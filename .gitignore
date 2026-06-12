@@ -46,3 +46,7 @@ package-lock.json
 .claude
 
 .idea
+
+# project
+.env
+uploads/
