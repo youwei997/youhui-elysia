@@ -43,5 +43,6 @@ package-lock.json
 
 .kilo
 .codebuddy
+.claude
 
 .idea
