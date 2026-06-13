@@ -78,7 +78,7 @@ CMD ["bun", "dist/index.js"]
 ```
 
 `docker-compose.prod.yml`：
-- 引用线上 Neon / Redis Cloud / MinIO 的 env
+- 引用线上 Neon / Redis Cloud / 对象存储（七牛 / R2 等）的 env
 - 健康检查
 - 重启策略 always
 

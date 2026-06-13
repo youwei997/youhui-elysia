@@ -88,7 +88,7 @@ youhui-elysia/
 │   ├── architecture.md
 │   ├── plan/                     # 阶段计划与验收
 │   └── adr/                      # 架构决策记录
-├── docker-compose.yml            # pg + redis + minio
+├── docker-compose.yml            # pg + redis（开发期）
 ├── drizzle.config.ts
 ├── biome.json
 └── package.json

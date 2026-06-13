@@ -18,11 +18,14 @@
 
 ### 1.1 Docker compose 基础设施 (0.5d)
 
-写 `docker-compose.yml`，包含：
-- **PostgreSQL 16**：端口 5432，初始库 `youhui`，账号密码走 `.env`
-- **Redis 7**：端口 6379
-- **MinIO**：端口 9000（API）+ 9001（Console），管理员凭据走 `.env`
-- 三者持久化用 named volume
+写 `docker-compose.yml`，**仅两个服务**：
+- **PostgreSQL 18**：端口 5432，初始库 `youhui`，账号密码走 `.env`
+- **Redis 8**：端口 6379
+
+两者持久化用 named volume（`youhui_pg_data` / `youhui_redis_data`）。
+
+> **不放 MinIO 进 docker-compose**：开发期 storage driver 用 `local-fs`（写 `./uploads/`），需要测 S3 协议时再 `docker run --rm minio/minio` 临时起。
+> **不用 PG 存文件**：备份慢、不能流式、无 S3 协议；Storage 抽象层（阶段 5.4）才是正路。
 
 写 `.env.example`（必须 commit）+ `.env`（gitignore）。
 
@@ -125,14 +128,13 @@ bun run db:push       # 应用到本地 pg
 - ❌ `tsconfig.json` 不要保留 `strict: false` 留下的妥协
 - ❌ 不要在 `src/db/schema/` 里写业务逻辑，schema 文件只声明表
 - ⚠️ docker-compose 的 volume 命名要带项目前缀（如 `youhui_pg_data`），避免和其他项目冲突
-- ⚠️ MinIO 默认凭据要换掉，否则不安全
 
 ## 验收清单
 
 > 完成后逐项核对。**全部 ✅ 才能进下一阶段。**
 
 ### 基础设施
-- [ ] `docker compose up -d` 一键起 pg + redis + minio
+- [ ] `docker compose up -d` 一键起 pg + redis
 - [ ] `docker compose down` 干净关停，volume 数据保留
 - [ ] `.env.example` 包含所有必要变量，`.env` 已 gitignore
 
