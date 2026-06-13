@@ -123,7 +123,8 @@ const list = await userRepo.list({ status: 1 })  // 别包一层 Repository
 
 - **错误码用 `as const` 字面量联合**，按业务域分组（A=认证 / B=用户 / C=权限 / ...）
 - **业务错误抛 `BizError`**（工厂函数或 class 二选一，全局统一）
-- **queries 内部用 `Result<T, E>`** 表达可预期失败；HTTP 出口处统一拆包到响应
+- **`queries` 直接返回数据或 `undefined`**，不包任何 Result/Ok/Err 容器；HTTP 错误判断放在 routes 层
+- **业务错误在 routes 层抛 `BizError`**（工厂函数或 class 二选一，全局统一）
 - **不可预期的错误抛 `Error`**，由 `onError` plugin 统一打日志 + 返回 500
 - **绝不**在 catch 后只 `console.log` 然后吞错（`return null` 是禁忌）
 

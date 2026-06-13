@@ -67,7 +67,6 @@ youhui-elysia/
 │   │   ├── rate-limit.ts
 │   │   └── i18n.ts               # Accept-Language → 文案映射
 │   ├── lib/
-│   │   ├── result.ts             # Result<T, E> + ok/err 工厂
 │   │   ├── errors.ts             # 错误码 as const + BizError 工厂
 │   │   ├── jwt.ts                # jose 包装 + 三层失效
 │   │   ├── cache.ts              # WithCache 防击穿
@@ -115,7 +114,7 @@ youhui-elysia/
 
 - 错误码：**`as const` 字面量联合类型**（不是字符串）
 - 业务错误：`BizError` 工厂函数（不是 class 继承）
-- 函数返回：内部用 `Result<T, E>`（`neverthrow` 风格），出口处统一拆包到 HTTP 响应
+- `queries` 函数直接返回数据或 `undefined`，HTTP 错误判断放在 routes 层 throw 或 return
 - HTTP 抛出：通过 `onError` plugin 统一序列化
 
 ### 4.4 数据权限（关键）

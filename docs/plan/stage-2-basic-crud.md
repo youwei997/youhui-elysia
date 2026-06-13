@@ -28,17 +28,12 @@
 
 `package.json` 加 `db:seed` 脚本。
 
-### 2.2 通用工具（result + pagination）(0.5d)
-
-`src/lib/result.ts`：
-- `type Result<T, E> = { ok: true, value: T } | { ok: false, error: E }`
-- `ok(value)` / `err(error)` 工厂函数
-- `match(result, { ok, err })` helper
+### 2.2 分页工具（pagination）(0.25d)
 
 `src/lib/pagination.ts`：
-- `PageQuery`：page / pageSize（带默认值、上限）
+- `pageQuerySchema`（zod）：page + pageSize，带默认值和上限
 - `PageResult<T>`：list / total / page / pageSize
-- `paginate(query, q)` helper：接受 Drizzle query builder 和 page 参数，返回 PageResult
+- **不抽象 `paginate` helper**，各 queries 自己写 count + list 两个查询，等摸清模式后再抽
 
 ### 2.3 CrudDto 工厂 (0.5d)
 
@@ -60,7 +55,7 @@
 - 导出响应 DTO（敏感字段如 password 用 `t.Omit` 剔除）
 
 `src/modules/user/queries.ts`：
-- 纯函数，签名形如 `findUsers(db: DB, query: UserListQuery) => Promise<PageResult<User>>`
+- 纯函数，直接返回数据或 undefined，不包 Result/Ok/Err 容器
 - 导出：`findUsers` / `findUserById` / `createUser` / `updateUser` / `softDeleteUser`
 - **不准**触碰 Elysia ctx、不准抛 HTTP 错误
 
@@ -131,8 +126,7 @@
 - [ ] 在线"试一试"功能可用
 
 ### 工具
-- [ ] `Result<T, E>` + `ok` / `err` 已实现并被 queries 使用（或确认本阶段不用，阶段 3 再上）
-- [ ] `paginate` helper 实际被 `findUsers` 使用，不是写死的
+- [ ] `pagination.ts` 已实现（PageResult + pageQuerySchema）
 
 ## 完成标志
 
