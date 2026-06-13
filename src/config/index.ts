@@ -37,7 +37,7 @@ export const config: Config = (() => {
 			const messages = err.issues.map(
 				(e) => `  - ${e.path.join(".")}: ${e.message}`,
 			);
-			console.error("❌ 环境变量校验失败:\n" + messages.join("\n"));
+			console.error(`❌ 环境变量校验失败:\n${messages.join("\n")}`);
 			process.exit(1);
 		}
 		throw err;
