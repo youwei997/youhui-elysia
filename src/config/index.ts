@@ -29,7 +29,7 @@ export const config: Config = (() => {
     return envSchema.parse(process.env);
   } catch (err) {
     if (err instanceof z.ZodError) {
-      const messages = err.errors.map(
+      const messages = err.issues.map(
         (e) => `  - ${e.path.join(".")}: ${e.message}`,
       );
       console.error("❌ 环境变量校验失败:\n" + messages.join("\n"));
