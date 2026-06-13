@@ -1,6 +1,8 @@
 import { and, count, eq, like } from "drizzle-orm";
+import type z from "zod";
 import { db } from "@/db/client";
 import { sysUser } from "@/db/schema/system/user";
+import type { UserCreateBody, UserUpdateBody } from "./schema";
 
 /**
  * 查询用户列表（分页 + 可选过滤）
@@ -44,7 +46,7 @@ export const findUserById = async (id: number) => {
 };
 
 /** 创建用户 */
-export const createUser = async (data: typeof sysUser.$inferInsert) => {
+export const createUser = async (data: z.infer<typeof UserCreateBody>) => {
 	const [user] = await db.insert(sysUser).values(data).returning();
 	return user;
 };
@@ -52,7 +54,7 @@ export const createUser = async (data: typeof sysUser.$inferInsert) => {
 /** 更新用户 */
 export const updateUser = async (
 	id: number,
-	data: Partial<typeof sysUser.$inferInsert>,
+	data: z.infer<typeof UserUpdateBody>,
 ) => {
 	const [user] = await db
 		.update(sysUser)

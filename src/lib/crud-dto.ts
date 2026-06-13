@@ -1,5 +1,5 @@
 import type { AnyPgTable } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-orm/zod";
+import { createInsertSchema, createUpdateSchema } from "drizzle-orm/zod";
 import { z } from "zod";
 
 /**
@@ -25,8 +25,8 @@ export const createInsertDto = <T extends AnyPgTable>(table: T) => {
 };
 
 /**
- * 创建更新 DTO：除 id 外全部可选
+ * 创建更新 DTO：所有字段可选
  */
 export const createUpdateDto = <T extends AnyPgTable>(table: T) => {
-	return createInsertSchema(table).partial().extend({ id: z.number() });
+	return createUpdateSchema(table);
 };
