@@ -23,7 +23,7 @@
 
 | 文件 | 职责 | 不准做 |
 |---|---|---|
-| `schema.ts` | TypeBox DTO 定义（用 `drizzle-typebox` 从 Drizzle 表派生） | 写业务、写 SQL |
+| `schema.ts` | Zod DTO 定义（用 `drizzle-orm/zod` 从 Drizzle 表派生） | 写业务、写 SQL |
 | `queries.ts` | **纯函数** CRUD（输入 `db` + 参数 → 数据） | 触碰 Elysia ctx、抛 HTTP 错误、`import { Elysia }` |
 | `routes.ts` | Elysia plugin（路由 + 校验 + 权限装饰）+ 编排调用 queries | 写 SQL、写复杂业务（拆到 queries 或 lib/） |
 
@@ -53,6 +53,8 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 ### 范式：函数式优先
 
 - **优先函数 + 闭包**，禁止 class 重度使用
+- **所有函数统一用箭头函数**，不用 `function` 声明
+- **箭头函数必须用 `{}` 大括号包裹函数体**，禁止简写体（`() => value` 应写为 `() => { return value }`）
 - **仅以下场景允许 class**：第三方库要求、需要 `instanceof` 判别、明确的状态机；其他一律用函数
 - **依赖注入用闭包或 Elysia `decorate` / `derive`**，禁止任何形式的 DI 容器、`@Injectable`、reflect-metadata
 - **顶层 `const` 导出 > 单例模式**
@@ -81,7 +83,10 @@ modules/  → lib/ 和 db/，不依赖 plugins/
  * @param ctx - 校验上下文（含 redis 客户端）
  * @returns 校验通过的 payload；任何一层失败抛 BizError
  */
-export const verifyToken = async (token: string, ctx: VerifyCtx): Promise<JwtPayload> => { ... }
+export const verifyToken = async (
+  token: string,
+  ctx: VerifyCtx,
+): Promise<JwtPayload> => { ... }
 ```
 
 ### 可读性
@@ -179,8 +184,8 @@ if (!user) return null  // 静默吞错
 |---|---|
 | `class XxxService { @Inject ... }` | 模块导出函数 + 闭包注入依赖 |
 | `@Controller` / `@Get` / `@Post` 装饰器 | Elysia 链式 API |
-| `import 'reflect-metadata'` | TypeBox / Drizzle schema 是值 |
-| `class Dto { @IsString @ApiProperty }` | TypeBox `t.Object` |
+| `import 'reflect-metadata'` | Zod / Drizzle schema 是值 |
+| `class Dto { @IsString @ApiProperty }` | Zod schema |
 | `abstract class BaseEntity` | `auditColumns` 对象 spread |
 | `Repository<T>` 模式 | Drizzle 链式 API + queries 函数 |
 | 字符串错误码 `"A0001"`（无类型约束） | `as const` 字面量联合 |
@@ -196,7 +201,7 @@ if (!user) return null  // 静默吞错
 ## 🧪 测试
 
 - 测试框架用内置 `bun:test`
-- **`lib/` 下所有工具必须有单测**（jwt / result / cache / data-scope 等）
+- **`lib/` 下所有工具必须有单测**（jwt / cache / data-scope 等）
 - queries 推荐写集成测试（用真实 PG，但隔离 schema 或测试库）
 - 路由可写少量端到端 smoke test
 - **不强制覆盖率目标**，但核心 lib 应 ≥ 90%
