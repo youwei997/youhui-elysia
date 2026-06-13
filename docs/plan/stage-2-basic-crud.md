@@ -94,38 +94,42 @@
 ## 验收清单
 
 ### 数据
-- [ ] `sys_user` 表结构正确（含 auditColumns）
-- [ ] `bun run db:seed` 可重复执行（先清后插）
-- [ ] `db:studio` 能看到种子数据
+- [x] `sys_user` 表结构正确（含 auditColumns）
+- [x] `bun run db:seed` 可重复执行（先清后插）
+- [x] `db:studio` 能看到种子数据
 
 ### 模块结构
-- [ ] `modules/user/` 严格三文件：schema.ts / routes.ts / queries.ts
-- [ ] `queries.ts` 不 import Elysia
-- [ ] `routes.ts` 不写 SQL（除非是 join 的 select 字段映射）
-- [ ] `schema.ts` 用 drizzle-orm/zod 派生，不重写字段
+- [x] `modules/user/` 严格三文件：schema.ts / routes.ts / queries.ts
+- [x] `queries.ts` 不 import Elysia
+- [x] `routes.ts` 不写 SQL（除非是 join 的 select 字段映射）
+- [x] `schema.ts` 用 drizzle-orm/zod 派生，不重写字段
 
 ### 路由能力
-- [ ] `GET /users` 列表分页（默认 page=1, pageSize=20）
-- [ ] `GET /users?page=2&pageSize=5&username=admin` 分页 + 过滤
-- [ ] `GET /users/:id` 详情，不存在时 404
-- [ ] `POST /users` 创建，body 校验失败返回 422
-- [ ] `PUT /users/:id` 更新（部分字段）
-- [ ] `DELETE /users/:id` 软删（`deletedAt` 被设置，记录还在 DB）
-- [ ] 删除后再查列表 / 详情都查不到
+- [x] `GET /users` 列表分页（默认 page=1, pageSize=20）
+- [x] `GET /users?page=2&pageSize=5&username=admin` 分页 + 过滤
+- [x] `GET /users/:id` 详情，不存在时 404
+- [x] `POST /users` 创建，body 校验失败返回 422
+- [x] `PUT /users/:id` 更新（部分字段）
+- [x] `DELETE /users/:id` 软删（`deletedAt` 被设置，记录还在 DB）
+- [ ] 删除后再查列表 / 详情都查不到 ⚠️ blocker（queries 未加 `eq(deletedAt, null)`）
 
 ### 类型推导
-- [ ] handler 内 `body` / `query` / `params` 完整类型推导
-- [ ] `queries.ts` 的返回值类型可以一路推导到 handler
-- [ ] 全项目 grep `as any` / `as never` 应当为 0（除了少量真的必要场景）
+- [x] handler 内 `body` / `query` / `params` 完整类型推导
+- [x] `queries.ts` 的返回值类型可以一路推导到 handler
+- [x] 全项目 grep `as any` / `as never` 应当为 0（除了少量真的必要场景）
 
 ### OpenAPI
-- [ ] Scalar UI 能看到 User 分组下所有接口
-- [ ] 每个接口有 summary / description
+- [x] Scalar UI 能看到 User 分组下所有接口
+- [ ] 每个接口有 description（summary 已配，description 未补）
 - [ ] schema 字段有 description，前端读得懂
-- [ ] 在线"试一试"功能可用
+- [x] 在线"试一试"功能可用
 
 ### 工具
-- [ ] `pagination.ts` 已实现（PageResult + pageQuerySchema）
+- [x] `pagination.ts` 已实现（PageResult + pageQuerySchema）
+
+### 已知 Blockers（需完成才能进阶段 3）
+- [ ] queries 的 select 查询补 `eq(deletedAt, null)` 过滤
+- [ ] OpenAPI 字段补 `.describe()`、路由补 `description`
 
 ## 完成标志
 

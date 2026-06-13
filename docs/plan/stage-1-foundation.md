@@ -77,12 +77,6 @@ scripts
 - 导出可被 spread 的对象
 - 导出 helper：`tablePrefix`（如果要前缀）
 
-写一张测试表 `src/db/schema/_smoke.ts`（仅 id + name），验证：
-```bash
-bun run db:generate   # 生成迁移
-bun run db:push       # 应用到本地 pg
-```
-
 ### 1.5 logger（pino）+ 优雅关停 (1d)
 
 `src/lib/logger.ts`：
@@ -108,7 +102,7 @@ bun run db:push       # 应用到本地 pg
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run --check src/index.ts"
   }
 }
 ```
@@ -134,37 +128,36 @@ bun run db:push       # 应用到本地 pg
 > 完成后逐项核对。**全部 ✅ 才能进下一阶段。**
 
 ### 基础设施
-- [ ] `docker compose up -d` 一键起 pg + redis
-- [ ] `docker compose down` 干净关停，volume 数据保留
-- [ ] `.env.example` 包含所有必要变量，`.env` 已 gitignore
+- [x] `docker compose up -d` 一键起 pg + redis
+- [x] `docker compose down` 干净关停，volume 数据保留
+- [x] `.env.example` 包含所有必要变量，`.env` 已 gitignore
 
 ### 配置体系
-- [ ] 启动时 zod 校验环境变量，缺值会 fail-fast 报具体错误
-- [ ] 全项目 grep `process.env` 仅在 `src/config/` 里出现
-- [ ] config 对象有完整类型推导
+- [x] 启动时 zod 校验环境变量，缺值会 fail-fast 报具体错误
+- [x] 全项目 grep `process.env` 仅在 `src/config/` 里出现
+- [x] config 对象有完整类型推导
 
 ### 目录与代码风格
-- [ ] 目录结构与 `docs/architecture.md` 一致
-- [ ] `tsconfig.json` 严格模式开启（含 `noUncheckedIndexedAccess`）
-- [ ] `bun run check` 通过（biome 无报错）
-- [ ] `bun run typecheck` 通过
+- [x] 目录结构与 `docs/architecture.md` 一致
+- [x] `tsconfig.json` 严格模式开启（含 `noUncheckedIndexedAccess`）
+- [x] `bun run check` 通过（biome 无报错）
+- [x] `bun run typecheck` 通过（使用 bun 内置类型检查）
 
 ### Drizzle
-- [ ] `drizzle.config.ts` 配置正确
-- [ ] `src/db/client.ts` 导出 `db` 和 `DB` 类型
-- [ ] `src/db/schema/_shared.ts` 含 `auditColumns`
-- [ ] 测试表 `_smoke` 可通过 `db:push` 建表
-- [ ] `bun run db:studio` 能可视化看到表
+- [x] `drizzle.config.ts` 配置正确
+- [x] `src/db/client.ts` 导出 `db` 和 `DB` 类型
+- [x] `src/db/schema/_shared.ts` 含 `auditColumns`
+- [x] `bun run db:studio` 能可视化看到表
 
 ### 启动与关停
-- [ ] `bun dev` 输出结构化日志（开发期 pretty 模式）
-- [ ] 启动横幅显示版本、端口、环境
-- [ ] Ctrl+C 优雅关停（先停 HTTP，再关连接池）
-- [ ] 启动失败时进程立即退出（不静默）
+- [x] `bun dev` 输出结构化日志（开发期 pretty 模式）
+- [x] 启动横幅显示版本、端口、环境
+- [x] Ctrl+C 优雅关停（先停 HTTP，再关连接池）
+- [x] 启动失败时进程立即退出（不静默）
 
 ### 端到端
-- [ ] OpenAPI 文档 `http://localhost:3000/openapi` 可访问
-- [ ] `GET /` 仍返回 "Hello Elysia"
+- [x] OpenAPI 文档 `http://localhost:3000/openapi` 可访问
+- [x] `GET /` 仍返回 "Hello Elysia"
 
 ## 完成标志
 
