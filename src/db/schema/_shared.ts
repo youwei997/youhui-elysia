@@ -15,4 +15,4 @@ export const auditColumns = {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   /** 删除时间（非空 = 已删除），语义优于 is_deleted */
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-} as const;
+};

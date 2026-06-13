@@ -6,6 +6,7 @@
     "start": "bun run src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "db:seed": "bun run scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
     "lint": "biome lint src/",
     "format": "biome format --write src/",
