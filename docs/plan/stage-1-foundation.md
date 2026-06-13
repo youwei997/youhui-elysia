@@ -163,7 +163,7 @@ bun run db:push       # 应用到本地 pg
 - [ ] 启动失败时进程立即退出（不静默）
 
 ### 端到端
-- [ ] OpenAPI 文档 `http://localhost:3000/swagger` 可访问
+- [ ] OpenAPI 文档 `http://localhost:3000/openapi` 可访问
 - [ ] `GET /` 仍返回 "Hello Elysia"
 
 ## 完成标志
@@ -174,7 +174,7 @@ bun run db:push
 bun dev
 # 看到启动横幅 + 结构化日志
 curl http://localhost:3000/      # Hello Elysia
-open http://localhost:3000/swagger
+open http://localhost:3000/openapi
 # Ctrl+C 干净退出
 ```
 

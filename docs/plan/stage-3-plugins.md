@@ -38,7 +38,7 @@
 
 `src/plugins/response-wrap.ts`：
 - 用 `mapResponse` 把 handler 返回值包成 `{ code: 0, msg: 'ok', data }`
-- 跳过白名单：OpenAPI 文档路径（`/swagger`、`/swagger/json`）、健康检查（`/health`）
+- 跳过白名单：OpenAPI 文档路径（`/openapi`、`/openapi/json`）、健康检查（`/health`）
 - 已经是包装格式的不重复包（鸭子类型检测：含 `code` 字段就跳过）
 
 ### 3.3 请求上下文（plugin/request-context）(0.5d)

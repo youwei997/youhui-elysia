@@ -44,7 +44,7 @@ const { data, error } = await api.users.get({ query: { page: 1 } })
 **逃生口：OpenAPI 导出**
 
 - 已有 `@elysia/openapi` 在工作
-- 加一个 `bun run openapi:export` 脚本，把 `/swagger/json` 内容导出到 `dist/openapi.json`
+- 加一个 `bun run openapi:export` 脚本，把 `/openapi/json` 内容导出到 `dist/openapi.json`
 - 这样不用 Elysia 的客户端也能用 `openapi-typescript` 生成类型
 
 ### 7.2 Dockerfile + 部署 (1d)
