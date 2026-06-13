@@ -1,6 +1,6 @@
 # 阶段 2 · 基础 CRUD（模块三件套范式首秀）
 
-> 难度 ⭐⭐ · 工时 2-3 天 · 学到：Elysia 路由组织、TypeBox 校验、drizzle-typebox、模块三件套
+> 难度 ⭐⭐ · 工时 2-3 天 · 学到：Elysia 路由组织、Zod 校验、drizzle-orm/zod、模块三件套
 > **不涉及**：鉴权、权限、横切 plugin（先把范式跑通，再上鉴权）
 
 ## 目标
@@ -39,20 +39,19 @@
 
 `src/lib/crud-dto.ts`：
 
-参考 elysia-admin 思路，但简化：
-- `createListDto(selectSchema, queryFields)`：列表查询 DTO（page + 业务查询字段）
-- `createInsertDto(insertSchema, opts?)`：新增 DTO（去掉 id/审计字段）
-- `createUpdateDto(insertSchema, idField)`：更新 DTO（id 必填 + 其余可选）
+参考 elysia-admin 思路，但用 drizzle-orm/zod 简化：
+- `createListQuery(table, queryFields?)`：列表查询 DTO（page + pageSize + 业务过滤字段）
+- `createInsertDto(table)`：新增 DTO（自动排除 id/审计字段）
+- `createUpdateDto(table)`：更新 DTO（全部可选 + id 必填）
 
-**关键**：用 `drizzle-typebox` 的 `createInsertSchema` / `createSelectSchema` 派生，再用 `t.Pick` / `t.Omit` / `t.Partial` 操作。
+**关键**：用 `drizzle-orm/zod` 的 `createInsertSchema` 派生，然后用 `.partial()` / `.extend()` 加工。
 
 ### 2.4 user 模块三件套 (1d)
 
 `src/modules/user/schema.ts`：
-- import sys_user table
-- 用 `drizzle-typebox` 派生 `selectUserSchema` / `insertUserSchema`
-- 用 `CrudDto` 派生：`UserListQuery` / `UserCreateBody` / `UserUpdateBody`
-- 导出响应 DTO（敏感字段如 password 用 `t.Omit` 剔除）
+- import sys_user table + CrudDto 工厂
+- 用 CrudDto 工厂派生：`UserListQuery` / `UserCreateBody` / `UserUpdateBody`
+- 导出响应类型（敏感字段如 password 用 `z.omit()` 剔除）
 
 `src/modules/user/queries.ts`：
 - 纯函数，直接返回数据或 undefined，不包 Result/Ok/Err 容器
@@ -77,10 +76,10 @@
 ## 学习重点
 
 - **Elysia 链式 API**：`.get(path, handler, opts)` 的类型推导是怎么做到的
-- **TypeBox 的能力边界**：`t.Object` / `t.Pick` / `t.Omit` / `t.Partial` / `t.Union`
-- **drizzle-typebox**：从一张 Drizzle 表派生 select/insert schema，自动同步类型
+- **Zod in Elysia**：Zod schema 直接传 `body` / `query` / `params`，框架自动校验 + 自动 OpenAPI
+- **drizzle-orm/zod**：从一张 Drizzle 表自动派生 insert schema，一行搞定
 - **模块作为 plugin**：`new Elysia({ prefix }).get(...)` 本身就是一个 plugin，`.use()` 即挂载
-- **路由级 schema vs 全局 schema**：开始养成"小颗粒度声明 schema"的习惯
+- **Route schema vs 全局 schema**：开始养成"小颗粒度声明 schema"的习惯
 
 ## 避雷
 
@@ -88,7 +87,7 @@
 - ❌ 不要在 `queries.ts` 里 `import { Elysia }` —— 纯函数和 HTTP 框架解耦
 - ❌ 不要把响应壳（`{ code, msg, data }`）硬编码在 handler 里 —— 阶段 3 会用 `mapResponse` 统一处理，这阶段先返回裸数据
 - ❌ 不要写 `class UserService` —— 你是函数式优先
-- ❌ 不要在 schema 文件里 `t.Object({ password: t.String() })` 直接重写 —— 用 `drizzle-typebox` 派生
+- ❌ 不要在 schema 文件里手动复制字段定义 —— 用 `drizzle-orm/zod` 派生
 - ⚠️ 列表分页的 `pageSize` 必须有上限（如 100），否则 `?pageSize=99999` 会拖死 DB
 - ⚠️ 软删要在所有查询里默认加 `eq(deletedAt, null)`，可考虑在 `queries.ts` 内统一封装
 
@@ -103,7 +102,7 @@
 - [ ] `modules/user/` 严格三文件：schema.ts / routes.ts / queries.ts
 - [ ] `queries.ts` 不 import Elysia
 - [ ] `routes.ts` 不写 SQL（除非是 join 的 select 字段映射）
-- [ ] `schema.ts` 用 drizzle-typebox 派生，不重写字段
+- [ ] `schema.ts` 用 drizzle-orm/zod 派生，不重写字段
 
 ### 路由能力
 - [ ] `GET /users` 列表分页（默认 page=1, pageSize=20）
