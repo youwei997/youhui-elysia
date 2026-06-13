@@ -24,6 +24,7 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "useUnknownInCatchVariables": true,
+    "exactOptionalPropertyTypes": true,
     "paths": {
       "@/*": [
         "./src/*"
