@@ -1,19 +1,21 @@
 {
   "compilerOptions": {
     /* 环境 */
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
     "allowJs": true,
-    "types": ["bun-types"],
-
+    "types": [
+      "bun-types"
+    ],
     /* 模块解析（Bun 推荐 bundler 模式，支持 paths 别名） */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
-
     /* 严格模式 */
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -22,14 +24,14 @@
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
     "useUnknownInCatchVariables": true,
-
-    /* 路径别名 */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@db/*": ["./src/db/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@db/*": [
+        "./src/db/*"
+      ]
     },
-
     /* 其他 */
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
