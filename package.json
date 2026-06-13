@@ -11,11 +11,11 @@
     "lint": "biome lint src/",
     "format": "biome format --write src/",
     "check": "biome check --write src/",
-    "typecheck": "bun run --check src/index.ts",
+    "typecheck": "bun run --check src/index.ts"
   },
   "dependencies": {
     "@elysia/openapi": "^1.4.15",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^1.0.0-beta.22",
     "elysia": "latest",
     "pino": "^10.3.1",
     "postgres": "^3.4.9",
