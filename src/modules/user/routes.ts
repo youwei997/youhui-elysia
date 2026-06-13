@@ -20,7 +20,11 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 		},
 		{
 			query: UserListQuery,
-			detail: { tags: ["User"], summary: "用户列表（分页）" },
+			detail: {
+				tags: ["User"],
+				summary: "用户列表（分页）",
+				description: "支持用户名模糊搜索和状态筛选",
+			},
 		},
 	)
 	.get(
@@ -34,7 +38,11 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 		},
 		{
 			params: ParamsWithId,
-			detail: { tags: ["User"], summary: "用户详情" },
+			detail: {
+				tags: ["User"],
+				summary: "用户详情",
+				description: "根据 ID 获取单个用户信息",
+			},
 		},
 	)
 	.post(
@@ -44,7 +52,11 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 		},
 		{
 			body: UserCreateBody,
-			detail: { tags: ["User"], summary: "创建用户" },
+			detail: {
+				tags: ["User"],
+				summary: "创建用户",
+				description: "新增系统用户，除用户名/密码外可选填其他信息",
+			},
 		},
 	)
 	.put(
@@ -59,7 +71,11 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 		{
 			body: UserUpdateBody,
 			params: ParamsWithId,
-			detail: { tags: ["User"], summary: "更新用户" },
+			detail: {
+				tags: ["User"],
+				summary: "更新用户",
+				description: "部分字段更新，未传字段保持原值不变",
+			},
 		},
 	)
 	.delete(
@@ -73,6 +89,10 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 		},
 		{
 			params: ParamsWithId,
-			detail: { tags: ["User"], summary: "删除用户（软删）" },
+			detail: {
+				tags: ["User"],
+				summary: "删除用户（软删）",
+				description: "软删除，记录仍保留在数据库，查询时自动过滤",
+			},
 		},
 	);
