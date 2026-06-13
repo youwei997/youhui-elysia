@@ -76,19 +76,6 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 - **复杂逻辑**：行内中文注释解释**为什么**这样写，不解释代码本身做什么
 - **变量名达意时不写注释**，达意失败时优先改名而不是补注释
 
-```ts
-/**
- * 校验 JWT 并返回 payload，三层失效校验顺序：签名 → tokenVersion → jti 黑名单
- * @param token - 完整 JWT 字符串
- * @param ctx - 校验上下文（含 redis 客户端）
- * @returns 校验通过的 payload；任何一层失败抛 BizError
- */
-export const verifyToken = async (
-  token: string,
-  ctx: VerifyCtx,
-): Promise<JwtPayload> => { ... }
-```
-
 ### 可读性
 
 - **禁止难懂的链式 `reduce`**——需要聚合时用 `for...of` + 累加变量，或拆函数
@@ -104,22 +91,26 @@ export const verifyToken = async (
 - **schema 即 TS 值**，不要把 schema 写成 class
 - **所有表必须包含 `auditColumns`**（createdAt / updatedAt / createdBy / updatedBy / deletedAt）
 - **软删用 `deletedAt: timestamp`**，禁用 `is_deleted: boolean`
-- 所有 `select` 默认加 `eq(t.deletedAt, null)`，封装到 queries 内统一处理
-- **不要写 Repository 包装类**（如 `CreateQueryBuilder().eq().like()`）—— 直接用 Drizzle 链式 API，保留类型推导
-- 复杂查询用 SQL fragment（`` sql`...` ``）+ 显式 prepare，不要拼字符串
+- **不要写 Repository 包装类**——直接用 Drizzle 链式 API，保留类型推导
+- 复杂查询用 SQL fragment（`` sql`...` ``），不要拼字符串
 - 事务必须用 `db.transaction(async tx => ...)`，禁止裸调用
 
-```ts
-// ✅ 推荐
-const where = and(
-  eq(users.deletedAt, null),
-  eq(users.status, 1),
-  dataScopeFilter(ctx, users),  // 数据权限：显式纯函数
-)
-const list = await db.select().from(users).where(where).limit(20)
+### 软删过滤规则
 
-// ❌ 禁止
-const list = await userRepo.list({ status: 1 })  // 别包一层 Repository
+> Drizzle 没有全局查询过滤器，每个查询手动加
+> 记忆法：**改已有数据必加、查列表默认加、新增/删本身不加**
+
+| 操作类型 | 例子 | 需 `eq(deletedAt, null)` | 理由 |
+|---|---|---|---|
+| 修改已有数据 | `updateUser` / 登录校验 / 唯一性校验 | ✅ 必须 | 不能改活已删记录 |
+| 列表/详情（普通用户） | `findUsers` / `findUserById` | ✅ 默认加 | 前端不应看到已删数据 |
+| 列表/详情（管理员查回收站） | 加 `includeDeleted` 参数 | ⚠️ 由调用方决定 | 数据恢复场景 |
+| 纯粹新增 | `createUser` | ❌ 不需要 | 不存在"已删" |
+| 设 `deletedAt` | `softDelete` / `restore` | ❌ 不需要 | 自身就是设这个值 |
+
+```ts
+const where = and(eq(users.deletedAt, null), eq(users.status, 1))
+const list = await db.select().from(users).where(where).limit(20)
 ```
 
 ---
@@ -127,9 +118,8 @@ const list = await userRepo.list({ status: 1 })  // 别包一层 Repository
 ## 🛡️ 错误处理
 
 - **错误码用 `as const` 字面量联合**，按业务域分组（A=认证 / B=用户 / C=权限 / ...）
-- **业务错误抛 `BizError`**（工厂函数或 class 二选一，全局统一）
-- **`queries` 直接返回数据或 `undefined`**，不包任何 Result/Ok/Err 容器；HTTP 错误判断放在 routes 层
 - **业务错误在 routes 层抛 `BizError`**（工厂函数或 class 二选一，全局统一）
+- **`queries` 直接返回数据或 `undefined`**，不包 Result/Ok/Err 容器；HTTP 错误判断放在 routes 层
 - **不可预期的错误抛 `Error`**，由 `onError` plugin 统一打日志 + 返回 500
 - **绝不**在 catch 后只 `console.log` 然后吞错（`return null` 是禁忌）
 
@@ -180,20 +170,15 @@ if (!user) return null  // 静默吞错
 
 ## 🚫 明确禁止清单
 
+> 快速查阅，具体理由见上文对应章节
+
 | 禁止 | 替代 |
 |---|---|
 | `class XxxService { @Inject ... }` | 模块导出函数 + 闭包注入依赖 |
+| `class Dto { @IsString @ApiProperty }` / `abstract class BaseEntity` | Zod schema + `auditColumns` spread |
 | `@Controller` / `@Get` / `@Post` 装饰器 | Elysia 链式 API |
-| `import 'reflect-metadata'` | Zod / Drizzle schema 是值 |
-| `class Dto { @IsString @ApiProperty }` | Zod schema |
-| `abstract class BaseEntity` | `auditColumns` 对象 spread |
-| `Repository<T>` 模式 | Drizzle 链式 API + queries 函数 |
-| 字符串错误码 `"A0001"`（无类型约束） | `as const` 字面量联合 |
 | `is_deleted: tinyint` | `deletedAt: timestamp` |
-| `as any` / `as never` | 修类型而不是绕过 |
-| 难懂的链式 `reduce` | `for...of` + 累加变量 |
 | 静默 catch（吞错 + return null） | 重抛或转 BizError |
-| SQL 拦截器自动改写 | 显式 `dataScope(ctx)` 纯函数 |
 | `process.env.XXX` 直接读 | 走 `src/config/` 的 zod schema |
 
 ---
