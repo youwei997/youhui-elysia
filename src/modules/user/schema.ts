@@ -89,9 +89,12 @@ export const UserUpdateBody = createUpdateSchema(sysUser, {
 	})
 	.describe("更新用户请求参数，未传字段保持原值");
 
-/** 用户响应（排除密码字段） */
+/** 用户响应（排除敏感字段和内部状态） */
 export const UserResponse = createSelectSchema(sysUser)
 	.omit({
 		password: true,
+		deletedAt: true,
+		createdBy: true,
+		updatedBy: true,
 	})
-	.describe("用户信息（不含密码）");
+	.describe("用户信息（不含密码、软删标志、操作人 id）");
