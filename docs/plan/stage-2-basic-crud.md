@@ -111,7 +111,7 @@
 - [x] `POST /users` 创建，body 校验失败返回 422
 - [x] `PUT /users/:id` 更新（部分字段）
 - [x] `DELETE /users/:id` 软删（`deletedAt` 被设置，记录还在 DB）
-- [ ] 删除后再查列表 / 详情都查不到 ⚠️ blocker（queries 未加 `eq(deletedAt, null)`）
+- [x] 删除后再查列表 / 详情都查不到（findUsers/findUserById/updateUser 三处已补 isNull(deletedAt)，见 commit 7eb9bff）
 
 ### 类型推导
 - [x] handler 内 `body` / `query` / `params` 完整类型推导
@@ -120,16 +120,18 @@
 
 ### OpenAPI
 - [x] Scalar UI 能看到 User 分组下所有接口
-- [ ] 每个接口有 description（summary 已配，description 未补）
-- [ ] schema 字段有 description，前端读得懂
+- [x] 每个接口有 description（5 个路由 handler 均已补 detail.description，见 commit fa5dd51）
+- [x] schema 字段有 description，前端读得懂（schema.ts inline refine 全字段 .describe()，见 commit 170a732）
 - [x] 在线"试一试"功能可用
 
 ### 工具
 - [x] `pagination.ts` 已实现（PageResult + pageQuerySchema）
 
 ### 已知 Blockers（需完成才能进阶段 3）
-- [ ] queries 的 select 查询补 `eq(deletedAt, null)` 过滤
-- [ ] OpenAPI 字段补 `.describe()`、路由补 `description`
+- [x] queries 的 select 查询补 `eq(deletedAt, null)` 过滤（实际用 isNull，改了 3 处：列表/详情/更新，见 commit 7eb9bff）
+- [x] OpenAPI 字段补 `.describe()`、路由补 `description`（见 commit fa5dd51 / 170a732）
+
+> ✅ **Blockers 全部清空**（2026-06-14）：软删过滤与 OpenAPI 字段描述均已完成，阶段 2 验收全 ✅，可进阶段 3。
 
 ## 完成标志
 
