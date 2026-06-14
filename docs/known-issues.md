@@ -73,3 +73,39 @@ Scalar 渲染 `anyOf` + `const` 组合时，把关键字名 `const` 当成选项
 ### 相关文件
 
 - `src/modules/user/schema.ts`：`genderSchema` / `statusSchema` 定义
+---
+
+## Redis 端口 6379 在 Windows 上被占用
+
+**状态**:✅ 已绕过（改用 16379）
+**发现时间**:2026-06-15 阶段 3 接 Redis
+
+### 现象
+
+Windows 上启动 docker redis 容器（端口映射 6379:6379）后，Bun.redis 连接报 `ERR_REDIS_CONNECTION_CLOSED`，redis-cli 也连不上。容器本身 healthy。
+
+### 根因
+
+Windows 上某个服务占用了 6379 端口（可能是本地装的 Redis、WSL2 转发、或其他服务）。Docker 端口映射绑不上 6379，或绑上但被抢占。
+
+### 解决
+
+把 docker-compose.yml 的 redis 端口映射从 `6379:6379` 改成 `16379:6379`（容器内仍 6379，宿主机用 16379）。同步改 .env 的 `REDIS_URL`。
+
+```yaml
+redis:
+  ports:
+    - "16379:6379"  # 宿主机:容器
+```
+```
+REDIS_URL=redis://default:youhui123@localhost:16379/0
+```
+
+### 为什么记这里
+
+换机器、同事 clone 项目时可能再撞上。看到这条就知道：**Windows 上 6379 大概率被占，直接用 16379 绕过**。
+
+### 相关文件
+
+- `docker-compose.yml`（redis ports）
+- `.env`（REDIS_URL）
