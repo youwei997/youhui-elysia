@@ -30,7 +30,7 @@
 
 ### 2.2 分页工具（pagination）(0.25d)
 
-`src/lib/pagination.ts`：
+`src/db/helpers/pagination.ts`：
 - `pageQuerySchema`（zod）：page + pageSize，带默认值和上限
 - `PageResult<T>`：list / total / page / pageSize
 - **不抽象 `paginate` helper**，各 queries 自己写 count + list 两个查询，等摸清模式后再抽
@@ -125,7 +125,7 @@
 - [x] 在线"试一试"功能可用
 
 ### 工具
-- [x] `pagination.ts` 已实现（PageResult + pageQuerySchema）
+- [x] `pagination.ts` 已实现（PageResult + pageQuerySchema，位于 db/helpers/）
 
 ### 已知 Blockers（需完成才能进阶段 3）
 - [x] queries 的 select 查询补 `eq(deletedAt, null)` 过滤（实际用 isNull，改了 3 处：列表/详情/更新，见 commit 7eb9bff）
