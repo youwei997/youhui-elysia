@@ -144,3 +144,52 @@ createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defau
 // 改后
 .set({ deletedAt: new Date().toISOString() })
 ```
+
+---
+
+### drizzle-orm/zod 的 refine 箭头函数标注 `z.ZodType` 会击穿类型
+
+**现象**：给 `createInsertSchema` 的 refine 里的箭头函数显式标注参数类型 `(s: z.ZodType) => s.describe(...)` 后，下游 `db.insert(sysUser).values(data)` 报 `unknown` 不可赋值给 `string`：
+
+```
+Type 'unknown' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+(parameter) data: { username: unknown; password: unknown; ... }  // 整个 schema 退化成 unknown
+```
+
+**原因**：drizzle-orm/zod 的 refine 类型是 `BuildRefineField<T> = ((schema: T) => z.ZodType) | z.ZodType`，最终字段类型取自**箭头函数的返回值**（`ReturnType<TRefinement>`）。手写 `s: z.ZodType` 把参数从「具体子类（如 `z.ZodString`）」降级成「基类」，`.describe()` 返回基类，于是整个 insert schema 的字段类型退化为 `unknown`。
+
+**修复**：去掉参数类型标注，让 TS 从 drizzle 泛型推导 `s` 为对应列的具体 zod 类型：
+```ts
+// ❌ 标注 z.ZodType → 击穿类型，data 全部 unknown
+username: (s: z.ZodType) => s.describe("登录用户名"),
+
+// ✅ 不标注，让 drizzle 推导为 z.ZodString
+username: (s) => s.describe("登录用户名"),
+```
+
+---
+
+### drizzle-orm/zod 的 refine 对象抽成共享 const 会触发 noImplicitAny
+
+**现象**：把 refine 对象抽成共享常量后，编辑器报：
+```
+Parameter 's' implicitly has an 'any' type. ts(7006)
+```
+
+**原因**：TS 的 contextual typing（反向推导）只在**对象字面量直接作为函数实参**时触发。先 `const x = {...}` 再 `fn(x)`，TS 会先独立推导 `x` 的类型，此时箭头函数参数 `s` 无上下文 → 退化为 `any`，触发 `noImplicitAny`。inline 时 drizzle 的泛型参数直接约束对象字面量，`s` 才能被正确推导为 `z.ZodString`。
+
+**修复**：refine 对象必须 inline 写进 `createInsertSchema`/`createUpdateSchema` 调用，不能抽成共享 const：
+```ts
+// ❌ 抽常量 → s 退化为 any
+const userFieldRefine = {
+  username: (s) => s.describe("登录用户名"),  // ts(7006)
+};
+createInsertSchema(sysUser, userFieldRefine);
+
+// ✅ inline 写进调用 → s 推导为 z.ZodString
+createInsertSchema(sysUser, {
+  username: (s) => s.describe("登录用户名"),
+});
+```
+
+**代价**：Create/Update 共享相同描述时需各写一份 refine（无法复用）。这是 drizzle 类型推导的限制，接受重复换取类型正确。
