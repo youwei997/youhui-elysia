@@ -120,14 +120,27 @@ Object literal may only specify known properties, and 'id' does not exist...
 
 ---
 
-### auditColumns 的 `as const` 导致 Drizzle 类型推导问题
+## Elysia / OpenAPI
 
-**错误**：
+### `warn: Date cannot be represented in JSON Schema`
+
+**现象**：终端输出 `warn: Date cannot be represented in JSON Schema`，OpenAPI 文档中时间字段无正确 schema。
+
+**原因**：Drizzle `timestamp` 字段默认 `mode: "date"`，drizzle-zod 推导为 `z.date()`。`@elysia/openapi` 无法将 `z.date()` 映射为 JSON Schema（JSON Schema 无 Date 原生类型）。
+
+**修复**：timestamp 字段加 `mode: "string"`，让 drizzle-zod 推导为 `z.string()`（ISO 字符串）：
 ```ts
-export const auditColumns = { ... } as const;
-// 放在 pgTable 的 spread 中会导致 extraConfig callback 参数类型异常
+// 改前
+createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+
+// 改后
+createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
 ```
 
-**原因**：`as const` 生成的字面量类型与 Drizzle 的 `ExtraConfigColumn` 类型不兼容。
-
-**修复**：去掉 `as const`，改为普通对象。
+配套改动：手动设值处传 ISO 字符串而非 Date 对象：
+```ts
+// 改前
+.set({ deletedAt: new Date() })
+// 改后
+.set({ deletedAt: new Date().toISOString() })
+```

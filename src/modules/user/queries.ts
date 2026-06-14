@@ -68,7 +68,7 @@ export const updateUser = async (
 export const softDeleteUser = async (id: number) => {
 	const [user] = await db
 		.update(sysUser)
-		.set({ deletedAt: new Date() })
+		.set({ deletedAt: new Date().toISOString() })
 		.where(eq(sysUser.id, id))
 		.returning();
 	return user;
