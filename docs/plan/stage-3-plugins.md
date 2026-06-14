@@ -78,7 +78,7 @@
 ### 3.6 Auth 模块（modules/auth）(1d)
 
 新增：
-- `db/schema/system/auth.ts`：可选——是否拆 `auth_credential` 表（密码 / OAuth / passkey 多种登录方式分离）。**第一版直接用 `sys_user.password` 简化**，记录在 ADR 里"未来要拆"。
+- `db/schema/system/auth.ts`：可选——是否拆 `auth_accounts` 表（密码 / OAuth / passkey 多种登录方式分离）。**第一版直接用 `sys_user.password` 简化**，记录在 ADR 里"未来要拆"。
 
 `src/modules/auth/schema.ts` + `routes.ts` + `queries.ts`：
 - `POST /auth/login`：username + password → access + refresh
