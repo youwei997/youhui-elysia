@@ -9,9 +9,9 @@
 
 ## 前置检查
 
-- [ ] 阶段 1 验收全 ✅
-- [ ] `db` 客户端可用、`auditColumns` 已就位
-- [ ] `bun dev` 可起、OpenAPI 可访问
+- [x] 阶段 1 验收全 ✅
+- [x]  `db` 客户端可用、`auditColumns` 已就位
+- [x]  `bun dev` 可起、OpenAPI 可访问
 
 ## 子任务清单
 
@@ -144,4 +144,12 @@ curl -XDELETE http://localhost:3000/users/3
 # 在 Scalar UI 里能完整玩一遍
 ```
 
-## 本阶段收获（完成后填写）
+## 本阶段收获（已完成）
+
+跑通了「schema.ts + queries.ts + routes.ts」三件套范式，端到端类型推导不丢。核心收获：
+
+1. **drizzle-orm/zod 的 refine 必须用箭头函数且参数不能标注 `z.ZodType`**——标注基类会让 `.describe()` 返回基类，整个 schema 退化为 `unknown`，下游 `db.insert().values()` 类型全炸。正确做法是去掉标注让 drizzle 推导成具体子类（如 `z.ZodString`）。
+2. **refine 对象不能抽成共享 const**——TS 的反向推导只在对象字面量直接作为函数实参时触发，抽常量会让箭头函数参数退化为 `any`（`noImplicitAny`）。Create/Update 共享描述时只能各 inline 一份。
+3. **软删过滤是纪律问题**：按 AGENTS.md 软删规则表，`findUsers`/`findUserById`/`updateUser` 三处必须加 `isNull(deletedAt)`，尤其 `updateUser` 能改活已删记录是隐患。用 `isNull()` 而非 `eq(deletedAt, null)`，Drizzle 推荐写法。
+
+以上两个类型坑详见 `docs/troubleshooting.md`。

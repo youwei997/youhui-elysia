@@ -7,7 +7,7 @@
 | 阶段 | 难度 | 工时 | 状态 | 文档 |
 |---|---|---|---|---|
 | 1 · 地基 | ⭐ | 3-4d | ✅ 已完成 | [stage-1-foundation.md](./stage-1-foundation.md) |
-| 2 · 基础 CRUD | ⭐⭐ | 2-3d | 🟡 进行中 | [stage-2-basic-crud.md](./stage-2-basic-crud.md) |
+| 2 · 基础 CRUD | ⭐⭐ | 2-3d | ✅ 已完成 | [stage-2-basic-crud.md](./stage-2-basic-crud.md) |
 | 3 · 横切 Plugin 体系 | ⭐⭐⭐ | 4-5d | ⬜ 未开始 | [stage-3-plugins.md](./stage-3-plugins.md) |
 | 4 · 权限核心 | ⭐⭐⭐⭐⭐ | 6-7d | ⬜ 未开始 | [stage-4-rbac.md](./stage-4-rbac.md) |
 | 5 · 进阶辅助模块 | ⭐⭐⭐ | 4-5d | ⬜ 未开始 | [stage-5-modules.md](./stage-5-modules.md) |
@@ -58,4 +58,5 @@ Elysia 范式吃透 █████████ 25%
 
 ```
 [2026-06-14] 阶段 1 完成。收获：跑通 Docker + Drizzle + Elysia 地基，建好 config/logger/优雅关停体系，删掉 _smoke 测试表改走真实 user 表验证，typecheck 改用 bun 内置。进入阶段 2 开发。
+[2026-06-14] 阶段 2 完成。收获：跑通 user 模块三件套（schema/queries/routes）范式，端到端类型推导不丢。两个核心坑：drizzle-orm/zod 的 refine 箭头函数参数不能标注 z.ZodType（否则 schema 退化为 unknown）、refine 对象不能抽共享 const（否则 noImplicitAny）。软删过滤补齐 findUsers/findUserById/updateUser 三处。进入阶段 3 开发。
 ```
