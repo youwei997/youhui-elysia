@@ -7,7 +7,7 @@
 | 维度 | 选择 | 反对的 |
 |---|---|---|
 | **范式** | 函数式优先、模块即文件、依赖即闭包 | OOP class 重度、装饰器魔法、DI 容器 |
-| **类型** | 端到端类型推导（Elysia + drizzle-typebox + TypeBox） | `as any` / `as never` 击穿类型 |
+| **类型** | 端到端类型推导（Elysia + drizzle-orm/zod） | `as any` / `as never` 击穿类型 |
 | **抽象层级** | 显式 > 隐式（数据权限是纯函数，不是 SQL 拦截器） | "魔法" 切面 / 元数据反射 / 隐藏控制流 |
 | **目录组织** | 按特性分包（`modules/<domain>/{schema,routes,queries}.ts`） | 按层分包（controller/service/mapper 四件套） |
 
@@ -16,11 +16,11 @@
 ```
 Runtime:      Bun
 Framework:    ElysiaJS
-ORM:          Drizzle (drizzle-orm + drizzle-typebox + drizzle-kit)
+ORM:          Drizzle (drizzle-orm + drizzle-kit)
 DB:           PostgreSQL  (docker dev / Neon prod)
 Cache:        Redis        (docker dev / Redis Cloud Free prod)
 Storage:      抽象层 + drivers (local-fs / s3 / 七牛 prod 候选)
-Validation:   TypeBox (Elysia t.Object) + zod (仅 env)
+Validation:   zod (env + body/query/params 校验，配合 drizzle-orm/zod 从表派生)
 Auth:         JWT (jose) + Redis 三层失效（tokenVersion + jti + exp）
 Logger:       pino
 Queue:        pg-boss (基于 PostgreSQL，零额外组件)
@@ -51,7 +51,7 @@ youhui-elysia/
 │   │       └── data-scope.ts     # ⭐ 数据权限纯函数
 │   ├── modules/                  # 业务模块：一个领域 = 三文件
 │   │   ├── auth/
-│   │   │   ├── schema.ts         # TypeBox DTO（drizzle-typebox 派生）
+│   │   │   ├── schema.ts         # Zod DTO（drizzle-orm/zod 派生）
 │   │   │   ├── routes.ts         # Elysia plugin + 路由
 │   │   │   └── queries.ts        # 纯函数 CRUD
 │   │   ├── user/  role/  menu/  dept/  dict/
@@ -101,7 +101,7 @@ youhui-elysia/
 
 | 文件 | 职责 | 不准做的事 |
 |---|---|---|
-| `schema.ts` | TypeBox DTO 定义（用 `drizzle-typebox` 从 Drizzle schema 派生） | 写业务逻辑、写 SQL |
+| `schema.ts` | Zod DTO 定义（用 `drizzle-orm/zod` 从 Drizzle schema 派生） | 写业务逻辑、写 SQL |
 | `queries.ts` | **纯函数** CRUD（输入参数 + db client → 数据） | 触碰 HTTP / Elysia ctx / 抛 HttpError |
 | `routes.ts` | Elysia plugin（路由 + 校验 + 权限装饰） + 编排调用 queries | 写复杂业务（拆到 queries 或 lib/） |
 
@@ -147,7 +147,7 @@ db.select().from(t).where(where)
 | `abstract class BaseEntity { ... }` 实体继承 | youlai-nest | Drizzle `auditColumns` 对象 spread |
 | `@Permissions("sys:user:create")` 装饰器 + Reflector | youlai-nest | `requirePerm(perm)` Elysia macro |
 | `@Module + forwardRef + APP_GUARD` DI 容器 | youlai-nest | 函数闭包 / Elysia decorate |
-| `class CreateUserDto { @IsString @ApiProperty ... }` | youlai-nest | TypeBox `t.Object` |
+| `class CreateUserDto { @IsString @ApiProperty ... }` | youlai-nest | Zod schema |
 | `ResponseInterceptor` + RxJS Observable | youlai-nest | Elysia `mapResponse` |
 | 自建路由表 + `as never` 强转 | elysia-admin | Elysia 原生 `.use(plugin).get(...)` |
 | Repository 包装 `CreateQueryBuilder().eq().like()` | elysia-admin | 直接用 Drizzle 链式 API |
@@ -168,6 +168,6 @@ db.select().from(t).where(where)
 | `sys_dict` + `sys_dict_item` 双表 | youlai-boot | 字典管理标准 |
 | `gen_table` + `gen_table_column` 元数据 | youlai-boot | 代码生成器持久化配置 |
 | `WithCache` 缓存防击穿（双重检查 + 分布式锁） | elysia-admin | `lib/cache.ts` |
-| `drizzle-typebox` + `CrudDto` 工厂 | elysia-admin | DTO 一行派生 |
+| `drizzle-typebox` + `CrudDto` 工厂 | elysia-admin | DTO 一行派生（本项目改用 `drizzle-orm/zod` 实现 CrudDto） |
 | 文件存储 provider 抽象 | youlai-boot/elysia-admin | `lib/storage/` |
 | 双调度器思路（本地 cron + 分布式队列） | elysia-admin | 用 pg-boss 实现 |
