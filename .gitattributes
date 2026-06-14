@@ -1,0 +1,15 @@
+# 统一行尾：仓库内一律 LF（避免 CRLF/LF 幽灵 diff）
+# Windows 上 .editorconfig + 编辑器会本地显示 CRLF，但 git 存储和 diff 都是 LF
+* text=auto eol=lf
+
+# 二进制文件不做行尾转换（防止误损）
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.lockb binary
