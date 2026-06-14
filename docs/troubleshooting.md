@@ -193,3 +193,37 @@ createInsertSchema(sysUser, {
 ```
 
 **代价**：Create/Update 共享相同描述时需各写一份 refine（无法复用）。这是 drizzle 类型推导的限制，接受重复换取类型正确。
+---
+
+### drizzle-orm/zod 直接从表派生会暴露审计列/id/敏感字段
+
+**现象**：`PUT /users/:id` 的 body schema 把 `createdAt`/`createdBy`/`updatedAt`/`updatedBy`/`deletedAt`/`id`/`password` 全部暴露给前端，前端可直接篡改创建时间、清空 `deletedAt` 反软删、改 `id` 引发主键错乱。
+
+**原因**：
+1. `createInsertSchema`/`createUpdateSchema` 直接从整张表派生，**所有列都进 schema**，包括审计列。
+2. `generatedByDefaultAsIdentity` 的 `id` **不会被自动排除**——只有 `generatedAlwaysAsIdentity` 才会被 `createUpdateSchema` 自动排除（文档：update schema 对 generated column 会排除）。本项目 id 用的是 `generatedByDefault`（为支持 seed 手动插），所以泄漏。
+
+**修复**：用 `.omit({ 字段: true })` 显式排除服务端控制的字段，审计列统一抽 `auditKeys` 复用：
+```ts
+const auditKeys = {
+  id: true, createdBy: true, createdAt: true,
+  updatedBy: true, updatedAt: true, deletedAt: true,
+} as const;
+
+// Create Body：排除 id + 审计列
+export const UserCreateBody = createInsertSchema(sysUser, { ... })
+  .omit(auditKeys);
+
+// Update Body：最小可改集，排除 id + 审计列 + password + username
+export const UserUpdateBody = createUpdateSchema(sysUser, { ... })
+  .omit({ ...auditKeys, password: true, username: true });
+```
+
+**原则**：
+- 审计列（createdAt/createdBy/.../deletedAt）永远由服务端控制，前端不可注入
+- `id` 从路径参数来，不在 body
+- `password` 更新走专用接口（带旧密码校验），不在通用 PUT 里
+- 业务枚举字段（gender/status）用 `z.literal` 联合覆盖 smallint 原始范围，消除 `-32768~32767` 这种无意义边界
+
+**配套**：refine 里覆盖字段类型时直接传 ZodType（如 `gender: genderSchema`）即"覆盖"语义，drizzle 官方支持（文档 Refinements 章节："providing a Zod schema will overwrite it"）。
+
