@@ -2,6 +2,7 @@ import { and, count, eq, isNull, like } from "drizzle-orm";
 import type z from "zod";
 import { db } from "@/db/client";
 import { sysUser } from "@/db/schema/system/user";
+import type { PageResult } from "@/db/helpers/pagination";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
 
 /**
@@ -12,7 +13,7 @@ export const findUsers = async (query: {
 	pageSize: number;
 	username?: string;
 	status?: number;
-}) => {
+}): Promise<PageResult<(typeof sysUser)["$inferSelect"]>> => {
 	// 组装查询条件：软删过滤（必加）+ 用户名模糊匹配 + 状态精确匹配
 	const where = [isNull(sysUser.deletedAt)];
 	if (query.username) {

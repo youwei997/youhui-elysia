@@ -1,20 +1,19 @@
 import type { AnyPgTable } from "drizzle-orm/pg-core";
 import { createInsertSchema, createUpdateSchema } from "drizzle-orm/zod";
 import { z } from "zod";
+import { pageFields } from "@/db/helpers/pagination";
 
 /**
- * 创建列表查询 DTO：分页参数 + 业务过滤字段
+ * 创建列表查询 DTO：分页参数（复用 pageFields）+ 业务过滤字段
  * @param fields - 可选的业务查询字段，如 { username: z.string().optional() }
  */
 export const createListQuery = <T extends AnyPgTable>(
 	_table: T,
 	fields?: Record<string, z.ZodType>,
 ) => {
-	return z.object({
-		page: z.coerce.number().int().positive().default(1),
-		pageSize: z.coerce.number().int().positive().max(100).default(20),
-		...fields,
-	});
+	// 展开 pageFields 分页字段 + 业务字段，统一构造 schema
+	// 用 z.object 而非 pageQuerySchema.extend(fields)，保证 TS 对字段类型正确推导
+	return z.object({ ...pageFields, ...fields });
 };
 
 /**
