@@ -1,8 +1,10 @@
 import { openapi } from "@elysia/openapi";
 import { Elysia } from "elysia";
+import { errorHandler } from "@/plugins/error-handler";
 import { userRoutes } from "@/modules/user/routes";
 
 export const app = new Elysia()
+	.use(errorHandler)
 	.use(
 		openapi({
 			scalar: { showDeveloperTools: "never" },

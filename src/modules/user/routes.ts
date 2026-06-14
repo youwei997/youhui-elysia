@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { z } from "zod";
+import { notFound } from "@/lib/errors";
 import {
 	createUser,
 	findUserById,
@@ -32,7 +33,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 		async ({ params }) => {
 			const user = await findUserById(params.id);
 			if (!user) {
-				throw new Error("用户不存在");
+				throw notFound();
 			}
 			return user;
 		},
@@ -64,7 +65,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 		async ({ params, body }) => {
 			const user = await updateUser(params.id, body);
 			if (!user) {
-				throw new Error("用户不存在");
+				throw notFound();
 			}
 			return user;
 		},
@@ -83,7 +84,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 		async ({ params }) => {
 			const user = await softDeleteUser(params.id);
 			if (!user) {
-				throw new Error("用户不存在");
+				throw notFound();
 			}
 			return user;
 		},
