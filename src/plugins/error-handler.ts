@@ -14,11 +14,11 @@ import { logger } from "@/lib/logger";
  *
  * 装配：app.use(errorHandler)，as: "global" 让它兜底所有路由。
  */
-export const errorHandler = new Elysia({ name: "error-handler" }).onError(
-	{ as: "global" },
-	({ error, code, set, request, store }) => {
-		// TODO(3.3 request-context): plugin 用 .state() 声明 reqId 后去掉 as 断言
-		const traceId = (store as { reqId?: string }).reqId;
+export const errorHandler = new Elysia({ name: "error-handler" })
+	// requestContext 注入的 store 字段，这里声明类型让下方能直接读 store.reqId
+	.state("reqId", "")
+	.onError({ as: "global" }, ({ error, code, set, request, store }) => {
+		const traceId = store.reqId;
 
 		// 0. 接口不存在（路由未匹配，如拼错 URL 或浏览器请求 favicon）
 		if (code === "NOT_FOUND") {
@@ -65,5 +65,4 @@ export const errorHandler = new Elysia({ name: "error-handler" }).onError(
 		);
 		set.status = 500;
 		return failed(ERR_CODE.SYSTEM_ERROR);
-	},
-);
+	});
