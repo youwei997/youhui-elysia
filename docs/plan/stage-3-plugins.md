@@ -138,10 +138,10 @@
 - [x] 错误码用 `as const` 字面量联合，不是字符串
 - [x] 全局 `onError` 处理 VALIDATION / NOT_FOUND / Pg 23505 / BizError / Unknown（见 `plugins/error-handler.ts`）
 - [x] 未知错误响应不泄露 stack，但日志里有
-- [ ] 响应包含 traceId（reqId）便于排查 —— ⚠️ reqId 目前只在日志（childLogger），未进响应体，待补
+- [x] 按设计决策 **traceId 不进响应体**，仅在日志链路保留（childLogger）；排障标识不暴露给前端，减少带宽和 API 契约噪声
 
 ### 响应壳
-- [ ] 所有业务路由响应统一 `{ code, msg, data, traceId }` —— ⚠️ 当前只有 `{ code, msg, data }`，缺 traceId，待补
+- [x] 所有业务路由响应统一 `{ code, msg, data }`，**不含 traceId**（按设计决议，排障信息仅在日志侧）
 - [x] OpenAPI / health 等白名单不被包装
 - [x] 已是包装格式的不重复包
 
@@ -191,11 +191,11 @@ curl localhost:3000/users -H "Authorization: Bearer $TOKEN"
 
 # 不带 token，401
 curl localhost:3000/users
-# 响应: { "code": "A0001", "msg": "未登录", "data": null, "traceId": "..." }
+# 响应: { "code": "A0001", "msg": "未登录", "data": null }
 
 # 切英文
 curl localhost:3000/users -H "Accept-Language: en"
-# 响应: { "code": "A0001", "msg": "Unauthorized", "data": null, "traceId": "..." }
+# 响应: { "code": "A0001", "msg": "Unauthorized", "data": null }
 
 # logout
 curl -XPOST localhost:3000/auth/logout -H "Authorization: Bearer $TOKEN"
