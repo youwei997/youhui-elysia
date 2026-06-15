@@ -226,4 +226,37 @@ export const UserUpdateBody = createUpdateSchema(sysUser, { ... })
 - 业务枚举字段（gender/status）用 `z.literal` 联合覆盖 smallint 原始范围，消除 `-32768~32767` 这种无意义边界
 
 **配套**：refine 里覆盖字段类型时直接传 ZodType（如 `gender: genderSchema`）即"覆盖"语义，drizzle 官方支持（文档 Refinements 章节："providing a Zod schema will overwrite it"）。
+---
+
+### 改了代码不生效——先查端口有没有僵尸进程
+
+**现象**：改了 error-handler 代码（plugin 形式装配到 app.ts），curl 测试一直返回旧的错误格式（500 + 纯文本），怎么改都不生效。
+
+**原因**：Windows 上 bun 进程有时不会被 Ctrl+C 干净杀掉，多次 `bun dev` 累积出多个僵尸进程（bun.exe），同时监听同一端口。curl 打到的是某个旧进程，跑的是旧代码，新代码根本没被执行。
+
+```bash
+# 一查发现 3000 端口有 3 个 bun 进程在 LISTEN
+$ netstat -ano | findstr :3000 | findstr LISTENING
+  TCP    0.0.0.0:3000    LISTENING    20384
+  TCP    0.0.0.0:3000    LISTENING    28928
+  TCP    0.0.0.0:3000    LISTENING    19204
+```
+
+**排查步骤**（改了代码不生效时，按此顺序，别急着改代码）：
+
+```bash
+# 1. 看端口被谁占
+netstat -ano | findstr :3000 | findstr LISTENING
+
+# 2. 确认 PID 是不是 bun
+powershell -Command "Get-Process -Id <PID>"
+
+# 3. 杀掉僵尸进程（需要管理员权限）
+powershell -Command "Stop-Process -Id <PID> -Force"
+# 或任务管理器 → 详细信息 → 结束 bun.exe
+
+# 4. 换个干净端口启动，确认新代码生效
+```
+
+**预防**：每次启 bun dev 前先 `netstat` 确认端口干净；重启服务前确认上次进程真的退了。Windows 上 bun 进程比 node 更容易留僵尸。
 
