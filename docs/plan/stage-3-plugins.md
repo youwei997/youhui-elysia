@@ -134,21 +134,21 @@
 ## 验收清单
 
 ### 错误体系
-- [ ] `BizError` 工厂或 class 已实现
-- [ ] 错误码用 `as const` 字面量联合，不是字符串
-- [ ] 全局 `onError` 处理 VALIDATION / NOT_FOUND / Pg 23505 / BizError / Unknown
-- [ ] 未知错误响应不泄露 stack，但日志里有
-- [ ] 响应包含 traceId（reqId）便于排查
+- [x] `BizError` 工厂或 class 已实现（class 风格，见 `lib/errors.ts`，附 notFound/unauthorized/forbidden 工厂）
+- [x] 错误码用 `as const` 字面量联合，不是字符串
+- [x] 全局 `onError` 处理 VALIDATION / NOT_FOUND / Pg 23505 / BizError / Unknown（见 `plugins/error-handler.ts`）
+- [x] 未知错误响应不泄露 stack，但日志里有
+- [ ] 响应包含 traceId（reqId）便于排查 —— ⚠️ reqId 目前只在日志（childLogger），未进响应体，待补
 
 ### 响应壳
-- [ ] 所有业务路由响应统一 `{ code, msg, data, traceId }`
-- [ ] OpenAPI / health 等白名单不被包装
-- [ ] 已是包装格式的不重复包
+- [ ] 所有业务路由响应统一 `{ code, msg, data, traceId }` —— ⚠️ 当前只有 `{ code, msg, data }`，缺 traceId，待补
+- [x] OpenAPI / health 等白名单不被包装
+- [x] 已是包装格式的不重复包
 
 ### 请求上下文
-- [ ] 每个请求有 reqId（v7 uuid，可排序）
-- [ ] logger 打日志带 reqId
-- [ ] 请求完成日志包含耗时和 status
+- [x] 每个请求有 reqId（v4 uuid，`crypto.randomUUID()`）
+- [x] logger 打日志带 reqId（childLogger 绑定）
+- [ ] 请求完成日志包含耗时和 status —— ⚠️ 已含耗时（duration），缺 status 字段，待补
 
 ### JWT
 - [ ] access / refresh 双 token
@@ -191,11 +191,11 @@ curl localhost:3000/users -H "Authorization: Bearer $TOKEN"
 
 # 不带 token，401
 curl localhost:3000/users
-# 响应: { "code": "A0001", "msg": "未登录", "data": null }
+# 响应: { "code": "A0001", "msg": "未登录", "data": null, "traceId": "..." }
 
 # 切英文
 curl localhost:3000/users -H "Accept-Language: en"
-# 响应: { "code": "A0001", "msg": "Unauthorized", "data": null }
+# 响应: { "code": "A0001", "msg": "Unauthorized", "data": null, "traceId": "..." }
 
 # logout
 curl -XPOST localhost:3000/auth/logout -H "Authorization: Bearer $TOKEN"

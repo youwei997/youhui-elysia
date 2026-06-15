@@ -8,7 +8,7 @@
 |---|---|---|---|---|
 | 1 · 地基 | ⭐ | 3-4d | ✅ 已完成 | [stage-1-foundation.md](./stage-1-foundation.md) |
 | 2 · 基础 CRUD | ⭐⭐ | 2-3d | ✅ 已完成 | [stage-2-basic-crud.md](./stage-2-basic-crud.md) |
-| 3 · 横切 Plugin 体系 | ⭐⭐⭐ | 4-5d | ⬜ 未开始 | [stage-3-plugins.md](./stage-3-plugins.md) |
+| 3 · 横切 Plugin 体系 | ⭐⭐⭐ | 4-5d | 🟡 进行中（3.1-3.3 完成） | [stage-3-plugins.md](./stage-3-plugins.md) |
 | 4 · 权限核心 | ⭐⭐⭐⭐⭐ | 6-7d | ⬜ 未开始 | [stage-4-rbac.md](./stage-4-rbac.md) |
 | 5 · 进阶辅助模块 | ⭐⭐⭐ | 4-5d | ⬜ 未开始 | [stage-5-modules.md](./stage-5-modules.md) |
 | 6 · 代码生成器 | ⭐⭐⭐⭐ | 5-6d | ⬜ 未开始 | [stage-6-codegen.md](./stage-6-codegen.md) |
