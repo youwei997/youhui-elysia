@@ -1,12 +1,15 @@
 import { Elysia } from "elysia";
 import { logger } from "@/lib/logger";
 
+/** 请求完成日志跳过的路径前缀（文档页、favicon 等噪音请求） */
+const LOG_SKIP_PREFIXES = ["/openapi", "/favicon.ico", "/health"];
+
 /**
  * 请求上下文 plugin：为每个请求注入 reqId + 子 logger + 耗时统计
  *
  * - onRequest 生成 reqId（uuid v4）+ startTime，写入 store
  * - derive 把 reqId 和子 logger 挂到 ctx，让 handler/其他 plugin 直接用
- * - onAfterResponse 打"请求完成"日志（reqId + 耗时 + status）
+ * - onAfterResponse 打"请求完成"日志（reqId + 耗时 + status），噪音请求跳过
  *
  * 装配：必须在 errorHandler 之前 use，确保 error-handler 能读到 store.reqId。
  * reqId 原理详见 docs/architecture.md 4.2.1。
@@ -24,11 +27,15 @@ export const requestContext = new Elysia({ name: "request-context" })
 		store.startTime = performance.now();
 	})
 	.onAfterResponse({ as: "global" }, ({ store, request }) => {
+		const { pathname } = new URL(request.url);
+		if (LOG_SKIP_PREFIXES.some((p) => pathname.startsWith(p))) {
+			return;
+		}
 		const duration = performance.now() - store.startTime;
 		logger.child({ reqId: store.reqId }).info(
 			{
 				method: request.method,
-				path: request.url,
+				path: pathname,
 				duration: Math.round(duration),
 			},
 			"请求完成",
