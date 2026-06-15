@@ -2,10 +2,12 @@ import { openapi } from "@elysia/openapi";
 import { Elysia } from "elysia";
 import { userRoutes } from "@/modules/user/routes";
 import { errorHandler } from "@/plugins/error-handler";
+import { responseWrap } from "@/plugins/response-wrap";
 
 export const app = new Elysia()
 	// favicon 直接返回 204，避免浏览器自动请求触发 NOT_FOUND 污染日志
 	.get("/favicon.ico", () => new Response(null, { status: 204 }))
+	.use(responseWrap)
 	.use(errorHandler)
 	.use(
 		openapi({
