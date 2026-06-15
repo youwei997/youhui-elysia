@@ -228,6 +228,35 @@ export const UserUpdateBody = createUpdateSchema(sysUser, { ... })
 **配套**：refine 里覆盖字段类型时直接传 ZodType（如 `gender: genderSchema`）即"覆盖"语义，drizzle 官方支持（文档 Refinements 章节："providing a Zod schema will overwrite it"）。
 ---
 
+### 响应壳用 `mapResponse` 类型报错，应改用 `onAfterHandle`
+
+**现象**：
+```
+Type 'unknown' is not assignable to type 'MaybePromise<void | Response>'.
+```
+
+**原因**：`mapResponse` 的回调签名是 `(ctx) => MaybePromise<Response | void>`，要求返回标准 `Response` 对象（它是给"手动序列化"场景用的）。返回普通对象 `{ code, msg, data }` 类型对不上。
+
+```ts
+// ❌ mapResponse 返回普通对象，类型不匹配
+new Elysia().mapResponse({ as: "global" }, ({ responseValue }) => {
+  return { code: "00000", msg: "成功", data: responseValue }
+})
+```
+
+**修复**：改用 `onAfterHandle`，回调签名是 `(ctx) => MaybePromise<unknown | void>`，返回普通对象合法：
+
+```ts
+// ✅ onAfterHandle 返回普通对象，类型自洽
+new Elysia().onAfterHandle({ as: "global" }, ({ responseValue }) => {
+  return { code: "00000", msg: "成功", data: responseValue }
+})
+```
+
+**附带**：不需要判断"返回值是否已是壳格式"来防重复包，因为 `onError`（handler 抛错）和 `onAfterHandle`（handler 正常返回）互斥，error-handler 返回的 `{ code, msg, data }` 不会进入 onAfterHandle。
+
+---
+
 ### 改了代码不生效——先查端口有没有僵尸进程
 
 **现象**：改了 error-handler 代码（plugin 形式装配到 app.ts），curl 测试一直返回旧的错误格式（500 + 纯文本），怎么改都不生效。

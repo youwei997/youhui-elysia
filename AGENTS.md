@@ -138,7 +138,7 @@ if (!user) return null  // 静默吞错
 
 - **横切关注点 = Elysia plugin**（不是装饰器、不是 AOP、不是 Reflector）
 - **优先用 `derive` / `resolve` / `macro`** 而不是手动 `onBeforeHandle` 串多个 guard
-- **响应壳用 `mapResponse`**，不要在每个 handler 里手动包 `{ code, msg, data }`
+- **响应壳用 `onAfterHandle`**，不要在每个 handler 里手动包 `{ code, msg, data }`（`mapResponse` 要求返回 `Response` 对象，不适合此场景，详见 troubleshooting）
 - **路由声明权限用 macro**：`requirePerm: 'sys:user:create'`，不要写装饰器风格
 - **plugin 必须命名**：`new Elysia({ name: 'auth' })` 启用去重
 - **路由 detail 必填**：`detail: { tags: [...], summary: '...' }`，让 OpenAPI 文档可读
