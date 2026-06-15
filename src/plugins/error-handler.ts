@@ -17,6 +17,7 @@ import { logger } from "@/lib/logger";
 export const errorHandler = new Elysia({ name: "error-handler" }).onError(
 	{ as: "global" },
 	({ error, code, set, request, store }) => {
+		// TODO(3.3 request-context): plugin 用 .state() 声明 reqId 后去掉 as 断言
 		const traceId = (store as { reqId?: string }).reqId;
 
 		// 0. 接口不存在（路由未匹配，如拼错 URL 或浏览器请求 favicon）
