@@ -40,6 +40,7 @@ export const ERR_CODE = {
 
 	// C 第三方服务错误
 	THIRD_PARTY_SERVICE_ERROR: "C0001", // 调用第三方服务出错
+	INTERFACE_NOT_EXIST: "C0113", // 接口不存在
 	DATABASE_EXECUTION_ERROR: "C0310", // 数据库执行异常
 	INTEGRITY_CONSTRAINT_VIOLATION: "C0342", // 违反完整性约束（如唯一冲突）
 } as const;
@@ -61,6 +62,7 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.SYSTEM_ERROR]: "系统执行出错",
 	[ERR_CODE.THIRD_PARTY_SERVICE_ERROR]: "调用第三方服务出错",
+	[ERR_CODE.INTERFACE_NOT_EXIST]: "接口不存在",
 	[ERR_CODE.DATABASE_EXECUTION_ERROR]: "数据库执行异常",
 	[ERR_CODE.INTEGRITY_CONSTRAINT_VIOLATION]: "违反了完整性约束",
 };

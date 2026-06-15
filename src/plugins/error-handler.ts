@@ -19,6 +19,12 @@ export const errorHandler = new Elysia({ name: "error-handler" }).onError(
 	({ error, code, set, request, store }) => {
 		const traceId = (store as { reqId?: string }).reqId;
 
+		// 0. 接口不存在（路由未匹配，如拼错 URL 或浏览器请求 favicon）
+		if (code === "NOT_FOUND") {
+			set.status = 404;
+			return failed(ERR_CODE.INTERFACE_NOT_EXIST);
+		}
+
 		// 1. 参数校验失败（zod schema 校验不通过）
 		if (code === "VALIDATION") {
 			set.status = 422;
