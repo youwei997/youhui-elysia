@@ -1,10 +1,5 @@
 import { Elysia } from "elysia";
-import {
-	BizError,
-	ERR_CODE,
-	failed,
-	type Result,
-} from "@/lib/errors";
+import { BizError, ERR_CODE, failed, type Result } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
 /**
@@ -19,8 +14,9 @@ import { logger } from "@/lib/logger";
  *
  * 装配：app.use(errorHandler)，as: "global" 让它兜底所有路由。
  */
-export const errorHandler = new Elysia({ name: "error-handler" })
-	.onError({ as: "global" }, ({ error, code, set, request, store }) => {
+export const errorHandler = new Elysia({ name: "error-handler" }).onError(
+	{ as: "global" },
+	({ error, code, set, request, store }) => {
 		const traceId = (store as { reqId?: string }).reqId;
 
 		// 1. 参数校验失败（zod schema 校验不通过）
@@ -62,4 +58,5 @@ export const errorHandler = new Elysia({ name: "error-handler" })
 		);
 		set.status = 500;
 		return failed(ERR_CODE.SYSTEM_ERROR);
-	});
+	},
+);

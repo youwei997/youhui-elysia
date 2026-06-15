@@ -1,8 +1,8 @@
 import { and, count, eq, isNull, like } from "drizzle-orm";
 import type z from "zod";
 import { db } from "@/db/client";
-import { sysUser } from "@/db/schema/system/user";
 import type { PageResult } from "@/db/helpers/pagination";
+import { sysUser } from "@/db/schema/system/user";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
 
 /**
