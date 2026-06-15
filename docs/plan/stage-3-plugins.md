@@ -44,10 +44,11 @@
 ### 3.3 请求上下文（plugin/request-context）(0.5d)
 
 `src/plugins/request-context.ts`：
-- `onRequest` 注入 `reqId`（uuid v7）+ `startTime`
+- `onRequest` 注入 `reqId`（uuid v4，用 Bun 内置 `crypto.randomUUID()`）+ `startTime`
 - `derive` 把 `reqId` 挂到 ctx 上
 - 创建子 logger `logger.child({ reqId })` 也挂到 ctx
 - `onAfterResponse` 打"请求完成"日志（含耗时、status）
+- 原理详见 `docs/architecture.md` 4.2.1 节（reqId 是内存临时编号，不存表；与阶段 5 的操作日志表是两回事）
 
 ### 3.4 JWT 库（lib/jwt）(0.5d)
 

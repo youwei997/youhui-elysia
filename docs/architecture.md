@@ -110,6 +110,34 @@ youhui-elysia/
 不准用：装饰器、AOP、拦截器、Reflector、metadata。
 只能用：Elysia 的 `derive` / `resolve` / `macro` / `onError` / `onAfterHandle` / `mapResponse`。
 
+### 4.2.1 请求追踪（reqId）与日志体系
+
+**reqId 是什么**：每次 HTTP 请求进来时临时生成的 uuid（v4），生命周期 = 一次请求从进来到响应发出。**不存任何数据库表**，只挂在内存的 ctx 和 store 上，请求结束即销毁。
+
+**为什么需要它**：一次请求可能打多条日志（收到请求 → 查库 → 校验 → 出错），并发请求的日志会混在一起。带上同一个 reqId，`grep <reqId>` 就能捞出这次请求的全链路日志。错误响应里也返回 reqId，前端把它反馈给用户，后端凭编号直接定位是哪一次、哪一步炸的。
+
+**实现**（`plugin/request-context`）：
+
+```
+HTTP 请求进来
+  ↓ onRequest：生成 reqId（uuid v4）+ startTime，存到 ctx 和 store
+  ↓ handler 跑业务，用 ctx.logger（子 logger，自动带 reqId）打日志
+  ↓ 出错？→ error-handler 从 store 读 reqId 塞进错误响应
+  ↓ onAfterResponse：打"请求完成"日志（reqId + 耗时 + status）
+请求结束，reqId 随 ctx 销毁
+```
+
+**⚠️ 区分两类日志，不要混淆**：
+
+| | 请求日志（pino 输出） | 操作日志（业务表） |
+|---|---|---|
+| 存哪 | 控制台 / 文件 / 日志平台 | 数据库 `sys_oper_log` 表 |
+| 内容 | 技术细节：reqId、耗时、stack、SQL 错误 | 业务行为：谁（userId）何时做了何操作（"删除用户 5"） |
+| 给谁看 | 后端开发排查 bug | 管理员审计、合规留痕 |
+| reqId | **每条都带** | 不带（业务维度，非技术维度） |
+
+操作日志表是阶段 5 才做的事，阶段 3 只做请求日志 + reqId 追踪。
+
 ### 4.3 错误处理
 
 - 错误码：**`as const` 字面量联合类型**（不是字符串）
