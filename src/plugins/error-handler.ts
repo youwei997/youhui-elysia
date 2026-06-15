@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { BizError, ERR_CODE, failed, type Result } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { requestContext } from "@/plugins/request-context";
 
 /**
  * 全局错误处理 plugin
@@ -12,13 +13,17 @@ import { logger } from "@/lib/logger";
  * 3. Postgres 唯一约束冲突（23505）→ C0342
  * 4. 未知错误 → B0001，打日志含 stack，响应不泄露 stack
  *
+ * traceId 取自 requestContext 注入的 reqId（每请求独立，避免并发串号）。
+ * 这里 .use(requestContext) 仅借用其 context 类型让 onError 能解构 reqId——
+ * requestContext 是纯 context provider，同名 plugin 在 app 装配时自动去重，
+ * 不会重复挂载；属 Elysia"基础 plugin 提供共享 context 类型"模式，非业务耦合。
+ *
  * 装配：app.use(errorHandler)，as: "global" 让它兜底所有路由。
  */
 export const errorHandler = new Elysia({ name: "error-handler" })
-	// requestContext 注入的 store 字段，这里声明类型让下方能直接读 store.reqId
-	.state("reqId", "")
-	.onError({ as: "global" }, ({ error, code, set, request, store }) => {
-		const traceId = store.reqId;
+	.use(requestContext) // 只为 onError 提供 reqId 类型，app 已装配过一次了，不会重复挂载
+	.onError({ as: "global" }, ({ error, code, set, request, reqId }) => {
+		const traceId = reqId;
 
 		// 0. 接口不存在（路由未匹配，如拼错 URL 或浏览器请求 favicon）
 		if (code === "NOT_FOUND") {

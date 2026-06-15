@@ -7,32 +7,34 @@ const LOG_SKIP_PREFIXES = ["/openapi", "/favicon.ico", "/health"];
 /**
  * 请求上下文 plugin：为每个请求注入 reqId + 子 logger + 耗时统计
  *
- * - onRequest 生成 reqId（uuid v4）+ startTime，写入 store
- * - derive 把 reqId 和子 logger 挂到 ctx，让 handler/其他 plugin 直接用
- * - onAfterResponse 打"请求完成"日志（reqId + 耗时 + status），噪音请求跳过
+ * 设计要点（详见 docs/troubleshooting.md "reqId 不放 store"）：
+ * - reqId / startTime 放 derive 的 per-request context，**不放全局 store**。
+ *   store 是整个 app 共享的单例，多个并发请求写同一字段会竞态串号。
+ * - derive 回调每个请求执行一次，返回值挂到该请求独立的 context 上，
+ *   天然隔离，等价于 Koa 的 ctx.reqId。
  *
- * 装配：必须在 errorHandler 之前 use，确保 error-handler 能读到 store.reqId。
  * reqId 原理详见 docs/architecture.md 4.2.1。
  */
 export const requestContext = new Elysia({ name: "request-context" })
-	.state("reqId", "")
-	.state("startTime", 0)
-	// 子 logger：把 reqId 绑死在 logger 上，handler 后续打日志自动带 reqId，不用每次手动传
-	.derive({ as: "global" }, ({ store }) => {
-		const childLogger = logger.child({ reqId: store.reqId });
-		return { reqId: store.reqId, logger: childLogger };
+	// 每请求生成独立的 reqId / startTime / 子 logger，挂到 context（非 store）
+	.derive({ as: "global" }, () => {
+		const reqId = crypto.randomUUID();
+		return {
+			reqId,
+			startTime: performance.now(),
+			logger: logger.child({ reqId }),
+		};
 	})
-	.onRequest(({ store }) => {
-		store.reqId = crypto.randomUUID();
-		store.startTime = performance.now();
-	})
-	.onAfterResponse({ as: "global" }, ({ store, request }) => {
+	.onAfterResponse({ as: "global" }, ({ reqId, startTime, request }) => {
+		// 只取 pathname 做前缀匹配，不带 query，避免 ?id=xxx 这类查询串干扰白名单判断
 		const { pathname } = new URL(request.url);
+		// 文档页/favicon/健康检查这类请求量大且无业务意义，逐条打日志纯属噪音，跳过
 		if (LOG_SKIP_PREFIXES.some((p) => pathname.startsWith(p))) {
 			return;
 		}
-		const duration = performance.now() - store.startTime;
-		logger.child({ reqId: store.reqId }).info(
+		// duration 取整到毫秒：微秒级精度对排障无意义，且让日志更易读
+		const duration = performance.now() - startTime;
+		logger.child({ reqId }).info(
 			{
 				method: request.method,
 				path: pathname,

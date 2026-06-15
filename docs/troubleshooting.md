@@ -9,6 +9,7 @@
 ### `.get()` 仅 SQLite 可用，PG/MySQL 用 `rows[0]`
 
 **错误**：
+
 ```
 Property 'get' does not exist on type 'Omit<PgAsyncSelectBase<...>,...>'
 ```
@@ -16,6 +17,7 @@ Property 'get' does not exist on type 'Omit<PgAsyncSelectBase<...>,...>'
 **原因**：`.get()` 是 Drizzle **SQLite** 独有 API，PostgreSQL 不存在。
 
 **修复**：
+
 ```ts
 // ❌ PG 不可用
 return db.select().from(sysUser).where(eq(sysUser.id, id)).get();
@@ -30,6 +32,7 @@ return rows[0];
 ### `.where()` 不接收数组，需用 `and()` / `or()` 合并
 
 **错误**：
+
 ```
 Argument of type 'SQL<unknown>[] | undefined' is not assignable to parameter of type 'SQL<unknown> | undefined'
 ```
@@ -37,6 +40,7 @@ Argument of type 'SQL<unknown>[] | undefined' is not assignable to parameter of 
 **原因**：Drizzle 的 `.where()` 只接受**单个 SQL 表达式**，不接受数组。
 
 **修复**：
+
 ```ts
 // ❌ 数组传入
 .where(where.length ? where : undefined)
@@ -50,6 +54,7 @@ Argument of type 'SQL<unknown>[] | undefined' is not assignable to parameter of 
 ### count() 查询结果类型推断为 `| undefined`
 
 **错误**：
+
 ```
 Property 'total' does not exist on type '{ total: number; } | undefined'
 ```
@@ -57,6 +62,7 @@ Property 'total' does not exist on type '{ total: number; } | undefined'
 **原因**：`db.select(...)` 返回 `T[]`，TypeScript 认为数组第一个元素可能为 `undefined`。
 
 **修复**：
+
 ```ts
 // ❌ 直接解构
 const [{ total }] = await db.select({ total: count() }).from(sysUser).where(...);
@@ -73,6 +79,7 @@ const total = result[0]?.total ?? 0;
 ### Zod 4 中 `ZodError.errors` 已废弃
 
 **错误**：
+
 ```
 Property 'errors' does not exist on type 'ZodError<unknown>'
 ```
@@ -80,6 +87,7 @@ Property 'errors' does not exist on type 'ZodError<unknown>'
 **原因**：Zod 4 将 `errors` 改名为 `issues`（与标准规范对齐）。
 
 **修复**：
+
 ```ts
 // ❌ Zod 3
 err.errors.map(...)
@@ -95,6 +103,7 @@ err.issues.map(...)
 ### `baseUrl` 在 TypeScript 7.0 中将废弃
 
 **错误**：
+
 ```
 error TS5101: Option 'baseUrl' is deprecated and will stop functioning in TypeScript 7.0
 ```
@@ -110,6 +119,7 @@ error TS5101: Option 'baseUrl' is deprecated and will stop functioning in TypeSc
 ### 不可对 insertSchema omit 不存在的字段
 
 **错误**：
+
 ```
 Object literal may only specify known properties, and 'id' does not exist...
 ```
@@ -129,6 +139,7 @@ Object literal may only specify known properties, and 'id' does not exist...
 **原因**：Drizzle `timestamp` 字段默认 `mode: "date"`，drizzle-zod 推导为 `z.date()`。`@elysia/openapi` 无法将 `z.date()` 映射为 JSON Schema（JSON Schema 无 Date 原生类型）。
 
 **修复**：timestamp 字段加 `mode: "string"`，让 drizzle-zod 推导为 `z.string()`（ISO 字符串）：
+
 ```ts
 // 改前
 createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -138,6 +149,7 @@ createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defau
 ```
 
 配套改动：手动设值处传 ISO 字符串而非 Date 对象：
+
 ```ts
 // 改前
 .set({ deletedAt: new Date() })
@@ -159,6 +171,7 @@ Type 'unknown' is not assignable to type 'string | SQL<unknown> | Placeholder<st
 **原因**：drizzle-orm/zod 的 refine 类型是 `BuildRefineField<T> = ((schema: T) => z.ZodType) | z.ZodType`，最终字段类型取自**箭头函数的返回值**（`ReturnType<TRefinement>`）。手写 `s: z.ZodType` 把参数从「具体子类（如 `z.ZodString`）」降级成「基类」，`.describe()` 返回基类，于是整个 insert schema 的字段类型退化为 `unknown`。
 
 **修复**：去掉参数类型标注，让 TS 从 drizzle 泛型推导 `s` 为对应列的具体 zod 类型：
+
 ```ts
 // ❌ 标注 z.ZodType → 击穿类型，data 全部 unknown
 username: (s: z.ZodType) => s.describe("登录用户名"),
@@ -172,6 +185,7 @@ username: (s) => s.describe("登录用户名"),
 ### drizzle-orm/zod 的 refine 对象抽成共享 const 会触发 noImplicitAny
 
 **现象**：把 refine 对象抽成共享常量后，编辑器报：
+
 ```
 Parameter 's' implicitly has an 'any' type. ts(7006)
 ```
@@ -179,10 +193,11 @@ Parameter 's' implicitly has an 'any' type. ts(7006)
 **原因**：TS 的 contextual typing（反向推导）只在**对象字面量直接作为函数实参**时触发。先 `const x = {...}` 再 `fn(x)`，TS 会先独立推导 `x` 的类型，此时箭头函数参数 `s` 无上下文 → 退化为 `any`，触发 `noImplicitAny`。inline 时 drizzle 的泛型参数直接约束对象字面量，`s` 才能被正确推导为 `z.ZodString`。
 
 **修复**：refine 对象必须 inline 写进 `createInsertSchema`/`createUpdateSchema` 调用，不能抽成共享 const：
+
 ```ts
 // ❌ 抽常量 → s 退化为 any
 const userFieldRefine = {
-  username: (s) => s.describe("登录用户名"),  // ts(7006)
+  username: (s) => s.describe("登录用户名"), // ts(7006)
 };
 createInsertSchema(sysUser, userFieldRefine);
 
@@ -192,18 +207,19 @@ createInsertSchema(sysUser, {
 });
 ```
 
-**代价**：Create/Update 共享相同描述时需各写一份 refine（无法复用）。这是 drizzle 类型推导的限制，接受重复换取类型正确。
----
+## **代价**：Create/Update 共享相同描述时需各写一份 refine（无法复用）。这是 drizzle 类型推导的限制，接受重复换取类型正确。
 
 ### drizzle-orm/zod 直接从表派生会暴露审计列/id/敏感字段
 
 **现象**：`PUT /users/:id` 的 body schema 把 `createdAt`/`createdBy`/`updatedAt`/`updatedBy`/`deletedAt`/`id`/`password` 全部暴露给前端，前端可直接篡改创建时间、清空 `deletedAt` 反软删、改 `id` 引发主键错乱。
 
 **原因**：
+
 1. `createInsertSchema`/`createUpdateSchema` 直接从整张表派生，**所有列都进 schema**，包括审计列。
 2. `generatedByDefaultAsIdentity` 的 `id` **不会被自动排除**——只有 `generatedAlwaysAsIdentity` 才会被 `createUpdateSchema` 自动排除（文档：update schema 对 generated column 会排除）。本项目 id 用的是 `generatedByDefault`（为支持 seed 手动插），所以泄漏。
 
 **修复**：用 `.omit({ 字段: true })` 显式排除服务端控制的字段，审计列统一抽 `auditKeys` 复用：
+
 ```ts
 const auditKeys = {
   id: true, createdBy: true, createdAt: true,
@@ -220,17 +236,18 @@ export const UserUpdateBody = createUpdateSchema(sysUser, { ... })
 ```
 
 **原则**：
+
 - 审计列（createdAt/createdBy/.../deletedAt）永远由服务端控制，前端不可注入
 - `id` 从路径参数来，不在 body
 - `password` 更新走专用接口（带旧密码校验），不在通用 PUT 里
 - 业务枚举字段（gender/status）用 `z.literal` 联合覆盖 smallint 原始范围，消除 `-32768~32767` 这种无意义边界
 
-**配套**：refine 里覆盖字段类型时直接传 ZodType（如 `gender: genderSchema`）即"覆盖"语义，drizzle 官方支持（文档 Refinements 章节："providing a Zod schema will overwrite it"）。
----
+## **配套**：refine 里覆盖字段类型时直接传 ZodType（如 `gender: genderSchema`）即"覆盖"语义，drizzle 官方支持（文档 Refinements 章节："providing a Zod schema will overwrite it"）。
 
 ### 响应壳用 `mapResponse` 类型报错，应改用 `onAfterHandle`
 
 **现象**：
+
 ```
 Type 'unknown' is not assignable to type 'MaybePromise<void | Response>'.
 ```
@@ -240,8 +257,8 @@ Type 'unknown' is not assignable to type 'MaybePromise<void | Response>'.
 ```ts
 // ❌ mapResponse 返回普通对象，类型不匹配
 new Elysia().mapResponse({ as: "global" }, ({ responseValue }) => {
-  return { code: "00000", msg: "成功", data: responseValue }
-})
+  return { code: "00000", msg: "成功", data: responseValue };
+});
 ```
 
 **修复**：改用 `onAfterHandle`，回调签名是 `(ctx) => MaybePromise<unknown | void>`，返回普通对象合法：
@@ -249,8 +266,8 @@ new Elysia().mapResponse({ as: "global" }, ({ responseValue }) => {
 ```ts
 // ✅ onAfterHandle 返回普通对象，类型自洽
 new Elysia().onAfterHandle({ as: "global" }, ({ responseValue }) => {
-  return { code: "00000", msg: "成功", data: responseValue }
-})
+  return { code: "00000", msg: "成功", data: responseValue };
+});
 ```
 
 **附带**：不需要判断"返回值是否已是壳格式"来防重复包，因为 `onError`（handler 抛错）和 `onAfterHandle`（handler 正常返回）互斥，error-handler 返回的 `{ code, msg, data }` 不会进入 onAfterHandle。
@@ -288,4 +305,3 @@ powershell -Command "Stop-Process -Id <PID> -Force"
 ```
 
 **预防**：每次启 bun dev 前先 `netstat` 确认端口干净；重启服务前确认上次进程真的退了。Windows 上 bun 进程比 node 更容易留僵尸。
-
