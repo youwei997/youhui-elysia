@@ -158,7 +158,7 @@
 ### 请求上下文
 - [x] 每个请求有 reqId（v4 uuid，`crypto.randomUUID()`）
 - [x] logger 打日志带 reqId（childLogger 绑定）
-- [ ] 请求完成日志包含耗时和 status —— ⚠️ 已含耗时（duration），缺 status 字段，待补
+- [x] 请求完成日志包含耗时和 status
 
 ### JWT
 - [x] access / refresh 双 token
@@ -177,8 +177,8 @@
 ### Macro / Plugin
 - [x] `auth: true` macro 在路由声明即生效
 - [ ] user 模块所有路由挂上 `auth: true`，无 token 返回 401
-- [ ] 全项目无 `import 'reflect-metadata'`
-- [ ] 全项目无装饰器（除了 zod 校验等纯运行时库内部）
+- [x] 全项目无 `import 'reflect-metadata'`
+- [x] 全项目无装饰器（除了 zod 校验等纯运行时库内部）
 
 ### i18n
 - [ ] 默认 zh，请求带 `Accept-Language: en` 切英文
