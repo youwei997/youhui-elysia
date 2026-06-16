@@ -21,7 +21,9 @@ DB:           PostgreSQL  (docker dev / Neon prod)
 Cache:        Redis        (docker dev / Redis Cloud Free prod)
 Storage:      抽象层 + drivers (local-fs / s3 / 七牛 prod 候选)
 Validation:   zod (env + body/query/params 校验，配合 drizzle-orm/zod 从表派生)
-Auth:         JWT (jose) + Redis 三层失效（tokenVersion + jti + exp）
+Auth:         JWT (jose) + Redis 三层失效（exp + tokenVersion + jti 黑名单）
+              - jti 用 `crypto.randomUUID()` v4 UUID，单 token 精准注销
+              - tokenVersion 用于批量失效（改密码 / 踢全部端）
 Logger:       pino
 Queue:        pg-boss (基于 PostgreSQL，零额外组件)
 Test:         bun:test

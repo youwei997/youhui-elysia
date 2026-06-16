@@ -57,6 +57,9 @@
 - 函数：`signAccessToken(payload)` / `signRefreshToken(payload)` / `verifyToken(token)`
 - access token 短期（15min），refresh token 长期（7d）
 - payload 结构：`{ sub, username, roles, perms, dataScopes, tokenVersion, jti }`
+  - `jti`（JWT ID）：**单 token 唯一标识**，由调用方通过 `crypto.randomUUID()` 生成 v4 UUID
+    - 不是用户级、不是设备级，就是"这一个 token"的身份证号
+    - logout 时把 jti 写入 Redis 黑名单，TTL 等于 token 剩余有效期
 
 **三层失效设计**（关键，参考 youlai-boot）：
 1. **`exp`**：JWT 自带过期
