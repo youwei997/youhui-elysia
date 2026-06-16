@@ -305,3 +305,39 @@ powershell -Command "Stop-Process -Id <PID> -Force"
 ```
 
 **预防**：每次启 bun dev 前先 `netstat` 确认端口干净；重启服务前确认上次进程真的退了。Windows 上 bun 进程比 node 更容易留僵尸。
+
+---
+
+## JWT / Auth
+
+### clockTolerance 必须 > 0
+
+`verifyToken` 里设 `clockTolerance: 60`（秒），否则边缘过期的 token 在服务器时钟稍有偏差时被误杀。测试构造过期 token 时，过期时间必须超过容错值（如 `-120s` 而非 `-1s`）。
+
+### tokenVersion 为 null 时不能拒绝
+
+新用户首次登录时 Redis 里没有 `auth:user:{id}:version` key（`null`），此时要跳过校验而非拒绝。代码必须写成：
+
+```ts
+if (currentVersion !== null && Number(currentVersion) !== jwtPayload.tokenVersion) {
+  throw unauthorized();
+}
+```
+
+而非简化成 `if (Number(currentVersion) !== ...)`——否则 `Number(null) === 0` 但逻辑脆弱，且 `tokenVersion` 从 1 开始后新用户全被拒。
+
+### `not.toBeNull()` 不会收窄 TypeScript 类型
+
+```ts
+expect(body.user).not.toBeNull();
+expect(body.user.sub).toBe("99"); // TS: body.user possibly null
+```
+
+**原因**：`expect().not.toBeNull()` 是运行时断言，TypeScript 不会因此收窄联合类型。
+
+**修复**：用 `if (!x) throw` 强制收窄：
+
+```ts
+if (!body.user) throw new Error("expected user to be non-null");
+expect(body.user.sub).toBe("99");
+```

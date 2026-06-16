@@ -53,28 +53,35 @@
 ### 3.4 JWT 库（lib/jwt）(0.5d)
 
 `src/lib/jwt.ts`：
-- 基于 `jose`，HS256 对称签名
+- 算法：HS256 对称签名（选型见 `docs/notes/2026-06-16-为什么选jose不选官方jwt插件.md`）
 - 函数：`signAccessToken(payload)` / `signRefreshToken(payload)` / `verifyToken(token)`
 - access token 短期（15min），refresh token 长期（7d）
+- `verifyToken` 设 `clockTolerance: 60`（秒），避免边缘过期时时钟偏差误杀
 - payload 结构：`{ sub, username, roles, perms, dataScopes, tokenVersion, jti }`
   - `jti`（JWT ID）：**单 token 唯一标识**，由调用方通过 `crypto.randomUUID()` 生成 v4 UUID
     - 不是用户级、不是设备级，就是"这一个 token"的身份证号
     - logout 时把 jti 写入 Redis 黑名单，TTL 等于 token 剩余有效期
 
 **三层失效设计**（关键，参考 youlai-boot）：
-1. **`exp`**：JWT 自带过期
+1. **`exp`**：JWT 自带过期，由 jose 自动校验
 2. **`tokenVersion`**：用户级版本号，存在 Redis `auth:user:{id}:version`，改密码/踢全部时 +1
+   - 查 Redis 为 `null` 时跳过校验（新用户首次登录兼容），有值才比对
 3. **`jti`**：单 token 注销，存在 Redis `auth:revoked:{jti}` 黑名单（值=过期时间）
+   - key 存在即拒绝，值只起占位作用
 
-校验逻辑：先验签 + exp → 查 tokenVersion → 查 jti 黑名单。
+校验逻辑：先验签 + exp（jose 自动）→ 查 tokenVersion → 查 jti 黑名单。
+
+**错误处理策略**：
+- 验签/过期 → 抛出 jose 原生错误，`verifyToken` 不 catch，由调用方（auth plugin 的 derive）try/catch 降级为 `user = null`
+- tokenVersion 不匹配 / jti 黑名单命中 → 抛出 `BizError`（401，`ACCESS_TOKEN_INVALID`），同样由 derive catch 降级
 
 ### 3.5 auth plugin（derive ctx.user）(0.5d)
 
 `src/plugins/auth.ts`：
 - 一个 Elysia plugin
 - `derive` 从 `Authorization: Bearer xxx` 解析 token → 校验 → 注入 `ctx.user`
-- token 缺失：`ctx.user = null`（**不在 plugin 里直接 401**，让具体路由用 `requireAuth` macro 决定）
-- 实现 `requireAuth` macro：路由声明 `auth: true` 自动校验 user 非空
+- token 缺失：`ctx.user = null`（**不在 plugin 里直接 401**，让具体路由用 `auth` macro 决定）
+- 实现 `auth` macro：路由声明 `auth: true` 自动校验 user 非空
 
 > **核心范式**：不要装饰器 + Reflector + Guard 那套，就是 plugin + derive + macro。
 > 反例参考 `docs/architecture.md` 第 5 节。
@@ -154,10 +161,10 @@
 - [ ] 请求完成日志包含耗时和 status —— ⚠️ 已含耗时（duration），缺 status 字段，待补
 
 ### JWT
-- [ ] access / refresh 双 token
-- [ ] tokenVersion / jti 三层失效全实现
-- [ ] secret 从 env 读
-- [ ] payload 包含 roles / perms（为阶段 4 铺垫）
+- [x] access / refresh 双 token
+- [x] tokenVersion / jti 三层失效全实现
+- [x] secret 从 env 读
+- [x] payload 包含 roles / perms（为阶段 4 铺垫）
 
 ### Auth 模块
 - [ ] 登录返回 access + refresh
@@ -168,7 +175,7 @@
 - [ ] logout-all 把 tokenVersion +1，旧 token 全失效
 
 ### Macro / Plugin
-- [ ] `auth: true` macro 在路由声明即生效
+- [x] `auth: true` macro 在路由声明即生效
 - [ ] user 模块所有路由挂上 `auth: true`，无 token 返回 401
 - [ ] 全项目无 `import 'reflect-metadata'`
 - [ ] 全项目无装饰器（除了 zod 校验等纯运行时库内部）
