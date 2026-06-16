@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { db } from "@/db/client";
 import { BizError, ERR_CODE } from "@/lib/errors";
 import type { JwtPayload } from "@/lib/jwt";
 import { signAccessToken, signRefreshToken, verifyToken } from "@/lib/jwt";
@@ -64,7 +65,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 			}
 
 			// 2. 查找有效用户（软删过滤 + 状态正常）
-			const user = await findActiveUserByUsername(username);
+			const user = await findActiveUserByUsername(db, username);
 			if (!user) {
 				// 不暴露"用户不存在"，统一提示密码错误（防止枚举用户名）
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);

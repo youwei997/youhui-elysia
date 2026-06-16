@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "@/db/client";
+import type { DB } from "@/db/client";
 import { sysUser } from "@/db/schema/system/user";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
@@ -10,8 +10,13 @@ const MAX_FAIL_COUNT = 5;
 /** 登录失败计数 TTL（秒）：15 分钟窗口 */
 const FAIL_TTL = 15 * 60;
 
-/** 根据用户名查找有效用户（软删过滤 + 状态正常） */
+/**
+ * 根据用户名查找有效用户（软删过滤 + 状态正常）
+ * @param db Drizzle 实例（事务场景下传入 tx）
+ * @param username 用户名
+ */
 export const findActiveUserByUsername = async (
+	db: DB,
 	username: string,
 ): Promise<typeof sysUser.$inferSelect | undefined> => {
 	const rows = await db
