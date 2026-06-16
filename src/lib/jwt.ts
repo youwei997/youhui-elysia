@@ -32,6 +32,8 @@ export type JwtPayload = {
 	tokenVersion: number;
 	/** 单 token 唯一标识，用于注销 */
 	jti: string;
+	/** 过期时间（Unix 秒，由 jose setExpirationTime 注入） */
+	exp?: number;
 };
 
 /**

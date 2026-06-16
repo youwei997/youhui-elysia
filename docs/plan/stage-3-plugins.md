@@ -167,12 +167,12 @@
 - [x] payload 包含 roles / perms（为阶段 4 铺垫）
 
 ### Auth 模块
-- [ ] 登录返回 access + refresh
-- [ ] 登录失败计数 + 锁定可工作
-- [ ] 密码用 argon2/bcrypt 哈希
-- [ ] refresh 接口签新 token + 旧 refresh 入黑名单
-- [ ] logout 把当前 jti 入黑名单
-- [ ] logout-all 把 tokenVersion +1，旧 token 全失效
+- [x] 登录返回 access + refresh
+- [x] 登录失败计数 + 锁定可工作
+- [x] 密码用 argon2/bcrypt 哈希
+- [x] refresh 接口签新 token + 旧 refresh 入黑名单
+- [x] logout 把当前 jti 入黑名单
+- [x] logout-all 把 tokenVersion +1，旧 token 全失效
 
 ### Macro / Plugin
 - [x] `auth: true` macro 在路由声明即生效

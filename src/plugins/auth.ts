@@ -17,6 +17,9 @@ export type AuthContext = {
  *
  * 设计：token 缺失或校验失败时 user = null，不直接抛 401。
  * 公开路由和需登录路由都过 derive，差异由 auth macro 决定。
+ *
+ * 类型说明：macro 运行时拦截了 null 情况，但 TS 类型层面 ctx.user 仍是
+ * JwtPayload | null，handler 里需自行用 if (!user) 收窄（与 auth.test.ts 一致）。
  */
 export const authPlugin = new Elysia({ name: "auth" })
 	.derive({ as: "global" }, async ({ headers }): Promise<AuthContext> => {

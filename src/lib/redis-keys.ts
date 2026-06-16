@@ -19,4 +19,12 @@ export const redisKeys = {
 	revokedToken: (jti: string): string => {
 		return `auth:revoked:${jti}`;
 	},
+
+	/**
+	 * 登录失败计数（15 分钟窗口）
+	 * 连续失败达到上限后触发账户锁定
+	 */
+	loginFailCount: (username: string): string => {
+		return `auth:fail:${username}`;
+	},
 } as const;
