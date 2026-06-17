@@ -22,8 +22,9 @@ export const responseWrap = new Elysia({ name: "response-wrap" }).onAfterHandle(
 			return responseValue;
 		}
 
-		// typeof null === "object"，需额外排除 null；字符串/数字等非对象直接放行
-		if (typeof responseValue !== "object" || responseValue === null) {
+		// 仅放行 string（纯文本）和 undefined（Elysia 内部用），其余都包壳
+		// boolean/number/object/null 一律包成 { code, msg, data }
+		if (typeof responseValue === "string" || responseValue === undefined) {
 			return responseValue;
 		}
 

@@ -27,7 +27,13 @@ export const requestContext = new Elysia({ name: "request-context" })
 	})
 	.onAfterResponse({ as: "global" }, ({ reqId, startTime, request, set }) => {
 		// 只取 pathname 做前缀匹配，不带 query，避免 ?id=xxx 这类查询串干扰白名单判断
-		const { pathname } = new URL(request.url);
+		// URL 解析做 try/catch：某些边缘场景 request.url 为相对路径或空字符串会抛 ERR_INVALID_URL
+		let pathname: string;
+		try {
+			pathname = new URL(request.url).pathname;
+		} catch {
+			pathname = request.url || "<unknown>";
+		}
 		// 文档页/favicon/健康检查这类请求量大且无业务意义，逐条打日志纯属噪音，跳过
 		if (LOG_SKIP_PREFIXES.some((p) => pathname.startsWith(p))) {
 			return;
