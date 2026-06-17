@@ -100,7 +100,12 @@
 - `POST /auth/logout`：把当前 jti 入黑名单 + 删除当前 refresh token
 - `POST /auth/logout-all`：tokenVersion +1（踢用户所有端）
 
-### 3.7 i18n plugin (1d)
+### 3.7 ~~i18n plugin (1d)~~ 跳过
+
+> **不做了**。参考项目 youlai-boot 后端无 i18n，错误消息直接中文返。前端 vue-i18n 只翻 UI 文案。
+> 决策记录见 `docs/notes/2026-06-17-后端不做i18n.md`。
+
+原计划（保留作为未来参考，不再实施）：
 
 `src/lib/i18n.ts`：
 - 文案结构：`{ [errCode]: { zh: '...', en: '...' } }`
@@ -181,9 +186,16 @@
 - [x] 全项目无装饰器（除了 zod 校验等纯运行时库内部）
 
 ### i18n
-- [ ] 默认 zh，请求带 `Accept-Language: en` 切英文
-- [ ] 错误码 → 文案映射可工作
-- [ ] 文案文件按 locale 分
+- [x] ~~默认 zh，请求带 `Accept-Language: en` 切英文~~（跳过）
+- [x] ~~错误码 → 文案映射可工作~~（跳过）
+- [x] ~~文案文件按 locale 分~~（跳过）
+
+**跳过理由**（详见 `docs/notes/2026-06-17-后端不做i18n.md`）：
+
+1. 参考项目 youlai-boot 后端**没做** i18n，错误消息直接中文返回
+2. youlai 前端 vue-i18n **只翻 UI 文案**（按钮/菜单/表单），**不翻后端错误码**
+3. 错误消息直接用 `lib/errors.ts` 的 `ERR_MSG` 字典，UI 文案用前端 vue-i18n，分工清晰
+4. 未来若真要做国际化，把 `ERR_MSG` 拆成按 locale 选即可，不用动 plugin 架构
 
 ### 整体
 - [ ] `bun run check` 通过
