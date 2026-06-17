@@ -181,7 +181,9 @@
 
 ### Macro / Plugin
 - [x] `auth: true` macro 在路由声明即生效
-- [ ] user 模块所有路由挂上 `auth: true`，无 token 返回 401
+- [x] user 模块所有路由挂上 `auth: true`，无 token 返回 401
+
+> **运行时验证由开发者完成**（curl + 浏览器）：未带 token → 401 / 带 token → 200 / logout 后旧 token 失效 / logout-all 后所有 token 失效 / Swagger UI 有 Authorize 按钮可试调。
 - [x] 全项目无 `import 'reflect-metadata'`
 - [x] 全项目无装饰器（除了 zod 校验等纯运行时库内部）
 

@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { z } from "zod";
 import { notFound } from "@/lib/errors";
+import { authPlugin } from "@/plugins/auth";
 import {
 	createUser,
 	findUserById,
@@ -14,12 +15,14 @@ import { UserCreateBody, UserListQuery, UserUpdateBody } from "./schema";
 const ParamsWithId = z.object({ id: z.coerce.number() });
 
 export const userRoutes = new Elysia({ prefix: "/users" })
+	.use(authPlugin)
 	.get(
 		"/",
 		async ({ query }) => {
 			return findUsers(query);
 		},
 		{
+			auth: true,
 			query: UserListQuery,
 			detail: {
 				tags: ["User"],
@@ -38,6 +41,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 			return user;
 		},
 		{
+			auth: true,
 			params: ParamsWithId,
 			detail: {
 				tags: ["User"],
@@ -52,6 +56,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 			return createUser(body);
 		},
 		{
+			auth: true,
 			body: UserCreateBody,
 			detail: {
 				tags: ["User"],
@@ -70,6 +75,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 			return user;
 		},
 		{
+			auth: true,
 			body: UserUpdateBody,
 			params: ParamsWithId,
 			detail: {
@@ -89,6 +95,7 @@ export const userRoutes = new Elysia({ prefix: "/users" })
 			return user;
 		},
 		{
+			auth: true,
 			params: ParamsWithId,
 			detail: {
 				tags: ["User"],

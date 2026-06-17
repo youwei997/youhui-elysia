@@ -23,6 +23,20 @@ export const app = new Elysia()
 					{ name: "User", description: "用户管理" },
 					{ name: "Auth", description: "认证管理" },
 				],
+				components: {
+					securitySchemes: {
+						bearerAuth: {
+							type: "http",
+							scheme: "bearer",
+							bearerFormat: "JWT",
+							description:
+								"Bearer JWT，登录后从 /auth/login 返回里取 accessToken",
+						},
+					},
+				},
+				// 全局默认要求 Bearer 认证
+				// 公开接口（如 /auth/login）在 route detail 里写 security: [] 显式覆盖
+				security: [{ bearerAuth: [] }],
 			},
 		}),
 	)

@@ -102,6 +102,8 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 				summary: "用户登录",
 				description:
 					"用户名 + 密码登录，返回双 token（access 15min / refresh 7d）",
+				// 公开接口：覆盖全局 security，不显示锁
+				security: [],
 			},
 		},
 	)
@@ -135,6 +137,8 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 				summary: "刷新 token",
 				description:
 					"用 refresh token 换取新的双 token，旧 refresh token 立即失效",
+				// 公开接口：覆盖全局 security，不显示锁
+				security: [],
 			},
 		},
 	)
