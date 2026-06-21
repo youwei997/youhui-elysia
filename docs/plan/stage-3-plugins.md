@@ -39,7 +39,7 @@
 `src/plugins/response-wrap.ts`：
 - 用 `mapResponse` 把 handler 返回值包成 `{ code: 0, msg: 'ok', data }`
 - 跳过白名单：OpenAPI 文档路径（`/openapi`、`/openapi/json`）、健康检查（`/health`）
-- 已经是包装格式的不重复包（鸭子类型检测：含 `code` 字段就跳过）
+- 按类型放行：`string`（纯文本）和 `undefined`（Elysia 内部用）直接透传，其余（boolean/number/object/null）统一包壳
 
 ### 3.3 请求上下文（plugin/request-context）(0.5d)
 
@@ -200,9 +200,9 @@
 4. 未来若真要做国际化，把 `ERR_MSG` 拆成按 locale 选即可，不用动 plugin 架构
 
 ### 整体
-- [ ] `bun run check` 通过
-- [ ] `bun run typecheck` 通过
-- [ ] OpenAPI 文档里 Authorization 安全方案已声明，可用 token 试调
+- [x] `bun run check` 通过
+- [x] `bun run typecheck` 通过
+- [x] OpenAPI 文档里 Authorization 安全方案已声明，可用 token 试调
 
 ## 完成标志
 
@@ -217,10 +217,6 @@ curl localhost:3000/users -H "Authorization: Bearer $TOKEN"
 curl localhost:3000/users
 # 响应: { "code": "A0001", "msg": "未登录", "data": null }
 
-# 切英文
-curl localhost:3000/users -H "Accept-Language: en"
-# 响应: { "code": "A0001", "msg": "Unauthorized", "data": null }
-
 # logout
 curl -XPOST localhost:3000/auth/logout -H "Authorization: Bearer $TOKEN"
 
@@ -230,3 +226,5 @@ curl localhost:3000/users -H "Authorization: Bearer $TOKEN"
 ```
 
 ## 本阶段收获（完成后填写）
+
+吃透了 Elysia 的 plugin 范式：`derive`/`resolve` 扩展 ctx 类型、`macro` 替代装饰器实现路由级鉴权、`onError` 全局错误处理、`onAfterHandle` 统一响应壳。核心认知转变：**Elysia 没有 Guard/Interceptor/AOP 这些概念**，所有横切关注点都是 lifecycle hook + ctx 类型推导。JWT 三层失效设计（exp + tokenVersion + jti 黑名单）借鉴了 youlai-boot，Redis key 命名规范在 `redis-keys.ts` 集中管理。i18n 决定不做——参考项目没做，前端 vue-i18n 只管 UI 文案，后端错误消息直出中文，分工清晰且简单。

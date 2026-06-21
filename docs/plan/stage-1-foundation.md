@@ -173,4 +173,4 @@ open http://localhost:3000/openapi
 
 ## 本阶段收获（完成后填写）
 
-> 完成后用一段话总结你学到了什么、踩了什么坑、对什么有了新理解。
+跑通了从零到可运行的全链路：Docker Compose 一键起 PG + Redis、zod 做 env 校验实现 fail-fast、Drizzle schema 即 TS 值的声明式体验、pino 子 logger 链路为后续 request-context 铺路、Bun 的 SIGINT/SIGTERM 优雅关停。核心感受：**基础设施先行**是对的，后面所有业务模块都能安心依赖 config/db/logger 这三个稳定底座，不用回头补。biome 替代 eslint+prettier 的速度提升也很明显。
