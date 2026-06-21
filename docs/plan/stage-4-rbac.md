@@ -13,9 +13,9 @@
 
 ## 前置检查
 
-- [ ] 阶段 3 验收全 ✅
-- [ ] JWT payload 已包含 `roles` / `perms` / `dataScopes` 字段（即使为空数组）
-- [ ] `auth: true` macro 已可用
+- [x] 阶段 3 验收全 ✅
+- [x] JWT payload 已包含 `roles` / `perms` / `dataScopes` 字段（即使为空数组）
+- [x] `auth: true` macro 已可用
 
 ## 子任务清单
 
@@ -182,9 +182,9 @@ const where = and(
 ## 验收清单
 
 ### 数据建模
-- [ ] sys_role / sys_menu / sys_dept 三表 + 三关联表已建
-- [ ] dept.treePath 字段在创建/更新时自动维护
-- [ ] 种子数据完整：admin / dept-manager / staff 三角色，部门树 ≥ 3 层
+- [x] sys_role / sys_menu / sys_dept 三表 + 三关联表已建
+- [ ] dept.treePath 字段在创建/更新时自动维护（4.4 Dept 模块实现）
+- [x] 种子数据完整：7 角色（ROOT/ADMIN/GUEST/DEPT_MANAGER/DEPT_MEMBER/EMPLOYEE/CUSTOM_USER），部门树 2 层，菜单 25 条
 
 ### Role 模块
 - [ ] 完整 CRUD
