@@ -1,5 +1,11 @@
 import { auditColumns } from "@db/schema/_shared";
-import { bigint, integer, pgTable, smallint, varchar } from "drizzle-orm/pg-core";
+import {
+	bigint,
+	integer,
+	pgTable,
+	smallint,
+	varchar,
+} from "drizzle-orm/pg-core";
 
 /**
  * 系统角色表
