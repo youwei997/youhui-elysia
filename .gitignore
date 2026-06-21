@@ -52,3 +52,7 @@ package-lock.json
 # project
 .env
 uploads/
+
+# Windows 误操作产物：nul 是保留设备名（等同 /dev/null）
+# bash 重定向错误时会创建字面 nul 文件，永久忽略
+/nul
