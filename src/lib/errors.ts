@@ -32,6 +32,10 @@ export const ERR_CODE = {
 	ACCESS_UNAUTHORIZED: "A0301", // 访问未授权
 	/** A04xx 请求参数错误 */
 	USER_REQUEST_PARAMETER_ERROR: "A0400", // 用户请求参数错误
+	/** A041x Role 模块业务错误 */
+	ROLE_NOT_FOUND: "A0410", // 角色不存在
+	ROLE_CODE_OR_NAME_DUPLICATE: "A0411", // 角色编码或名称已存在
+	ROLE_HAS_ASSIGNED_USERS: "A0412", // 角色已分配用户，请先解除关联
 	/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
 
@@ -59,6 +63,9 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.REFRESH_TOKEN_INVALID]: "刷新令牌无效或已过期",
 	[ERR_CODE.ACCESS_UNAUTHORIZED]: "访问未授权",
 	[ERR_CODE.USER_REQUEST_PARAMETER_ERROR]: "用户请求参数错误",
+	[ERR_CODE.ROLE_NOT_FOUND]: "角色不存在",
+	[ERR_CODE.ROLE_CODE_OR_NAME_DUPLICATE]: "角色编码或名称已存在",
+	[ERR_CODE.ROLE_HAS_ASSIGNED_USERS]: "角色已分配用户，请先解除关联",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.SYSTEM_ERROR]: "系统执行出错",
 	[ERR_CODE.THIRD_PARTY_SERVICE_ERROR]: "调用第三方服务出错",

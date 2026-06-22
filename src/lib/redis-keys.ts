@@ -27,4 +27,13 @@ export const redisKeys = {
 	loginFailCount: (username: string): string => {
 		return `auth:fail:${username}`;
 	},
+
+	/**
+	 * 用户权限集合缓存
+	 * 登录时把 perms 字符串数组（JSON）写入，TTL 与 access token 一致
+	 * 角色变更（assign menus / 改 dataScope 等）时由编排逻辑主动删除
+	 */
+	userPerms: (userId: string | number): string => {
+		return `auth:user:${userId}:perms`;
+	},
 } as const;
