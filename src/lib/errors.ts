@@ -36,6 +36,10 @@ export const ERR_CODE = {
 	ROLE_NOT_FOUND: "A0410", // 角色不存在
 	ROLE_CODE_OR_NAME_DUPLICATE: "A0411", // 角色编码或名称已存在
 	ROLE_HAS_ASSIGNED_USERS: "A0412", // 角色已分配用户，请先解除关联
+	ROLE_MENU_ID_INVALID: "A0413", // 菜单 ID 非法（不存在或已删除）
+	ROLE_PROTECTED: "A0414", // 内置角色受保护，禁止删除/修改
+	ROLE_DEPT_ID_INVALID: "A0415", // 部门 ID 非法（不存在或已删除）
+	ROLE_NOT_CUSTOM_DATA_SCOPE: "A0416", // 角色非 dataScope=5（自定义），不支持绑定部门
 	/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
 
@@ -66,6 +70,10 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.ROLE_NOT_FOUND]: "角色不存在",
 	[ERR_CODE.ROLE_CODE_OR_NAME_DUPLICATE]: "角色编码或名称已存在",
 	[ERR_CODE.ROLE_HAS_ASSIGNED_USERS]: "角色已分配用户，请先解除关联",
+	[ERR_CODE.ROLE_MENU_ID_INVALID]: "菜单 ID 非法（不存在或已删除）",
+	[ERR_CODE.ROLE_PROTECTED]: "内置角色受保护，禁止删除/修改",
+	[ERR_CODE.ROLE_DEPT_ID_INVALID]: "部门 ID 非法（不存在或已删除）",
+	[ERR_CODE.ROLE_NOT_CUSTOM_DATA_SCOPE]: "角色非 dataScope=5（自定义），不支持绑定部门",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.SYSTEM_ERROR]: "系统执行出错",
 	[ERR_CODE.THIRD_PARTY_SERVICE_ERROR]: "调用第三方服务出错",
