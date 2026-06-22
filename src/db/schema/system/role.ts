@@ -24,6 +24,8 @@ export const sysRole = pgTable("sys_role", {
 	status: smallint("status").default(1).notNull(),
 	/** 数据权限（1=所有数据 2=部门及子部门 3=本部门 4=本人 5=自定义） */
 	dataScope: smallint("data_scope").default(1),
+	/** 备注（对齐 youlai-boot RoleForm.remark，最多 255 字符） */
+	remark: varchar("remark", { length: 255 }),
 	/** 审计字段 */
 	...auditColumns,
 });
