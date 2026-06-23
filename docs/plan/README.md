@@ -62,4 +62,5 @@ Elysia 范式吃透 █████████ 25%
 [2026-06-17] 阶段 3.1-3.6 完成。3.7 i18n 跳过（理由见 docs/notes/2026-06-17-后端不做i18n.md，参照 youlai 不做）。auth 模块（Bun.password + 三层失效）跑通。queries 函数 db 参数化（为 Drizzle 事务铺垫）。下一步 3.8：user 模块挂 auth: true + OpenAPI Authorization 安全方案。
 [2026-06-21] 阶段 4.1 完成。Drizzle 迁移生成 + 6 表建表 + 种子数据（7 角色/3 部门/25 菜单/7 用户/64 关联）。进入 4.2 Role 模块。
 [2026-06-22] 阶段 4.2 完成。Role 模块三件套落地（8 路由 + 11 queries 函数），核心：1）软删 4 表事务级联清理（先解绑再软删本体）；2）replaceRoleMenus/Depts 事务换绑模式；3）业务规则在 routes 入口前置校验（queries 保持纯函数）；4）7 个 Role 业务错误码 A0410-A0416。已知口子：改完菜单不踢用户登录态，等 4.5 接入 tokenVersion + 1。进入 4.3 Menu 模块。
+[2026-06-23] 阶段 4.3 完成。Menu 模块三件套落地（8 路由 + 10 queries 函数），核心：1）treePath 物化路径自动维护；2）treePath ~ 正则级联软删 + sys_role_menu 事务清理；3）isParentIdCyclic 纯字符串检测防循环；4）type=B perm 必填双保险（Zod refine + routes 防御）；5）/menus/routes 按 ROOT/角色返回前端动态路由树（不含按钮）。已知口子：未返回 perm 列表（前端 v-permission 依赖，等 4.7 合并到 /menus/my-tree）。进入 4.4 Dept 模块。
 ```

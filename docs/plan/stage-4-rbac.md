@@ -187,15 +187,15 @@ const where = and(
 - [x] 种子数据完整：7 角色（ROOT/ADMIN/GUEST/DEPT_MANAGER/DEPT_MEMBER/EMPLOYEE/CUSTOM_USER），部门树 2 层，菜单 25 条
 
 ### Role 模块
-- [ ] 完整 CRUD
-- [ ] 绑定菜单接口（事务保证）
-- [ ] 绑定部门接口（仅 CUSTOM dataScope 时启用）
-- [ ] 删除角色时清理关联
+- [x] 完整 CRUD
+- [x] 绑定菜单接口（事务保证）
+- [x] 绑定部门接口（仅 CUSTOM dataScope 时启用）
+- [x] 删除角色时清理关联
 
 ### Menu 模块
-- [ ] 树形列表正确（嵌套结构）
-- [ ] 防循环：parentId 不能是自己的子孙
-- [ ] type=B 时 perm 必填校验
+- [x] 树形列表正确（嵌套结构）
+- [x] 防循环：parentId 不能是自己的子孙
+- [x] type=B 时 perm 必填校验
 
 ### Dept 模块
 - [ ] 树形列表正确
