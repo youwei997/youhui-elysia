@@ -1,4 +1,8 @@
-import { createInsertSchema, createUpdateSchema } from "drizzle-orm/zod";
+import {
+	createInsertSchema,
+	createSelectSchema,
+	createUpdateSchema,
+} from "drizzle-orm/zod";
 import type { z } from "zod";
 import { sysDept } from "@/db/schema/system/dept";
 
@@ -41,6 +45,17 @@ export const DeptUpdateBody = createUpdateSchema(sysDept, {
 })
 	.omit({ ...auditKeys, treePath: true })
 	.describe("更新部门请求参数");
+
+/** 部门响应：排除审计列与软删标志 */
+export const DeptResponse = createSelectSchema(sysDept)
+	.omit({
+		deletedAt: true,
+		createdBy: true,
+		createdAt: true,
+		updatedBy: true,
+		updatedAt: true,
+	})
+	.describe("部门信息");
 
 export type DeptCreateBody = z.infer<typeof DeptCreateBody>;
 export type DeptUpdateBody = z.infer<typeof DeptUpdateBody>;

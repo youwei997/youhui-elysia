@@ -14,7 +14,7 @@ import {
 	softDeleteDept,
 	updateDept,
 } from "./queries";
-import { DeptCreateBody, DeptUpdateBody } from "./schema";
+import { DeptCreateBody, DeptResponse, DeptUpdateBody } from "./schema";
 
 /** 路径参数 id 校验（coerce.number 将字符串转数字） */
 const ParamsWithId = z.object({ id: z.coerce.number() });
@@ -72,7 +72,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
-			return dept;
+			return DeptResponse.parse(dept);
 		},
 		{
 			auth: true,
