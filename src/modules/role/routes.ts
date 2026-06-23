@@ -46,6 +46,23 @@ const ensureNotProtected = (role: { code: string }) => {
 	}
 };
 
+/**
+ * 校验 deptIds 是否全部存在且未软删
+ * routes 层业务规则校验，非法时抛 BizError
+ */
+const ensureValidDeptIds = async (deptIds: number[]) => {
+	if (deptIds.length === 0) return;
+	const validIds = await findValidDeptIds(undefined, deptIds);
+	if (validIds.length !== deptIds.length) {
+		const validSet = new Set(validIds);
+		const invalid = deptIds.filter((id) => !validSet.has(id));
+		throw new BizError(
+			ERR_CODE.ROLE_DEPT_ID_INVALID,
+			`以下 deptId 非法：${invalid.join(", ")}`,
+		);
+	}
+};
+
 export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.use(authPlugin)
 	.get(
@@ -118,6 +135,9 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.post(
 		"/",
 		async ({ body }) => {
+			if (body.deptIds) {
+				await ensureValidDeptIds(body.deptIds);
+			}
 			return createRole(undefined, body);
 		},
 		{
@@ -126,7 +146,8 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			detail: {
 				tags: ["Role"],
 				summary: "创建角色",
-				description: "新增系统角色，code 全局唯一",
+				description:
+					"新增系统角色，code 全局唯一；dataScope=5 时同时保存 deptIds",
 			},
 		},
 	)
@@ -138,6 +159,9 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
 			ensureNotProtected(existing);
+			if (body.deptIds) {
+				await ensureValidDeptIds(body.deptIds);
+			}
 			const role = await updateRole(undefined, params.id, body);
 			return role;
 		},
@@ -148,7 +172,8 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			detail: {
 				tags: ["Role"],
 				summary: "更新角色",
-				description: "code 不可改（角色编码是稳定标识）",
+				description:
+					"code 不可改；dataScope=5 时同时保存 deptIds，dataScope 切出 5 时自动清空",
 			},
 		},
 	)

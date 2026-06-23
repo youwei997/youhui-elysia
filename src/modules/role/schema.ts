@@ -70,6 +70,12 @@ export const RoleCreateBody = createInsertSchema(sysRole, {
 	remark: (s) => s.describe("备注"),
 })
 	.omit(auditKeys)
+	.extend({
+		deptIds: z
+			.array(z.coerce.number().int().positive())
+			.optional()
+			.describe("自定义数据权限部门 ID 列表（dataScope=5 时有效）"),
+	})
 	.describe("创建角色请求参数");
 
 /**
@@ -88,6 +94,12 @@ export const RoleUpdateBody = createUpdateSchema(sysRole, {
 	.omit({
 		...auditKeys,
 		code: true,
+	})
+	.extend({
+		deptIds: z
+			.array(z.coerce.number().int().positive())
+			.optional()
+			.describe("自定义数据权限部门 ID 列表（dataScope=5 时有效）"),
 	})
 	.describe("更新角色请求参数，未传字段保持原值");
 

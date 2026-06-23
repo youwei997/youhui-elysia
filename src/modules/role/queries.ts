@@ -64,27 +64,64 @@ export const findRoleById = async (db: DB = defaultDb, id: number) => {
 	return rows[0];
 };
 
-/** 创建角色 */
+/** 创建角色（支持内联保存 deptIds，dataScope=5 时写入 sys_role_dept） */
 export const createRole = async (
 	db: DB = defaultDb,
 	data: z.infer<typeof RoleCreateBody>,
 ) => {
-	const [role] = await db.insert(sysRole).values(data).returning();
-	return role;
+	const { deptIds, ...roleData } = data;
+
+	return await db.transaction(async (tx) => {
+		const [role] = await tx.insert(sysRole).values(roleData).returning();
+		if (!role) {
+			throw new Error("创建角色失败：未返回插入记录");
+		}
+
+		if (roleData.dataScope === 5 && deptIds && deptIds.length > 0) {
+			await tx
+				.insert(sysRoleDept)
+				.values(deptIds.map((deptId) => ({ roleId: role.id, deptId })));
+		}
+
+		return role;
+	});
 };
 
-/** 更新角色（软删过滤） */
+/** 更新角色（支持内联保存 deptIds，dataScope 变化时自动清理 sys_role_dept） */
 export const updateRole = async (
 	db: DB = defaultDb,
 	id: number,
 	data: z.infer<typeof RoleUpdateBody>,
 ) => {
-	const [role] = await db
-		.update(sysRole)
-		.set(data)
-		.where(and(eq(sysRole.id, id), isNull(sysRole.deletedAt)))
-		.returning();
-	return role;
+	const { deptIds, ...roleData } = data;
+
+	return await db.transaction(async (tx) => {
+		const [role] = await tx
+			.update(sysRole)
+			.set(roleData)
+			.where(and(eq(sysRole.id, id), isNull(sysRole.deletedAt)))
+			.returning();
+
+		if (!role) {
+			return undefined;
+		}
+
+		// 有效 dataScope：请求传的优先，没传则取数据库当前值
+		const effectiveDataScope = roleData.dataScope ?? role.dataScope;
+
+		if (effectiveDataScope === 5) {
+			await tx.delete(sysRoleDept).where(eq(sysRoleDept.roleId, id));
+			if (deptIds && deptIds.length > 0) {
+				await tx
+					.insert(sysRoleDept)
+					.values(deptIds.map((deptId) => ({ roleId: id, deptId })));
+			}
+		} else {
+			await tx.delete(sysRoleDept).where(eq(sysRoleDept.roleId, id));
+		}
+
+		return role;
+	});
 };
 
 /**
