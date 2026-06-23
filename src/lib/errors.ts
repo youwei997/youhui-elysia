@@ -25,6 +25,8 @@ export const ERR_CODE = {
 	ACCOUNT_NOT_FOUND: "A0201", // 用户账户不存在
 	ACCOUNT_FROZEN: "A0202", // 用户账户被冻结
 	USER_PASSWORD_ERROR: "A0210", // 用户名或密码错误
+	CAPTCHA_REQUIRED: "A0220", // 验证码 ID 和验证码必须同时提供
+	CAPTCHA_INVALID: "A0221", // 验证码错误或已过期
 	/** A023x 令牌 */
 	ACCESS_TOKEN_INVALID: "A0230", // 访问令牌无效或已过期
 	REFRESH_TOKEN_INVALID: "A0231", // 刷新令牌无效或已过期
@@ -63,6 +65,8 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.ACCOUNT_NOT_FOUND]: "用户账户不存在",
 	[ERR_CODE.ACCOUNT_FROZEN]: "用户账户被冻结",
 	[ERR_CODE.USER_PASSWORD_ERROR]: "用户名或密码错误",
+	[ERR_CODE.CAPTCHA_REQUIRED]: "验证码 ID 和验证码必须同时提供",
+	[ERR_CODE.CAPTCHA_INVALID]: "验证码错误或已过期",
 	[ERR_CODE.ACCESS_TOKEN_INVALID]: "访问令牌无效或已过期",
 	[ERR_CODE.REFRESH_TOKEN_INVALID]: "刷新令牌无效或已过期",
 	[ERR_CODE.ACCESS_UNAUTHORIZED]: "访问未授权",

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import {
+	batchSoftDeleteRoles,
 	createRole,
 	findRoleById,
 	findRoleDeptIds,
@@ -28,6 +29,9 @@ import {
 
 /** 路径参数 id 校验：路由 `:id` 是 string，coerce 转 number */
 const ParamsWithId = z.object({ id: z.coerce.number() });
+
+/** DELETE 专用：接受原始字符串（支持 "1" 和 "1,2,3" 两种形式），对齐前端批量删除 */
+const ParamsWithCommaIds = z.object({ id: z.string() });
 
 /** 内部预设：系统内置角色 code 列表，禁止删除/改编码 */
 const PROTECTED_CODES = ["ROOT"] as const;
@@ -151,26 +155,62 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.delete(
 		"/:id",
 		async ({ params }) => {
-			const existing = await findRoleById(undefined, params.id);
+			const idStr = params.id;
+
+			// 前端批量删除传 "1,2,3"，单条传 "1"
+			if (idStr.includes(",")) {
+				const ids = idStr
+					.split(",")
+					.map((s) => Number(s.trim()))
+					.filter((n) => !Number.isNaN(n));
+
+				if (ids.length === 0) {
+					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+				}
+
+				// 逐条前置校验：受保护角色 / 已绑定用户
+				for (const id of ids) {
+					const existing = await findRoleById(undefined, id);
+					if (!existing) {
+						throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+					}
+					ensureNotProtected(existing);
+					if (await isRoleAssignedToUsers(undefined, id)) {
+						throw new BizError(
+							ERR_CODE.ROLE_HAS_ASSIGNED_USERS,
+							`角色 ${existing.name} 下存在已分配用户，无法删除`,
+						);
+					}
+				}
+
+				return batchSoftDeleteRoles(undefined, ids);
+			}
+
+			// 单条删除
+			const id = Number(idStr);
+			if (Number.isNaN(id)) {
+				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+			}
+
+			const existing = await findRoleById(undefined, id);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
 			ensureNotProtected(existing);
-			// 已有用户绑定的角色禁止删除，避免角色消失后用户登录态变孤儿
-			if (await isRoleAssignedToUsers(undefined, params.id)) {
+			if (await isRoleAssignedToUsers(undefined, id)) {
 				throw new BizError(ERR_CODE.ROLE_HAS_ASSIGNED_USERS);
 			}
-			const role = await softDeleteRole(undefined, params.id);
+			const role = await softDeleteRole(undefined, id);
 			return role;
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: ParamsWithCommaIds,
 			detail: {
 				tags: ["Role"],
-				summary: "删除角色（软删）",
+				summary: "删除角色（软删，支持批量）",
 				description:
-					"软删除并清理 sys_user_role / sys_role_menu / sys_role_dept 关联",
+					"单条：DELETE /api/v1/roles/1；批量：DELETE /api/v1/roles/1,2,3。删除时自动清理 sys_user_role / sys_role_menu / sys_role_dept 关联",
 			},
 		},
 	)

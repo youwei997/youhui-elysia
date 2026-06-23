@@ -251,3 +251,30 @@ export const isRoleAssignedToUsers = async (
 		.limit(1);
 	return rows.length > 0;
 };
+
+/**
+ * 批量软删除角色 + 清理关联
+ *
+ * 与 softDeleteRole 同逻辑，但使用 inArray 批量操作，
+ * 单事务内完成所有 junction 表清理 + 角色软删，减少往返。
+ * 前置拦截（受保护角色 / 已绑定用户）由 routes 层负责。
+ */
+export const batchSoftDeleteRoles = async (
+	db: DB = defaultDb,
+	ids: number[],
+) => {
+	if (ids.length === 0) {
+		return [];
+	}
+	return await db.transaction(async (tx) => {
+		await tx.delete(sysUserRole).where(inArray(sysUserRole.roleId, ids));
+		await tx.delete(sysRoleMenu).where(inArray(sysRoleMenu.roleId, ids));
+		await tx.delete(sysRoleDept).where(inArray(sysRoleDept.roleId, ids));
+		const roles = await tx
+			.update(sysRole)
+			.set({ deletedAt: new Date().toISOString() })
+			.where(and(inArray(sysRole.id, ids), isNull(sysRole.deletedAt)))
+			.returning();
+		return roles;
+	});
+};

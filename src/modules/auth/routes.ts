@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
+import { generateCaptcha, verifyCaptcha } from "@/lib/captcha";
 import { BizError, ERR_CODE } from "@/lib/errors";
 import type { JwtPayload } from "@/lib/jwt";
 import { signAccessToken, signRefreshToken, verifyToken } from "@/lib/jwt";
@@ -61,31 +62,60 @@ const revokeJti = async (jti: string, exp?: number): Promise<void> => {
 
 export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 	.use(authPlugin)
+	.get(
+		"/captcha",
+		async () => {
+			return generateCaptcha();
+		},
+		{
+			detail: {
+				tags: ["Auth"],
+				summary: "获取图形验证码",
+				description:
+					"返回 captchaId + base64 SVG 图片，答案存入 Redis（5 分钟 TTL），登录时回传校验",
+				security: [],
+			},
+		},
+	)
 	.post(
 		"/login",
 		async ({ body }) => {
-			const { username, password } = body;
+			const { username, password, captchaId, captchaCode } = body;
 
-			// 1. 检查账户是否因连续失败被锁定
+			// 1. 校验验证码（如果前端传了 captchaId / captchaCode 则必须校验）
+			if (captchaId || captchaCode) {
+				if (!captchaId || !captchaCode) {
+					throw new BizError(
+						ERR_CODE.CAPTCHA_REQUIRED,
+						"验证码 ID 和验证码必须同时提供",
+					);
+				}
+				const captchaValid = await verifyCaptcha(captchaId, captchaCode);
+				if (!captchaValid) {
+					throw new BizError(ERR_CODE.CAPTCHA_INVALID, "验证码错误或已过期");
+				}
+			}
+
+			// 2. 检查账户是否因连续失败被锁定
 			if (await isAccountLocked(username)) {
 				throw new BizError(ERR_CODE.ACCOUNT_FROZEN, undefined, 403);
 			}
 
-			// 2. 查找有效用户（软删过滤 + 状态正常）
+			// 3. 查找有效用户（软删过滤 + 状态正常）
 			const user = await findActiveUserByUsername(db, username);
 			if (!user) {
 				// 不暴露"用户不存在"，统一提示密码错误（防止枚举用户名）
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 			}
 
-			// 3. 校验密码
+			// 4. 校验密码
 			const valid = await verifyPassword(password, user.password);
 			if (!valid) {
 				await incrementLoginFailCount(username);
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 			}
 
-			// 4. 登录成功：清除失败计数，查角色/权限，签发双 token
+			// 5. 登录成功：清除失败计数，查角色/权限，签发双 token
 			await clearLoginFailCount(username);
 
 			// 并发查角色 + 权限（互不依赖，一起跑更快）

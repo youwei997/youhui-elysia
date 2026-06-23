@@ -36,4 +36,12 @@ export const redisKeys = {
 	userPerms: (userId: string | number): string => {
 		return `auth:user:${userId}:perms`;
 	},
+
+	/**
+	 * 验证码答案缓存
+	 * 生成验证码时写入算术结果，校验后立即删除（一次性使用），TTL 5 分钟
+	 */
+	captchaAnswer: (captchaId: string): string => {
+		return `auth:captcha:${captchaId}`;
+	},
 } as const;
