@@ -209,6 +209,36 @@ export const replaceRoleDepts = async (
 	});
 };
 
+/** 角色下拉选项（供前端下拉选择器使用） */
+export const findRoleOptions = async (db: DB = defaultDb) => {
+	const rows = await db
+		.select({ id: sysRole.id, name: sysRole.name })
+		.from(sysRole)
+		.where(isNull(sysRole.deletedAt))
+		.orderBy(sysRole.sort);
+	return rows.map((r) => ({ value: String(r.id), label: r.name }));
+};
+
+/**
+ * 获取角色表单数据（含已绑定的部门 ID 列表）
+ * 当 dataScope=5（CUSTOM）时额外查询 sys_role_dept
+ */
+export const findRoleFormData = async (db: DB = defaultDb, id: number) => {
+	const role = await findRoleById(db, id);
+	if (!role) {
+		return undefined;
+	}
+	let deptIds: number[] = [];
+	if (role.dataScope === 5) {
+		const rows = await db
+			.select({ deptId: sysRoleDept.deptId })
+			.from(sysRoleDept)
+			.where(eq(sysRoleDept.roleId, id));
+		deptIds = rows.map((r) => r.deptId);
+	}
+	return { ...role, deptIds };
+};
+
 /** 判断某角色是否已被用户绑定（用于软删前置拦截） */
 export const isRoleAssignedToUsers = async (
 	db: DB = defaultDb,

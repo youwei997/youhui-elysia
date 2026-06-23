@@ -6,7 +6,9 @@ import {
 	createRole,
 	findRoleById,
 	findRoleDeptIds,
+	findRoleFormData,
 	findRoleMenuIds,
+	findRoleOptions,
 	findRoles,
 	findValidDeptIds,
 	findValidMenuIds,
@@ -58,6 +60,20 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 	)
 	.get(
+		"/options",
+		async () => {
+			return findRoleOptions(undefined);
+		},
+		{
+			auth: true,
+			detail: {
+				tags: ["Role"],
+				summary: "角色下拉选项",
+				description: "返回 { value, label }[] 供前端下拉选择器使用",
+			},
+		},
+	)
+	.get(
 		"/:id",
 		async ({ params }) => {
 			const role = await findRoleById(undefined, params.id);
@@ -73,6 +89,25 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				tags: ["Role"],
 				summary: "角色详情",
 				description: "根据 ID 获取单个角色信息",
+			},
+		},
+	)
+	.get(
+		"/:id/form",
+		async ({ params }) => {
+			const role = await findRoleFormData(undefined, params.id);
+			if (!role) {
+				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+			}
+			return role;
+		},
+		{
+			auth: true,
+			params: ParamsWithId,
+			detail: {
+				tags: ["Role"],
+				summary: "角色表单数据（含 deptIds）",
+				description: "编辑角色时回填表单，dataScope=5 时返回已绑定的部门ID列表",
 			},
 		},
 	)
@@ -140,13 +175,13 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 	)
 	.get(
-		"/:id/menus",
+		"/:id/menu-ids",
 		async ({ params }) => {
 			const existing = await findRoleById(undefined, params.id);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return { menuIds: await findRoleMenuIds(undefined, params.id) };
+			return await findRoleMenuIds(undefined, params.id);
 		},
 		{
 			auth: true,
@@ -158,13 +193,13 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 	)
 	.get(
-		"/:id/depts",
+		"/:id/dept-ids",
 		async ({ params }) => {
 			const existing = await findRoleById(undefined, params.id);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return { deptIds: await findRoleDeptIds(undefined, params.id) };
+			return await findRoleDeptIds(undefined, params.id);
 		},
 		{
 			auth: true,
