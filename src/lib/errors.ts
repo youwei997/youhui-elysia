@@ -48,6 +48,10 @@ export const ERR_CODE = {
 	MENU_PARENT_NOT_FOUND: "A0422", // 父菜单不存在
 	MENU_BUTTON_REQUIRES_PERM: "A0423", // 按钮类型(type=B)必须填写权限标识
 	MENU_HAS_CHILDREN: "A0424", // 菜单存在子菜单，无法删除（如后续改级联则废弃此码）
+	/** A043x Dept 模块业务错误 */
+	DEPT_NOT_FOUND: "A0430", // 部门不存在
+	DEPT_PARENT_CYCLE: "A0431", // 不能将部门移动到自己或子部门下
+	DEPT_HAS_USERS: "A0432", // 部门下存在用户，无法删除
 	/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
 
@@ -90,6 +94,9 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.MENU_PARENT_NOT_FOUND]: "父菜单不存在",
 	[ERR_CODE.MENU_BUTTON_REQUIRES_PERM]: "按钮类型(type=B)必须填写权限标识",
 	[ERR_CODE.MENU_HAS_CHILDREN]: "菜单存在子菜单，无法删除",
+	[ERR_CODE.DEPT_NOT_FOUND]: "部门不存在",
+	[ERR_CODE.DEPT_PARENT_CYCLE]: "不能将部门移动到自己或子部门下",
+	[ERR_CODE.DEPT_HAS_USERS]: "部门下存在用户，无法删除",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.SYSTEM_ERROR]: "系统执行出错",
 	[ERR_CODE.THIRD_PARTY_SERVICE_ERROR]: "调用第三方服务出错",

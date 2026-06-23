@@ -13,6 +13,9 @@
  *   节点的 parentId 在 lookup 表中不存在 → 也视为根（兜底，防止数据有悬空引用的脏数据时丢节点）
  */
 
+import { like, type SQL } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
+
 /**
  * 带 children 递归子节点的节点类型
  * 原始 T 的所有字段 + children: TreeNode<T>[]
@@ -61,4 +64,27 @@ export const buildTree = <T extends { id: number; parentId: number }>(
 
 	// 只返回根节点数组，前端需要全量时拿根往下递归 children 即可
 	return roots;
+};
+
+/**
+ * 子树查询 helper（用于数据权限 DEPT_AND_SUB）
+ *
+ * @param treePathColumn Drizzle 表的 treePath 列
+ * @param rootTreePath 根节点的 treePath 值（如 "0,1,3"）
+ * @returns SQL fragment：匹配 treePath LIKE 'rootTreePath%' 的所有节点（含根自身）
+ *
+ * 使用示例：
+ * ```ts
+ * const where = and(
+ *   isNull(sysDept.deletedAt),
+ *   descendantsByTreePath(sysDept.treePath, "0,1,3")
+ * );
+ * // 查出 treePath="0,1,3" / "0,1,3,5" / "0,1,3,5,7" 等所有子孙
+ * ```
+ */
+export const descendantsByTreePath = (
+	treePathColumn: PgColumn,
+	rootTreePath: string,
+): SQL => {
+	return like(treePathColumn, `${rootTreePath}%`);
 };
