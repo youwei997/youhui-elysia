@@ -42,6 +42,12 @@ export const ERR_CODE = {
 	ROLE_PROTECTED: "A0414", // 内置角色受保护，禁止删除/修改
 	ROLE_DEPT_ID_INVALID: "A0415", // 部门 ID 非法（不存在或已删除）
 	ROLE_NOT_CUSTOM_DATA_SCOPE: "A0416", // 角色非 dataScope=5（自定义），不支持绑定部门
+	/** A042x Menu 模块业务错误 */
+	MENU_NOT_FOUND: "A0420", // 菜单不存在
+	MENU_PARENT_CYCLE: "A0421", // 父菜单不能选择自身或其子孙
+	MENU_PARENT_NOT_FOUND: "A0422", // 父菜单不存在
+	MENU_BUTTON_REQUIRES_PERM: "A0423", // 按钮类型(type=B)必须填写权限标识
+	MENU_HAS_CHILDREN: "A0424", // 菜单存在子菜单，无法删除（如后续改级联则废弃此码）
 	/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
 
@@ -79,6 +85,11 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.ROLE_DEPT_ID_INVALID]: "部门 ID 非法（不存在或已删除）",
 	[ERR_CODE.ROLE_NOT_CUSTOM_DATA_SCOPE]:
 		"角色非 dataScope=5（自定义），不支持绑定部门",
+	[ERR_CODE.MENU_NOT_FOUND]: "菜单不存在",
+	[ERR_CODE.MENU_PARENT_CYCLE]: "父菜单不能选择自身或其子孙",
+	[ERR_CODE.MENU_PARENT_NOT_FOUND]: "父菜单不存在",
+	[ERR_CODE.MENU_BUTTON_REQUIRES_PERM]: "按钮类型(type=B)必须填写权限标识",
+	[ERR_CODE.MENU_HAS_CHILDREN]: "菜单存在子菜单，无法删除",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.SYSTEM_ERROR]: "系统执行出错",
 	[ERR_CODE.THIRD_PARTY_SERVICE_ERROR]: "调用第三方服务出错",

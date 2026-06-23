@@ -1,8 +1,10 @@
-import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import type z from "zod";
 import { type DB, db as defaultDb } from "@/db/client";
 import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
+import type { MenuCreateBody, MenuUpdateBody } from "./schema";
 
 /** 菜单路由查询结果类型（仅路由接口所需字段，不含审计列） */
 export type MenuRoute = {
@@ -105,4 +107,198 @@ export const findMenusByRoleCodes = async (
 		)
 		.orderBy(asc(sysMenu.sort));
 	return rows as MenuRoute[];
+};
+
+/**
+ * 根据 ID 查菜单（软删过滤）
+ */
+export const findMenuById = async (db: DB = defaultDb, id: number) => {
+	const rows = await db
+		.select()
+		.from(sysMenu)
+		.where(and(eq(sysMenu.id, id), isNull(sysMenu.deletedAt)))
+		.limit(1);
+	return rows[0];
+};
+
+/**
+ * 获取所有菜单（含按钮）用于管理页树形列表
+ * 按 sort 升序排列
+ */
+export const findAllMenusWithButtons = async (
+	db: DB = defaultDb,
+	keywords?: string,
+) => {
+	const where = [isNull(sysMenu.deletedAt)];
+	if (keywords) {
+		// Postgres ILIKE：大小写不敏感的 LIKE，无需手动 lower()
+		where.push(sql`${sysMenu.name} ILIKE ${`%${keywords}%`}`);
+	}
+	const rows = await db
+		.select()
+		.from(sysMenu)
+		.where(and(...where))
+		.orderBy(asc(sysMenu.sort));
+	return rows;
+};
+
+/**
+ * 获取菜单下拉选项
+ * onlyParent 为 true 时过滤按钮（type != 'B'）
+ */
+export const findMenuOptions = async (
+	db: DB = defaultDb,
+	onlyParent?: boolean,
+) => {
+	const where = [isNull(sysMenu.deletedAt)];
+	if (onlyParent) {
+		where.push(ne(sysMenu.type, "B"));
+	}
+	const rows = await db
+		.select({
+			id: sysMenu.id,
+			name: sysMenu.name,
+			parentId: sysMenu.parentId,
+		})
+		.from(sysMenu)
+		.where(and(...where))
+		.orderBy(asc(sysMenu.sort));
+	return rows.map((r) => ({
+		value: String(r.id),
+		label: r.name,
+		parentId: Number(r.parentId),
+	}));
+};
+
+/**
+ * 计算 treePath：parentId 为 0 → "0"，否则取父节点的 treePath + parentId
+ */
+const calcTreePath = async (db: DB, parentId: number): Promise<string> => {
+	if (parentId === 0) {
+		return "0";
+	}
+	const parent = await db
+		.select({ treePath: sysMenu.treePath })
+		.from(sysMenu)
+		.where(and(eq(sysMenu.id, parentId), isNull(sysMenu.deletedAt)))
+		.limit(1);
+	const parentPath = parent[0]?.treePath ?? "0";
+	return `${parentPath},${parentId}`;
+};
+
+/**
+ * 创建菜单
+ * treePath 根据 parentId 自动计算
+ */
+export const createMenu = async (
+	db: DB = defaultDb,
+	data: z.infer<typeof MenuCreateBody>,
+) => {
+	const treePath = await calcTreePath(db, data.parentId ?? 0);
+	const [menu] = await db
+		.insert(sysMenu)
+		.values({ ...data, treePath })
+		.returning();
+	return menu;
+};
+
+/**
+ * 更新菜单
+ * 如果 parentId 变了，重新计算 treePath
+ */
+export const updateMenu = async (
+	db: DB = defaultDb,
+	id: number,
+	data: z.infer<typeof MenuUpdateBody>,
+) => {
+	const updateData: Record<string, unknown> = { ...data };
+	if (data.parentId !== undefined) {
+		updateData.treePath = await calcTreePath(db, data.parentId);
+	}
+	const [menu] = await db
+		.update(sysMenu)
+		.set(updateData)
+		.where(and(eq(sysMenu.id, id), isNull(sysMenu.deletedAt)))
+		.returning();
+	return menu;
+};
+
+/**
+ * 软删除菜单（级联删除所有子孙）
+ *
+ * 使用 treePath 正则匹配一次性删除自身 + 整棵子树：
+ *   tree_path ~ '(^|,)ID(,|$)' 匹配路径中含有该 ID 的节点（身为祖先或自身）
+ *   加上自身 id 直接匹配覆盖根节点边界情况
+ */
+export const softDeleteMenu = async (db: DB = defaultDb, id: number) => {
+	const pattern = `(^|,)${id}(,|$)`;
+	return await db.transaction(async (tx) => {
+		// 先清理 sys_role_menu 中所有引用（被删节点及其子孙可能被角色绑定）
+		const menuIds = await tx
+			.select({ id: sysMenu.id })
+			.from(sysMenu)
+			.where(
+				and(
+					isNull(sysMenu.deletedAt),
+					or(eq(sysMenu.id, id), sql`${sysMenu.treePath} ~ ${pattern}`),
+				),
+			);
+		const idsToDelete = menuIds.map((m) => m.id);
+		if (idsToDelete.length > 0) {
+			await tx
+				.delete(sysRoleMenu)
+				.where(inArray(sysRoleMenu.menuId, idsToDelete));
+		}
+		// 软删：自身 + 所有子孙
+		const menus = await tx
+			.update(sysMenu)
+			.set({ deletedAt: new Date().toISOString() })
+			.where(
+				and(
+					isNull(sysMenu.deletedAt),
+					or(eq(sysMenu.id, id), sql`${sysMenu.treePath} ~ ${pattern}`),
+				),
+			)
+			.returning();
+		return menus;
+	});
+};
+
+/**
+ * 判断 parentId 是否会导致循环引用
+ *
+ * 检查 parentId 所在节点的 treePath 是否包含目标 nodeId，
+ * 即"把自身或子孙节点设为新的父节点"的情况。
+ *
+ * 实现：取 parentId 的 treePath，检查 nodeId 是否以逗号分隔元素的形式出现。
+ * 纯 JS 字符串操作，不依赖 SQL 正则，避免跨平台兼容问题。
+ */
+export const isParentIdCyclic = async (
+	db: DB = defaultDb,
+	nodeId: number,
+	parentId: number,
+): Promise<boolean> => {
+	if (parentId === 0) {
+		return false; // 顶级永远不会循环
+	}
+	if (nodeId === parentId) {
+		return true; // 自己不能做自己的父
+	}
+	const parent = await db
+		.select({ treePath: sysMenu.treePath })
+		.from(sysMenu)
+		.where(and(eq(sysMenu.id, parentId), isNull(sysMenu.deletedAt)))
+		.limit(1);
+	if (!parent[0]) {
+		return false; // 父节点不存在，由 routes 层单独报错
+	}
+	const parentPath = parent[0].treePath ?? "0";
+	const idStr = String(nodeId);
+	// 三种匹配：路径就是 nodeId、nodeId 在开头、在中间、在结尾
+	return (
+		parentPath === idStr ||
+		parentPath.startsWith(`${idStr},`) ||
+		parentPath.includes(`,${idStr},`) ||
+		parentPath.endsWith(`,${idStr}`)
+	);
 };
