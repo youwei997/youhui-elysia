@@ -90,7 +90,14 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
-			return dept;
+			return {
+				id: String(dept.id),
+				name: dept.name,
+				code: dept.code,
+				parentId: String(dept.parentId),
+				sort: dept.sort,
+				status: dept.status,
+			};
 		},
 		{
 			auth: true,
@@ -98,7 +105,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			detail: {
 				tags: ["Dept"],
 				summary: "获取部门表单数据",
-				description: "编辑部门时回填表单",
+				description: "编辑部门时回填表单，仅含可编辑字段，排除审计列",
 			},
 		},
 	)
