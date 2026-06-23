@@ -118,7 +118,7 @@ export type CaptchaResult = {
 	/** 验证码缓存 ID，登录时回传 */
 	captchaId: string;
 	/** base64 SVG 图片 data URI */
-	captchaImage: string;
+	captchaBase64: string;
 };
 
 /**
@@ -127,12 +127,12 @@ export type CaptchaResult = {
  * 1. 随机生成算术题
  * 2. 渲染为 SVG base64
  * 3. 将答案存入 Redis（TTL 5 分钟）
- * 4. 返回 captchaId + captchaImage
+ * 4. 返回 captchaId + captchaBase64
  */
 export const generateCaptcha = async (): Promise<CaptchaResult> => {
 	const { expression, answer } = generateMathProblem();
 	const captchaId = crypto.randomUUID();
-	const captchaImage = renderMathSvg(expression);
+	const captchaBase64 = renderMathSvg(expression);
 
 	await redis.set(
 		redisKeys.captchaAnswer(captchaId),
@@ -141,7 +141,7 @@ export const generateCaptcha = async (): Promise<CaptchaResult> => {
 		CAPTCHA_TTL_SECONDS,
 	);
 
-	return { captchaId, captchaImage };
+	return { captchaId, captchaBase64 };
 };
 
 /**
