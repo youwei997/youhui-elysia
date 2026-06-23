@@ -1,5 +1,4 @@
 import { Elysia } from "elysia";
-import { z } from "zod";
 import { db } from "@/db/client";
 import { buildTree } from "@/db/helpers/tree";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
@@ -14,13 +13,14 @@ import {
 	softDeleteDept,
 	updateDept,
 } from "./queries";
-import { DeptCreateBody, DeptResponse, DeptUpdateBody } from "./schema";
-
-/** 路径参数 id 校验（coerce.number 将字符串转数字） */
-const ParamsWithId = z.object({ id: z.coerce.number() });
-
-/** DELETE 专用：接受原始字符串（支持 "1" 和 "1,2,3" 两种形式） */
-const ParamsWithCommaIds = z.object({ id: z.string() });
+import {
+	DeptCreateBody,
+	DeptListQuery,
+	DeptParamsWithCommaIds,
+	DeptParamsWithId,
+	DeptResponse,
+	DeptUpdateBody,
+} from "./schema";
 
 export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 	.use(authPlugin)
@@ -36,10 +36,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			query: z.object({
-				keywords: z.string().optional().describe("搜索关键字"),
-				status: z.coerce.number().optional().describe("状态：1=正常 0=停用"),
-			}),
+			query: DeptListQuery,
 			detail: {
 				tags: ["Dept"],
 				summary: "获取部门树形列表",
@@ -76,7 +73,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: DeptParamsWithId,
 			detail: {
 				tags: ["Dept"],
 				summary: "获取部门详情",
@@ -90,18 +87,16 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
+			const parsed = DeptResponse.parse(dept);
 			return {
-				id: String(dept.id),
-				name: dept.name,
-				code: dept.code,
-				parentId: String(dept.parentId),
-				sort: dept.sort,
-				status: dept.status,
+				...parsed,
+				id: String(parsed.id),
+				parentId: String(parsed.parentId),
 			};
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: DeptParamsWithId,
 			detail: {
 				tags: ["Dept"],
 				summary: "获取部门表单数据",
@@ -118,7 +113,8 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 				}
 			}
-			return await createDept(db, body);
+			const dept = await createDept(db, body);
+			return DeptResponse.parse(dept);
 		},
 		{
 			auth: true,
@@ -160,11 +156,11 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			if (!updated) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
-			return updated;
+			return DeptResponse.parse(updated);
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: DeptParamsWithId,
 			body: DeptUpdateBody,
 			detail: {
 				tags: ["Dept"],
@@ -218,7 +214,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			params: ParamsWithCommaIds,
+			params: DeptParamsWithCommaIds,
 			detail: {
 				tags: ["Dept"],
 				summary: "删除部门（级联删除子部门，支持批量）",

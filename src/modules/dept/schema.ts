@@ -3,7 +3,7 @@ import {
 	createSelectSchema,
 	createUpdateSchema,
 } from "drizzle-orm/zod";
-import type { z } from "zod";
+import { z } from "zod";
 import { sysDept } from "@/db/schema/system/dept";
 
 /**
@@ -46,6 +46,24 @@ export const DeptUpdateBody = createUpdateSchema(sysDept, {
 	.omit({ ...auditKeys, treePath: true })
 	.describe("更新部门请求参数");
 
+/** 部门列表查询参数（树形列表，无分页） */
+export const DeptListQuery = z
+	.object({
+		keywords: z.string().optional().describe("搜索关键字"),
+		status: z.coerce.number().optional().describe("状态：1=正常 0=停用"),
+	})
+	.describe("部门列表查询参数");
+
+/** 部门 ID 路径参数（coerce.number 将字符串转数字） */
+export const DeptParamsWithId = z
+	.object({ id: z.coerce.number() })
+	.describe("部门 ID 路径参数");
+
+/** DELETE 专用：接受原始字符串（支持 "1" 和 "1,2,3" 两种形式） */
+export const DeptParamsWithCommaIds = z
+	.object({ id: z.string() })
+	.describe("部门 ID 路径参数（逗号分隔批量）");
+
 /** 部门响应：排除审计列与软删标志 */
 export const DeptResponse = createSelectSchema(sysDept)
 	.omit({
@@ -59,3 +77,4 @@ export const DeptResponse = createSelectSchema(sysDept)
 
 export type DeptCreateBody = z.infer<typeof DeptCreateBody>;
 export type DeptUpdateBody = z.infer<typeof DeptUpdateBody>;
+export type DeptListQuery = z.infer<typeof DeptListQuery>;
