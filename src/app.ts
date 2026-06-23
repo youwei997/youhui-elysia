@@ -1,6 +1,7 @@
 import { openapi } from "@elysia/openapi";
 import { Elysia } from "elysia";
 import { authRoutes } from "@/modules/auth/routes";
+import { menuRoutes } from "@/modules/menu/routes";
 import { roleRoutes } from "@/modules/role/routes";
 import { userRoutes } from "@/modules/user/routes";
 import { authPlugin } from "@/plugins/auth";
@@ -23,6 +24,7 @@ export const app = new Elysia()
 				tags: [
 					{ name: "User", description: "用户管理" },
 					{ name: "Role", description: "角色管理" },
+					{ name: "Menu", description: "菜单管理" },
 					{ name: "Auth", description: "认证管理" },
 				],
 				components: {
@@ -45,4 +47,5 @@ export const app = new Elysia()
 	.use(authRoutes)
 	.use(userRoutes)
 	.use(roleRoutes)
+	.use(menuRoutes)
 	.get("/", () => "Hello Elysia");

@@ -19,12 +19,13 @@ export const findUsers = async (query: {
 	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选
 	const where = [isNull(sysUser.deletedAt)];
 	if (query.keywords) {
-		where.push(
-			or(
-				like(sysUser.username, `%${query.keywords}%`),
-				like(sysUser.nickname, `%${query.keywords}%`),
-			),
+		const keywordCondition = or(
+			like(sysUser.username, `%${query.keywords}%`),
+			like(sysUser.nickname, `%${query.keywords}%`),
 		);
+		if (keywordCondition) {
+			where.push(keywordCondition);
+		}
 	}
 	if (query.status !== undefined) {
 		where.push(eq(sysUser.status, query.status));
