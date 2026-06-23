@@ -198,9 +198,9 @@ const where = and(
 - [x] type=B 时 perm 必填校验
 
 ### Dept 模块
-- [ ] 树形列表正确
-- [ ] treePath 在 insert / update parentId 时自动维护
-- [ ] 子树查询 helper 可工作
+- [x] 树形列表正确
+- [x] treePath 在 insert / update parentId 时自动维护（含级联更新子树）
+- [x] 子树查询 helper 可工作（descendantsByTreePath）
 
 ### Permission macro
 - [ ] 路由可声明 `perm: 'sys:user:create'`
