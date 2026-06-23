@@ -291,9 +291,7 @@ export const isRoleAssignedToUsers = async (
 		.select({ userId: sysUserRole.userId })
 		.from(sysUserRole)
 		.innerJoin(sysUser, eq(sysUserRole.userId, sysUser.id))
-		.where(
-			and(eq(sysUserRole.roleId, roleId), isNull(sysUser.deletedAt)),
-		)
+		.where(and(eq(sysUserRole.roleId, roleId), isNull(sysUser.deletedAt)))
 		.limit(1);
 	return rows.length > 0;
 };

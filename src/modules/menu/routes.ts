@@ -18,29 +18,10 @@ import {
 	updateMenu,
 } from "./queries";
 import { MenuCreateBody, MenuOptionsQuery, MenuUpdateBody } from "./schema";
+import type { RouteItem, RouteMeta } from "./types";
 
 /** 路径参数 id 校验（coerce.number 将字符串转数字） */
 const ParamsWithId = z.object({ id: z.coerce.number() });
-
-/** RouteItem 元数据 */
-type Meta = {
-	title: string;
-	icon?: string | undefined;
-	hidden?: boolean | undefined;
-	keepAlive?: boolean | undefined;
-	alwaysShow?: boolean | undefined;
-	params?: Record<string, unknown> | undefined;
-};
-
-/** RouteItem 结构，对齐前端 RouteItem 类型 */
-type RouteItem = {
-	children: RouteItem[];
-	component?: string | undefined;
-	name?: string | undefined;
-	path?: string | undefined;
-	redirect?: string | undefined;
-	meta?: Meta;
-};
 
 /** 将单条菜单映射为 RouteItem */
 const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {
@@ -63,7 +44,7 @@ const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {
 	}
 
 	// meta 仅含非空字段
-	const meta: Meta = { title: menu.name };
+	const meta: RouteMeta = { title: menu.name };
 	if (menu.icon) meta.icon = menu.icon;
 	if (menu.visible === 0) meta.hidden = true;
 	if (menu.keepAlive === 1) meta.keepAlive = true;
