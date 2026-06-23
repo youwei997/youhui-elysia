@@ -103,14 +103,10 @@ export const RoleUpdateBody = createUpdateSchema(sysRole, {
 	})
 	.describe("更新角色请求参数，未传字段保持原值");
 
-/** 绑定菜单请求体：菜单 ID 数组 */
+/** 绑定菜单请求体：菜单 ID 数组（前端传裸数组 [1,2,3]） */
 export const RoleAssignMenusBody = z
-	.object({
-		menuIds: z
-			.array(z.coerce.number().int().positive())
-			.describe("菜单 ID 列表"),
-	})
-	.describe("绑定角色菜单请求体");
+	.array(z.coerce.number().int().positive())
+	.describe("菜单 ID 列表");
 
 /** 绑定部门请求体：部门 ID 数组 */
 export const RoleAssignDeptsBody = z

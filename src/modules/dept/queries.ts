@@ -8,12 +8,23 @@ import type { DeptCreateBody, DeptUpdateBody } from "./schema";
 
 /**
  * 查询所有部门（软删过滤，按 sort 升序）
+ * 支持可选的 keywords（名称模糊匹配）和 status 筛选
  */
-export const findAllDepts = async (db: DB = defaultDb) => {
+export const findAllDepts = async (
+	db: DB = defaultDb,
+	query?: { keywords?: string | undefined; status?: number | undefined },
+) => {
+	const where = [isNull(sysDept.deletedAt)];
+	if (query?.keywords) {
+		where.push(like(sysDept.name, `%${query.keywords}%`));
+	}
+	if (query?.status !== undefined) {
+		where.push(eq(sysDept.status, query.status));
+	}
 	const rows = await db
 		.select()
 		.from(sysDept)
-		.where(isNull(sysDept.deletedAt))
+		.where(and(...where))
 		.orderBy(asc(sysDept.sort));
 	return rows;
 };
@@ -193,6 +204,31 @@ export const softDeleteDept = async (db: DB = defaultDb, id: number) => {
 			.where(inArray(sysDept.id, idsToDelete));
 
 		return idsToDelete.length;
+	});
+};
+
+/**
+ * 批量软删除部门 + 清理关联
+ *
+ * 与 softDeleteDept 同逻辑，但使用 inArray 批量操作，
+ * 单事务内完成 sys_role_dept 清理 + 部门软删，减少往返。
+ * 前置拦截（用户引用校验）由 routes 层负责。
+ */
+export const batchSoftDeleteDepts = async (
+	db: DB = defaultDb,
+	ids: number[],
+) => {
+	if (ids.length === 0) {
+		return [];
+	}
+	return await db.transaction(async (tx) => {
+		await tx.delete(sysRoleDept).where(inArray(sysRoleDept.deptId, ids));
+		const depts = await tx
+			.update(sysDept)
+			.set({ deletedAt: sql`NOW()` })
+			.where(inArray(sysDept.id, ids))
+			.returning();
+		return depts;
 	});
 };
 

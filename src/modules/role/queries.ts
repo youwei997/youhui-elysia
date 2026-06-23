@@ -216,14 +216,14 @@ export const findValidDeptIds = async (
 export const replaceRoleMenus = async (
 	db: DB = defaultDb,
 	roleId: number,
-	body: z.infer<typeof RoleAssignMenusBody>,
+	menuIds: z.infer<typeof RoleAssignMenusBody>,
 ) => {
 	return await db.transaction(async (tx) => {
 		await tx.delete(sysRoleMenu).where(eq(sysRoleMenu.roleId, roleId));
-		if (body.menuIds.length > 0) {
+		if (menuIds.length > 0) {
 			await tx
 				.insert(sysRoleMenu)
-				.values(body.menuIds.map((menuId) => ({ roleId, menuId })));
+				.values(menuIds.map((menuId) => ({ roleId, menuId })));
 		}
 	});
 };

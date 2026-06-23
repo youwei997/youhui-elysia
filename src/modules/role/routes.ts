@@ -284,11 +284,11 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			}
 			// 业务规则前置校验：所有 menuId 必须存在且未软删
 			// 抽到 routes 层用 BizError 抛，符合 AGENTS.md "queries 不抛 HTTP 错误"
-			if (body.menuIds.length > 0) {
-				const validIds = await findValidMenuIds(undefined, body.menuIds);
-				if (validIds.length !== body.menuIds.length) {
+			if (body.length > 0) {
+				const validIds = await findValidMenuIds(undefined, body);
+				if (validIds.length !== body.length) {
 					const validSet = new Set(validIds);
-					const invalid = body.menuIds.filter((id) => !validSet.has(id));
+					const invalid = body.filter((id) => !validSet.has(id));
 					throw new BizError(
 						ERR_CODE.ROLE_MENU_ID_INVALID,
 						`以下 menuId 非法：${invalid.join(", ")}`,
