@@ -114,7 +114,12 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			);
 
 			// 直接返回原始数据，由 response-wrap 自动包壳
-			return { accessToken, refreshToken };
+			return {
+				tokenType: "Bearer",
+				accessToken,
+				refreshToken,
+				expiresIn: 900,
+			};
 		},
 		{
 			body: LoginBody,
@@ -170,7 +175,12 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				15 * 60,
 			);
 
-			return { accessToken, refreshToken: newRefreshToken };
+			return {
+				tokenType: "Bearer",
+				accessToken,
+				refreshToken: newRefreshToken,
+				expiresIn: 900,
+			};
 		},
 		{
 			query: RefreshTokenQuery,
@@ -184,7 +194,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			},
 		},
 	)
-	.post(
+	.delete(
 		"/logout",
 		async ({ user }) => {
 			// macro auth: true 运行时已拦截 null，类型层手动收窄（同 auth.test.ts 写法）

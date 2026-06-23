@@ -21,7 +21,7 @@ import type {
 export const findRoles = async (
 	db: DB = defaultDb,
 	query: {
-		page: number;
+		pageNum: number;
 		pageSize: number;
 		code?: string;
 		name?: string;
@@ -44,14 +44,14 @@ export const findRoles = async (
 		.from(sysRole)
 		.where(and(...where))
 		.limit(query.pageSize)
-		.offset((query.page - 1) * query.pageSize);
+		.offset((query.pageNum - 1) * query.pageSize);
 
 	const [{ total = 0 } = {}] = await db
 		.select({ total: count() })
 		.from(sysRole)
 		.where(and(...where));
 
-	return { list, total, page: query.page, pageSize: query.pageSize };
+	return { list, total };
 };
 
 /** 根据 ID 查角色（软删过滤） */

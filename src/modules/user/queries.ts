@@ -9,7 +9,7 @@ import type { UserCreateBody, UserUpdateBody } from "./schema";
  * 查询用户列表（分页 + 可选过滤）
  */
 export const findUsers = async (query: {
-	page: number;
+	pageNum: number;
 	pageSize: number;
 	username?: string;
 	status?: number;
@@ -28,7 +28,7 @@ export const findUsers = async (query: {
 		.from(sysUser)
 		.where(and(...where)) // 数组至少含软删过滤，永远不会空
 		.limit(query.pageSize)
-		.offset((query.page - 1) * query.pageSize);
+		.offset((query.pageNum - 1) * query.pageSize);
 
 	const result = await db
 		.select({ total: count() })
@@ -37,7 +37,7 @@ export const findUsers = async (query: {
 
 	const total = result[0]?.total ?? 0; // 安全访问，为空时默认 0
 
-	return { list, total, page: query.page, pageSize: query.pageSize };
+	return { list, total };
 };
 
 /** 根据 ID 查询用户（默认过滤已软删记录） */
