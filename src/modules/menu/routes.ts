@@ -1,5 +1,4 @@
 import { Elysia } from "elysia";
-import { z } from "zod";
 import { db } from "@/db/client";
 import { buildTree, type TreeNode } from "@/db/helpers/tree";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
@@ -17,11 +16,15 @@ import {
 	softDeleteMenu,
 	updateMenu,
 } from "./queries";
-import { MenuCreateBody, MenuOptionsQuery, MenuUpdateBody } from "./schema";
+import {
+	MenuCreateBody,
+	MenuListQuery,
+	MenuOptionsQuery,
+	MenuParamsWithId,
+	MenuResponse,
+	MenuUpdateBody,
+} from "./schema";
 import type { RouteItem, RouteMeta } from "./types";
-
-/** 路径参数 id 校验（coerce.number 将字符串转数字） */
-const ParamsWithId = z.object({ id: z.coerce.number() });
 
 /** 将单条菜单映射为 RouteItem */
 const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {
@@ -105,9 +108,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
-			query: z.object({
-				keywords: z.string().optional().describe("搜索关键字"),
-			}),
+			query: MenuListQuery,
 			detail: {
 				tags: ["Menu"],
 				summary: "菜单树形列表（含按钮）",
@@ -140,11 +141,11 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			if (!menu) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
-			return menu;
+			return MenuResponse.parse(menu);
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: MenuParamsWithId,
 			detail: {
 				tags: ["Menu"],
 				summary: "获取菜单表单数据",
@@ -215,7 +216,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		{
 			auth: true,
 			body: MenuUpdateBody,
-			params: ParamsWithId,
+			params: MenuParamsWithId,
 			detail: {
 				tags: ["Menu"],
 				summary: "更新菜单",
@@ -236,7 +237,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: MenuParamsWithId,
 			detail: {
 				tags: ["Menu"],
 				summary: "删除菜单（级联软删）",

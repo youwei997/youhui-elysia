@@ -5,19 +5,7 @@ import {
 } from "drizzle-orm/zod";
 import { z } from "zod";
 import { sysMenu } from "@/db/schema/system/menu";
-
-/**
- * 审计列黑名单：与 role/user schema 同款处理，
- * 禁止前端通过请求体篡改创建人/时间/软删标志。
- */
-const auditKeys = {
-	id: true,
-	createdBy: true,
-	createdAt: true,
-	updatedBy: true,
-	updatedAt: true,
-	deletedAt: true,
-} as const;
+import { auditKeys } from "@/lib/crud-dto";
 
 /** 菜单类型枚举 */
 export const menuTypeSchema = z
@@ -105,3 +93,15 @@ export const MenuResponse = createSelectSchema(sysMenu)
 		updatedBy: true,
 	})
 	.describe("菜单信息");
+
+/** 菜单 ID 路径参数（coerce.number 将字符串转数字） */
+export const MenuParamsWithId = z
+	.object({ id: z.coerce.number() })
+	.describe("菜单 ID 路径参数");
+
+/** 菜单树形列表查询参数 */
+export const MenuListQuery = z
+	.object({
+		keywords: z.string().optional().describe("搜索关键字"),
+	})
+	.describe("菜单列表查询参数");

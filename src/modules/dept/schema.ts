@@ -5,18 +5,7 @@ import {
 } from "drizzle-orm/zod";
 import { z } from "zod";
 import { sysDept } from "@/db/schema/system/dept";
-
-/**
- * 审计列黑名单：禁止前端通过请求体篡改
- */
-const auditKeys = {
-	id: true,
-	createdBy: true,
-	createdAt: true,
-	updatedBy: true,
-	updatedAt: true,
-	deletedAt: true,
-} as const;
+import { auditKeys } from "@/lib/crud-dto";
 
 /**
  * 创建部门请求体

@@ -1,5 +1,4 @@
 import { Elysia } from "elysia";
-import { z } from "zod";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import {
@@ -24,14 +23,11 @@ import {
 	RoleAssignMenusBody,
 	RoleCreateBody,
 	RoleListQuery,
+	RoleParamsWithCommaIds,
+	RoleParamsWithId,
+	RoleResponse,
 	RoleUpdateBody,
 } from "./schema";
-
-/** 路径参数 id 校验：路由 `:id` 是 string，coerce 转 number */
-const ParamsWithId = z.object({ id: z.coerce.number() });
-
-/** DELETE 专用：接受原始字符串（支持 "1" 和 "1,2,3" 两种形式），对齐前端批量删除 */
-const ParamsWithCommaIds = z.object({ id: z.string() });
 
 /** 内部预设：系统内置角色 code 列表，禁止删除/改编码 */
 const PROTECTED_CODES = ["ROOT"] as const;
@@ -101,11 +97,11 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return role;
+			return RoleResponse.parse(role);
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
 				summary: "角色详情",
@@ -120,11 +116,13 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return role;
+			const { deptIds } = role;
+			const parsed = RoleResponse.parse(role);
+			return { ...parsed, deptIds };
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
 				summary: "角色表单数据（含 deptIds）",
@@ -168,7 +166,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		{
 			auth: true,
 			body: RoleUpdateBody,
-			params: ParamsWithId,
+			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
 				summary: "更新角色",
@@ -230,7 +228,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			params: ParamsWithCommaIds,
+			params: RoleParamsWithCommaIds,
 			detail: {
 				tags: ["Role"],
 				summary: "删除角色（软删，支持批量）",
@@ -250,7 +248,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
 				summary: "查询角色已绑定的菜单 ID 列表",
@@ -268,7 +266,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
 				summary: "查询角色已绑定的部门 ID 列表（仅 CUSTOM dataScope 角色）",
@@ -301,7 +299,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		{
 			auth: true,
 			body: RoleAssignMenusBody,
-			params: ParamsWithId,
+			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
 				summary: "绑定角色菜单",
@@ -342,7 +340,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		{
 			auth: true,
 			body: RoleAssignDeptsBody,
-			params: ParamsWithId,
+			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
 				summary: "绑定角色部门（仅 CUSTOM dataScope）",

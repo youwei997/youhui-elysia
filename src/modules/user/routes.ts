@@ -1,5 +1,4 @@
 import { Elysia } from "elysia";
-import { z } from "zod";
 import { db } from "@/db/client";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { findUserPerms, findUserRoles } from "@/modules/auth/queries";
@@ -15,13 +14,15 @@ import {
 	softDeleteUser,
 	updateUser,
 } from "./queries";
-import { UserCreateBody, UserListQuery, UserUpdateBody } from "./schema";
-
-/** 路径参数 id 校验（coerce.number 将字符串转为数字） */
-const ParamsWithId = z.object({ id: z.coerce.number() });
-
-/** DELETE 专用：接受原始字符串（支持 "1" 和 "1,2,3" 两种形式） */
-const ParamsWithCommaIds = z.object({ id: z.string() });
+import {
+	UserCreateBody,
+	UserListQuery,
+	UserParamsWithCommaIds,
+	UserParamsWithId,
+	UserResetPasswordQuery,
+	UserResponse,
+	UserUpdateBody,
+} from "./schema";
 
 export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.use(authPlugin)
@@ -94,11 +95,13 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			if (!data) {
 				throw notFound();
 			}
-			return data;
+			const { roleIds } = data;
+			const parsed = UserResponse.parse(data);
+			return { ...parsed, roleIds };
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: UserParamsWithId,
 			detail: {
 				tags: ["User"],
 				summary: "用户表单数据",
@@ -113,11 +116,11 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			if (!user) {
 				throw notFound();
 			}
-			return user;
+			return UserResponse.parse(user);
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
+			params: UserParamsWithId,
 			detail: {
 				tags: ["User"],
 				summary: "用户详情",
@@ -152,8 +155,8 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			params: ParamsWithId,
-			query: z.object({ password: z.string().min(1, "密码不能为空") }),
+			params: UserParamsWithId,
+			query: UserResetPasswordQuery,
 			detail: {
 				tags: ["User"],
 				summary: "重置用户密码",
@@ -173,7 +176,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		{
 			auth: true,
 			body: UserUpdateBody,
-			params: ParamsWithId,
+			params: UserParamsWithId,
 			detail: {
 				tags: ["User"],
 				summary: "更新用户",
@@ -205,7 +208,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			params: ParamsWithCommaIds,
+			params: UserParamsWithCommaIds,
 			detail: {
 				tags: ["User"],
 				summary: "删除用户（软删，支持批量）",

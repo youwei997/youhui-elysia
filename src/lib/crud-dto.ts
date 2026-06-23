@@ -4,6 +4,21 @@ import { z } from "zod";
 import { pageFields } from "@/db/helpers/pagination";
 
 /**
+ * 审计列黑名单：createInsertSchema / createUpdateSchema 直接从整张表派生时
+ * 会把审计字段（createdAt / createdBy / updatedAt / updatedBy / deletedAt）
+ * 一并暴露给前端，导致前端可篡改创建时间、反软删（清空 deletedAt）等。
+ * 在各模块 schema.ts 中用 `.omit(auditKeys)` 统一排除。
+ */
+export const auditKeys = {
+	id: true,
+	createdBy: true,
+	createdAt: true,
+	updatedBy: true,
+	updatedAt: true,
+	deletedAt: true,
+} as const;
+
+/**
  * 创建列表查询 DTO：分页参数（复用 pageFields）+ 业务过滤字段
  * @param fields - 可选的业务查询字段，如 { username: z.string().optional() }
  */

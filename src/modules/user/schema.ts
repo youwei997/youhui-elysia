@@ -5,21 +5,7 @@ import {
 } from "drizzle-orm/zod";
 import { z } from "zod";
 import { sysUser } from "@/db/schema/system/user";
-import { createListQuery } from "@/lib/crud-dto";
-
-/**
- * 审计列黑名单：createInsertSchema/createUpdateSchema 直接从整张表派生，
- * 会把审计字段（createdAt/createdBy/.../deletedAt）也暴露给前端，
- * 导致前端可篡改创建时间、反软删（清空 deletedAt）等。必须 omit。
- */
-const auditKeys = {
-	id: true,
-	createdBy: true,
-	createdAt: true,
-	updatedBy: true,
-	updatedAt: true,
-	deletedAt: true,
-} as const;
+import { auditKeys, createListQuery } from "@/lib/crud-dto";
 
 /**
  * 性别枚举约束：覆盖 smallint 原始范围（-32768~32767），限定业务取值。
@@ -102,3 +88,20 @@ export const UserResponse = createSelectSchema(sysUser)
 		updatedBy: true,
 	})
 	.describe("用户信息（不含密码、软删标志、操作人 id）");
+
+/** 用户 ID 路径参数（coerce.number 将字符串转数字） */
+export const UserParamsWithId = z
+	.object({ id: z.coerce.number() })
+	.describe("用户 ID 路径参数");
+
+/** DELETE 专用：接受原始字符串（支持 "1" 和 "1,2,3" 两种形式） */
+export const UserParamsWithCommaIds = z
+	.object({ id: z.string() })
+	.describe("用户 ID 路径参数（逗号分隔批量）");
+
+/** 重置密码请求体（query 参数传递，管理员强制重置） */
+export const UserResetPasswordQuery = z
+	.object({
+		password: z.string().min(1, "密码不能为空"),
+	})
+	.describe("重置密码请求参数");

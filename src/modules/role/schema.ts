@@ -5,19 +5,7 @@ import {
 } from "drizzle-orm/zod";
 import { z } from "zod";
 import { sysRole } from "@/db/schema/system/role";
-import { createListQuery } from "@/lib/crud-dto";
-
-/**
- * 审计列黑名单：与 user/schema.ts 同款处理，避免前端可篡改审计字段 / 反软删
- */
-const auditKeys = {
-	id: true,
-	createdBy: true,
-	createdAt: true,
-	updatedBy: true,
-	updatedAt: true,
-	deletedAt: true,
-} as const;
+import { auditKeys, createListQuery } from "@/lib/crud-dto";
 
 /** 状态枚举：1=正常 0=停用 */
 const statusSchema = z.union([
@@ -125,3 +113,13 @@ export const RoleResponse = createSelectSchema(sysRole)
 		updatedBy: true,
 	})
 	.describe("角色信息");
+
+/** 角色 ID 路径参数（coerce.number 将字符串转数字） */
+export const RoleParamsWithId = z
+	.object({ id: z.coerce.number() })
+	.describe("角色 ID 路径参数");
+
+/** DELETE 专用：接受原始字符串（支持 "1" 和 "1,2,3" 两种形式） */
+export const RoleParamsWithCommaIds = z
+	.object({ id: z.string() })
+	.describe("角色 ID 路径参数（逗号分隔批量）");
