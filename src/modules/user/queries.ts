@@ -1,7 +1,8 @@
-import { and, count, eq, isNull, like } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, like, or } from "drizzle-orm";
 import type z from "zod";
 import { db } from "@/db/client";
 import type { PageResult } from "@/db/helpers/pagination";
+import { sysUserRole } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
 
@@ -11,16 +12,25 @@ import type { UserCreateBody, UserUpdateBody } from "./schema";
 export const findUsers = async (query: {
 	pageNum: number;
 	pageSize: number;
-	username?: string;
+	keywords?: string;
 	status?: number;
+	deptId?: number;
 }): Promise<PageResult<(typeof sysUser)["$inferSelect"]>> => {
-	// 组装查询条件：软删过滤（必加）+ 用户名模糊匹配 + 状态精确匹配
+	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选
 	const where = [isNull(sysUser.deletedAt)];
-	if (query.username) {
-		where.push(like(sysUser.username, `%${query.username}%`));
+	if (query.keywords) {
+		where.push(
+			or(
+				like(sysUser.username, `%${query.keywords}%`),
+				like(sysUser.nickname, `%${query.keywords}%`),
+			),
+		);
 	}
 	if (query.status !== undefined) {
 		where.push(eq(sysUser.status, query.status));
+	}
+	if (query.deptId !== undefined) {
+		where.push(eq(sysUser.deptId, query.deptId));
 	}
 
 	const list = await db
@@ -74,6 +84,67 @@ export const softDeleteUser = async (id: number) => {
 		.update(sysUser)
 		.set({ deletedAt: new Date().toISOString() })
 		.where(eq(sysUser.id, id))
+		.returning();
+	return user;
+};
+
+/** 查某用户已绑定的角色 ID 列表（前端"用户编辑"页回显用） */
+export const findUserRoleIds = async (userId: number) => {
+	const rows = await db
+		.select({ roleId: sysUserRole.roleId })
+		.from(sysUserRole)
+		.where(eq(sysUserRole.userId, userId));
+	return rows.map((r) => r.roleId);
+};
+
+/**
+ * 获取用户表单数据（含已绑定的角色 ID 列表）
+ * 返回 { ...user, roleIds }，对齐前端 UserForm 类型
+ */
+export const findUserFormData = async (id: number) => {
+	const user = await findUserById(id);
+	if (!user) {
+		return undefined;
+	}
+	const roleIds = await findUserRoleIds(id);
+	return { ...user, roleIds };
+};
+
+/** 用户下拉选项（供前端下拉选择器使用），仅返回启用且未删除的用户 */
+export const findUserOptions = async () => {
+	const rows = await db
+		.select({
+			id: sysUser.id,
+			username: sysUser.username,
+			nickname: sysUser.nickname,
+		})
+		.from(sysUser)
+		.where(and(isNull(sysUser.deletedAt), eq(sysUser.status, 1)));
+	return rows.map((r) => ({
+		value: String(r.id),
+		label: r.nickname || r.username,
+	}));
+};
+
+/** 批量软删除用户 */
+export const batchSoftDeleteUsers = async (ids: number[]) => {
+	if (ids.length === 0) {
+		return [];
+	}
+	const users = await db
+		.update(sysUser)
+		.set({ deletedAt: new Date().toISOString() })
+		.where(inArray(sysUser.id, ids))
+		.returning();
+	return users;
+};
+
+/** 重置用户密码（软删过滤，禁止重置已删用户的密码） */
+export const resetUserPassword = async (id: number, password: string) => {
+	const [user] = await db
+		.update(sysUser)
+		.set({ password })
+		.where(and(eq(sysUser.id, id), isNull(sysUser.deletedAt)))
 		.returning();
 	return user;
 };

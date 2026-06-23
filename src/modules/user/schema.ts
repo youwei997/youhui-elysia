@@ -39,8 +39,12 @@ const statusSchema = z.union([
 
 /** 用户列表查询参数 */
 export const UserListQuery = createListQuery(sysUser, {
-	username: z.string().optional().describe("用户名（模糊搜索）"),
+	keywords: z
+		.string()
+		.optional()
+		.describe("搜索关键字（模糊匹配用户名和昵称）"),
 	status: statusSchema.optional().describe("状态：1-正常 0-禁用"),
+	deptId: z.coerce.number().optional().describe("部门 ID"),
 }).describe("用户列表查询参数");
 
 /**
