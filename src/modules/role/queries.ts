@@ -10,6 +10,7 @@ import {
 	sysUserRole,
 } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
+import { sysUser } from "@/db/schema/system/user";
 import type {
 	RoleAssignDeptsBody,
 	RoleAssignMenusBody,
@@ -276,7 +277,12 @@ export const findRoleFormData = async (db: DB = defaultDb, id: number) => {
 	return { ...role, deptIds };
 };
 
-/** 判断某角色是否已被用户绑定（用于软删前置拦截） */
+/**
+ * 判断某角色是否已被"未软删"用户绑定（用于软删前置拦截）
+ *
+ * 必须 JOIN sys_user 过滤已删用户，否则角色只分配给已软删用户时
+ * 会误判"有用户占用"，导致角色无法删除。
+ */
 export const isRoleAssignedToUsers = async (
 	db: DB = defaultDb,
 	roleId: number,
@@ -284,7 +290,10 @@ export const isRoleAssignedToUsers = async (
 	const rows = await db
 		.select({ userId: sysUserRole.userId })
 		.from(sysUserRole)
-		.where(eq(sysUserRole.roleId, roleId))
+		.innerJoin(sysUser, eq(sysUserRole.userId, sysUser.id))
+		.where(
+			and(eq(sysUserRole.roleId, roleId), isNull(sysUser.deletedAt)),
+		)
 		.limit(1);
 	return rows.length > 0;
 };
