@@ -1,6 +1,8 @@
 import { Elysia } from "elysia";
 import { z } from "zod";
-import { notFound } from "@/lib/errors";
+import { db } from "@/db/client";
+import { BizError, ERR_CODE, notFound } from "@/lib/errors";
+import { findUserPerms, findUserRoles } from "@/modules/auth/queries";
 import { authPlugin } from "@/plugins/auth";
 import {
 	createUser,
@@ -16,6 +18,39 @@ const ParamsWithId = z.object({ id: z.coerce.number() });
 
 export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.use(authPlugin)
+	.get(
+		"/me",
+		async ({ user }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const userId = Number(user.sub);
+			const userInfo = await findUserById(userId);
+			if (!userInfo) {
+				throw notFound();
+			}
+			const [roles, perms] = await Promise.all([
+				findUserRoles(db, userId),
+				findUserPerms(db, userId),
+			]);
+			return {
+				userId: userInfo.id,
+				username: userInfo.username,
+				nickname: userInfo.nickname,
+				avatar: userInfo.avatar,
+				roles: roles.map((r) => r.code),
+				perms,
+			};
+		},
+		{
+			auth: true,
+			detail: {
+				tags: ["User"],
+				summary: "获取当前用户信息",
+				description: "返回当前登录用户的角色和权限标识集合",
+			},
+		},
+	)
 	.get(
 		"/",
 		async ({ query }) => {

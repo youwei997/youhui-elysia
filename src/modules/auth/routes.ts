@@ -16,7 +16,7 @@ import {
 	incrementTokenVersion,
 	isAccountLocked,
 } from "./queries";
-import { LoginBody, RefreshBody } from "./schema";
+import { LoginBody, RefreshTokenQuery } from "./schema";
 
 /** 生成唯一 jti */
 const generateJti = (): string => {
@@ -129,9 +129,9 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 		},
 	)
 	.post(
-		"/refresh",
-		async ({ body }) => {
-			const { refreshToken } = body;
+		"/refresh-token",
+		async ({ query }) => {
+			const { refreshToken } = query;
 
 			// 1. 验证 refresh token
 			const oldPayload = await verifyToken(refreshToken);
@@ -173,7 +173,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			return { accessToken, refreshToken: newRefreshToken };
 		},
 		{
-			body: RefreshBody,
+			query: RefreshTokenQuery,
 			detail: {
 				tags: ["Auth"],
 				summary: "刷新 token",
