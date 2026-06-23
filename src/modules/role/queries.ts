@@ -1,10 +1,14 @@
 import { and, count, eq, inArray, isNull, like } from "drizzle-orm";
 import type z from "zod";
-import { db as defaultDb, type DB } from "@/db/client";
+import { type DB, db as defaultDb } from "@/db/client";
 import type { PageResult } from "@/db/helpers/pagination";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysMenu } from "@/db/schema/system/menu";
-import { sysRoleDept, sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
+import {
+	sysRoleDept,
+	sysRoleMenu,
+	sysUserRole,
+} from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import type {
 	RoleAssignDeptsBody,

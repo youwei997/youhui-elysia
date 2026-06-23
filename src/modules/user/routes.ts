@@ -14,7 +14,7 @@ import { UserCreateBody, UserListQuery, UserUpdateBody } from "./schema";
 /** 路径参数 id 校验 */
 const ParamsWithId = z.object({ id: z.coerce.number() });
 
-export const userRoutes = new Elysia({ prefix: "/users" })
+export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.use(authPlugin)
 	.get(
 		"/",

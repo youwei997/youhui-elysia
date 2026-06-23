@@ -42,7 +42,10 @@ const codeSchema = z
 	.string()
 	.min(2)
 	.max(32)
-	.regex(/^[A-Z][A-Z0-9_]*$/, "编码必须以大写字母开头，仅含大写字母、数字、下划线");
+	.regex(
+		/^[A-Z][A-Z0-9_]*$/,
+		"编码必须以大写字母开头，仅含大写字母、数字、下划线",
+	);
 
 /** 角色列表查询参数 */
 export const RoleListQuery = createListQuery(sysRole, {
@@ -91,14 +94,18 @@ export const RoleUpdateBody = createUpdateSchema(sysRole, {
 /** 绑定菜单请求体：菜单 ID 数组 */
 export const RoleAssignMenusBody = z
 	.object({
-		menuIds: z.array(z.coerce.number().int().positive()).describe("菜单 ID 列表"),
+		menuIds: z
+			.array(z.coerce.number().int().positive())
+			.describe("菜单 ID 列表"),
 	})
 	.describe("绑定角色菜单请求体");
 
 /** 绑定部门请求体：部门 ID 数组 */
 export const RoleAssignDeptsBody = z
 	.object({
-		deptIds: z.array(z.coerce.number().int().positive()).describe("部门 ID 列表"),
+		deptIds: z
+			.array(z.coerce.number().int().positive())
+			.describe("部门 ID 列表"),
 	})
 	.describe("绑定角色部门请求体（仅 dataScope=5 时启用）");
 

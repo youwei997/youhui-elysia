@@ -1,11 +1,8 @@
-import { and, eq, isNull, isNotNull, ne } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { sysMenu } from "@/db/schema/system/menu";
+import { sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
-import {
-	sysRoleMenu,
-	sysUserRole,
-} from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";

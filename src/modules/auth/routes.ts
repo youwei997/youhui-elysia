@@ -59,7 +59,7 @@ const revokeJti = async (jti: string, exp?: number): Promise<void> => {
 	}
 };
 
-export const authRoutes = new Elysia({ prefix: "/auth" })
+export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 	.use(authPlugin)
 	.post(
 		"/login",
@@ -85,36 +85,36 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 			}
 
-// 4. 登录成功：清除失败计数，查角色/权限，签发双 token
-				await clearLoginFailCount(username);
+			// 4. 登录成功：清除失败计数，查角色/权限，签发双 token
+			await clearLoginFailCount(username);
 
-				// 并发查角色 + 权限（互不依赖，一起跑更快）
-				const [userRoles, userPerms] = await Promise.all([
-					findUserRoles(db, user.id),
-					findUserPerms(db, user.id),
-				]);
+			// 并发查角色 + 权限（互不依赖，一起跑更快）
+			const [userRoles, userPerms] = await Promise.all([
+				findUserRoles(db, user.id),
+				findUserPerms(db, user.id),
+			]);
 
-				const tokenVersion = Number(
-					(await redis.get(redisKeys.userTokenVersion(user.id))) ?? "0",
-				);
-				const payload = buildJwtPayload(user, tokenVersion, userRoles, userPerms);
+			const tokenVersion = Number(
+				(await redis.get(redisKeys.userTokenVersion(user.id))) ?? "0",
+			);
+			const payload = buildJwtPayload(user, tokenVersion, userRoles, userPerms);
 
-				// access 和 refresh 用不同的 jti，refresh 的 jti 不在这里黑名单
-				const [accessToken, refreshToken] = await Promise.all([
-					signAccessToken({ ...payload, jti: generateJti() }),
-					signRefreshToken(payload),
-				]);
+			// access 和 refresh 用不同的 jti，refresh 的 jti 不在这里黑名单
+			const [accessToken, refreshToken] = await Promise.all([
+				signAccessToken({ ...payload, jti: generateJti() }),
+				signRefreshToken(payload),
+			]);
 
-				// perms 写入 Redis 缓存，TTL 与 access token 有效期一致（15min）
-				await redis.set(
-					redisKeys.userPerms(user.id),
-					JSON.stringify(userPerms),
-					"EX",
-					15 * 60,
-				);
+			// perms 写入 Redis 缓存，TTL 与 access token 有效期一致（15min）
+			await redis.set(
+				redisKeys.userPerms(user.id),
+				JSON.stringify(userPerms),
+				"EX",
+				15 * 60,
+			);
 
-				// 直接返回原始数据，由 response-wrap 自动包壳
-				return { accessToken, refreshToken };
+			// 直接返回原始数据，由 response-wrap 自动包壳
+			return { accessToken, refreshToken };
 		},
 		{
 			body: LoginBody,
@@ -129,49 +129,49 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
 		},
 	)
 	.post(
-"/refresh",
-			async ({ body }) => {
-				const { refreshToken } = body;
+		"/refresh",
+		async ({ body }) => {
+			const { refreshToken } = body;
 
-				// 1. 验证 refresh token
-				const oldPayload = await verifyToken(refreshToken);
+			// 1. 验证 refresh token
+			const oldPayload = await verifyToken(refreshToken);
 
-				// 2. 旧 refresh token 的 jti 加入黑名单（一次性使用）
-				await revokeJti(oldPayload.jti, oldPayload.exp);
+			// 2. 旧 refresh token 的 jti 加入黑名单（一次性使用）
+			await revokeJti(oldPayload.jti, oldPayload.exp);
 
-				// 3. 从 JWT sub（userId）重新查角色/权限，确保刷新后权限是最新的
-				const userId = Number(oldPayload.sub);
-				const [userRoles, userPerms] = await Promise.all([
-					findUserRoles(db, userId),
-					findUserPerms(db, userId),
-				]);
+			// 3. 从 JWT sub（userId）重新查角色/权限，确保刷新后权限是最新的
+			const userId = Number(oldPayload.sub);
+			const [userRoles, userPerms] = await Promise.all([
+				findUserRoles(db, userId),
+				findUserPerms(db, userId),
+			]);
 
-				const tokenVersion = Number(
-					(await redis.get(redisKeys.userTokenVersion(userId))) ?? "0",
-				);
+			const tokenVersion = Number(
+				(await redis.get(redisKeys.userTokenVersion(userId))) ?? "0",
+			);
 
-				// 4. 签发新的双 token，携带最新权限
-				const newPayload = buildJwtPayload(
-					{ id: userId, username: oldPayload.username },
-					tokenVersion,
-					userRoles,
-					userPerms,
-				);
-				const [accessToken, newRefreshToken] = await Promise.all([
-					signAccessToken({ ...newPayload, jti: generateJti() }),
-					signRefreshToken(newPayload),
-				]);
+			// 4. 签发新的双 token，携带最新权限
+			const newPayload = buildJwtPayload(
+				{ id: userId, username: oldPayload.username },
+				tokenVersion,
+				userRoles,
+				userPerms,
+			);
+			const [accessToken, newRefreshToken] = await Promise.all([
+				signAccessToken({ ...newPayload, jti: generateJti() }),
+				signRefreshToken(newPayload),
+			]);
 
-				// 5. 同步更新 Redis 权限缓存
-				await redis.set(
-					redisKeys.userPerms(userId),
-					JSON.stringify(userPerms),
-					"EX",
-					15 * 60,
-				);
+			// 5. 同步更新 Redis 权限缓存
+			await redis.set(
+				redisKeys.userPerms(userId),
+				JSON.stringify(userPerms),
+				"EX",
+				15 * 60,
+			);
 
-				return { accessToken, refreshToken: newRefreshToken };
-			},
+			return { accessToken, refreshToken: newRefreshToken };
+		},
 		{
 			body: RefreshBody,
 			detail: {

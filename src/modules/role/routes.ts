@@ -40,7 +40,7 @@ const ensureNotProtected = (role: { code: string }) => {
 	}
 };
 
-export const roleRoutes = new Elysia({ prefix: "/roles" })
+export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.use(authPlugin)
 	.get(
 		"/",
