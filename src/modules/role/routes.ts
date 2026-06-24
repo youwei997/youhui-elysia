@@ -20,6 +20,7 @@ import {
 	updateRole,
 } from "./queries";
 import {
+	DATA_SCOPE_LABEL_MAP,
 	RoleAssignDeptsBody,
 	RoleAssignMenusBody,
 	RoleCreateBody,
@@ -60,10 +61,16 @@ const ensureValidDeptIds = async (deptIds: number[]) => {
 	}
 };
 
-/** 响应转换：parse 后 id 转 string */
+/** 响应转换：id 转 string，计算 dataScopeLabel */
 const parseRole = (role: Parameters<typeof RoleResponse.parse>[0]) => {
 	const parsed = RoleResponse.parse(role);
-	return { ...parsed, id: String(parsed.id) };
+	return {
+		...parsed,
+		id: String(parsed.id),
+		dataScopeLabel:
+			DATA_SCOPE_LABEL_MAP[parsed.dataScope as keyof typeof DATA_SCOPE_LABEL_MAP] ??
+			"未知",
+	};
 };
 
 export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })

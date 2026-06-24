@@ -13,6 +13,15 @@ const statusSchema = z.union([
 	z.literal(1).describe("正常"),
 ]);
 
+/** 数据权限描述映射（1→"所有数据" … 5→"自定义"） */
+export const DATA_SCOPE_LABEL_MAP: Record<number, string> = {
+	1: "所有数据",
+	2: "部门及子部门",
+	3: "本部门",
+	4: "本人",
+	5: "自定义",
+};
+
 /**
  * 数据权限枚举：与 sys_role.dataScope 字段对齐
  * 1=所有 2=部门及子 3=本部门 4=本人 5=自定义
@@ -105,10 +114,11 @@ export const RoleAssignDeptsBody = z
 	})
 	.describe("绑定角色部门请求体（仅 dataScope=5 时启用）");
 
-/** 角色响应：排除软删标志、创建人/更新人，保留创建/更新时间 */
+/** 角色响应：排除软删标志、备注、创建人/更新人，保留创建/更新时间 */
 export const RoleResponse = createSelectSchema(sysRole)
 	.omit({
 		deleteTime: true,
+		remark: true,
 		createdBy: true,
 		updatedBy: true,
 	})
