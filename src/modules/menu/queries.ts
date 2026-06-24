@@ -151,11 +151,15 @@ export const findAllMenusWithButtons = async (
  */
 export const findMenuOptions = async (
 	onlyParent: boolean | undefined,
+	scope: number | undefined,
 	db: DB,
 ): Promise<Array<{ value: string; label: string; parentId: number }>> => {
 	const where = [isNull(sysMenu.deleteTime)];
 	if (onlyParent) {
 		where.push(ne(sysMenu.type, "B"));
+	}
+	if (scope !== undefined) {
+		where.push(eq(sysMenu.scope, scope));
 	}
 	const rows = await db
 		.select({

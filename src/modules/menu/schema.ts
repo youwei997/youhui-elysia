@@ -19,6 +19,7 @@ export const MenuOptionsQuery = z
 			.string()
 			.optional()
 			.describe("是否仅返回目录/菜单（过滤按钮）"),
+		scope: z.coerce.number().optional().describe("菜单范围：1=平台 2=业务"),
 	})
 	.describe("菜单选项查询参数");
 
@@ -42,6 +43,7 @@ export const MenuCreateBody = createInsertSchema(sysMenu, {
 	icon: (s) => s.describe("图标"),
 	redirect: (s) => s.describe("跳转路径"),
 	params: (_s) => z.unknown().optional().describe("路由参数（JSON 对象）"),
+	scope: (s) => s.describe("菜单范围：1=平台 2=业务"),
 })
 	.omit(auditKeys)
 	.refine(
@@ -77,6 +79,7 @@ export const MenuUpdateBody = createUpdateSchema(sysMenu, {
 	icon: (s) => s.describe("图标"),
 	redirect: (s) => s.describe("跳转路径"),
 	params: (_s) => z.unknown().optional().describe("路由参数（JSON 对象）"),
+	scope: (s) => s.describe("菜单范围：1=平台 2=业务"),
 })
 	.omit({
 		...auditKeys,

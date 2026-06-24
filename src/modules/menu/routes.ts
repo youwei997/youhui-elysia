@@ -133,10 +133,10 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			const menus = await findAllMenusWithButtons(query.keywords, db);
 			const validMenus = menus
 				.filter((m) => m.parentId !== null)
-				.map((m) => ({
-					...m,
-					parentId: m.parentId as number,
-				}));
+				.map((m) => {
+					const { alwaysShow, keepAlive, ...rest } = m;
+					return { ...rest, parentId: m.parentId as number };
+				});
 			const tree = buildTree(validMenus);
 			return stringifyTreeIds(tree);
 		},
@@ -156,6 +156,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		async ({ query }) => {
 			const items = await findMenuOptions(
 				query.onlyParent === "true" || query.onlyParent === "1",
+				query.scope,
 				db,
 			);
 			// findMenuOptions 返回平面列表，需要组装成树

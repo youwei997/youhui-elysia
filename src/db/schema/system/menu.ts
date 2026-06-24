@@ -47,6 +47,8 @@ export const sysMenu = pgTable("sys_menu", {
 	redirect: varchar("redirect", { length: 128 }),
 	/** 路由参数（JSON 格式） */
 	params: jsonb("params"),
+	/** 菜单范围（1=平台 2=业务），对 youlai-boot 兼容字段 */
+	scope: smallint("scope").default(1).notNull(),
 	/** 审计字段 */
 	...auditColumns,
 });
