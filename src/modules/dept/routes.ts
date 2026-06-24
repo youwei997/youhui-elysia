@@ -28,11 +28,11 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		"/",
 		async ({ query }) => {
 			const list = await findAllDepts(query, db);
-			const validList = list.filter(
-				(item): item is typeof item & { parentId: number } =>
-					item.parentId !== null,
-			);
-			return buildTree(validList);
+			const items = list.map((d) => ({
+				...DeptResponse.parse(d),
+				parentId: d.parentId ?? 0,
+			}));
+			return buildTree(items);
 		},
 		{
 			auth: true,
@@ -55,7 +55,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			);
 			const tree = buildTree(validList);
 
-			/** 递归将树形节点映射为 { value, label, children? } 选项格式 */
+			/** 递归映射为 { value, label, children? } 选项格式 */
 			const toOptions = (
 				nodes: TreeNode<(typeof validList)[number]>[],
 			): { value: string; label: string; children?: unknown[] }[] => {
@@ -83,7 +83,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			detail: {
 				tags: ["Dept"],
 				summary: "部门下拉选项",
-				description: "返回嵌套树形 { value, label, children? }[] 供前端级联选择器使用",
+				description: "返回树形 { value, label, children? }[] 供前端级联选择器使用",
 			},
 		},
 	)
