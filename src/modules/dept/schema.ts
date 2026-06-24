@@ -14,7 +14,7 @@ import { auditKeys } from "@/lib/crud-dto";
 export const DeptCreateBody = createInsertSchema(sysDept, {
 	name: (s) => s.min(1, "部门名称不能为空").describe("部门名称"),
 	code: (s) => s.min(1, "部门编码不能为空").describe("部门编码"),
-	parentId: (s) => s.describe("父部门 ID，0 表示顶级"),
+	parentId: () => z.coerce.number().describe("父部门 ID，0 表示顶级"),
 	sort: (s) => s.describe("排序"),
 	status: (s) => s.describe("状态：1=正常 0=停用"),
 })

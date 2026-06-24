@@ -369,6 +369,54 @@ try {
 
 ---
 
+---
+
+## 种子数据
+
+### 种子执行报 `column does not exist`——先 `db:push` 同步 schema
+
+**现象**：`bun run db:seed` 报错：
+
+```
+PostgresError: column "remark" of relation "sys_role" does not exist
+```
+
+**原因**：TS 的 Drizzle schema 已包含某个字段，但数据库里还没有（迁移未执行）。种子脚本按 TS schema 生成 SQL，DB 不匹配。
+
+**修复**：先推 schema 到数据库，再跑种子：
+
+```bash
+bun run db:push    # 同步 schema 到 DB
+bun run db:seed    # 跑种子
+```
+
+---
+
+### 种子后新增数据报主键冲突——显式 ID 导致 sequence 错位
+
+**现象**：种子写入成功，但 POST 创建新记录报：
+
+```
+PostgresError: duplicate key value violates unique constraint "xxx_pkey"
+```
+
+**原因**：种子脚本对 `generatedByDefaultAsIdentity()` 的列插入了显式 ID（如 1, 2, 3），但 Postgres identity sequence 仍停留在 1。下次 `default` 取 sequence 值 = 1，与已存在的记录冲突。
+
+**修复**：种子脚本末尾复位 4 张表的 sequence：
+
+```ts
+await db.execute(`
+  SELECT setval('sys_dept_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_dept));
+  SELECT setval('sys_menu_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_menu));
+  SELECT setval('sys_role_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_role));
+  SELECT setval('sys_user_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_user));
+`);
+```
+
+已集成到 `scripts/seed.ts` 第 8 步。手动修复也可直接跑上面 SQL。
+
+---
+
 ## JWT / Auth
 
 ### clockTolerance 必须 > 0

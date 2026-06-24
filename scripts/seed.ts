@@ -734,6 +734,17 @@ const main = async () => {
 	console.log("  ✅ 角色-部门关联：2 条（CUSTOM_USER）");
 
 	// ==========================================
+	// 8. 复位自增序列（种子显式指定 ID → identity sequence 错位）
+	// ==========================================
+	await db.execute(
+		`SELECT setval('sys_dept_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_dept));
+SELECT setval('sys_menu_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_menu));
+SELECT setval('sys_role_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_role));
+SELECT setval('sys_user_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_user));`,
+	);
+	console.log("  ✅ 自增序列已复位");
+
+	// ==========================================
 	// 汇总
 	// ==========================================
 	console.log("");
