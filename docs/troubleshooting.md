@@ -209,7 +209,35 @@ createInsertSchema(sysUser, {
 
 ## **代价**：Create/Update 共享相同描述时需各写一份 refine（无法复用）。这是 drizzle 类型推导的限制，接受重复换取类型正确。
 
-### drizzle-orm/zod 直接从表派生会暴露审计列/id/敏感字段
+### drizzle-zod `createUpdateSchema` 的数字字段拒绝前端字符串
+
+**现象**：前端编辑表单提交 PUT 请求返回 `422 Unprocessable Entity`，`{ code: "A0400", msg: "参数校验失败" }`。
+
+**原因**：前端 `.form` 接口把 `parentId` 等数字字段转成了字符串（`String(parsed.parentId)`），前端回传 PUT body 时还是字符串格式。但 `createUpdateSchema(sysDept)` 从 Drizzle schema `bigint({ mode: "number" })` 自动映射为 `z.number()`，拒绝字符串输入。
+
+**修复**：在 `createUpdateSchema` 的字段回调中，把需要兼容字符串的数字字段替换为 `z.coerce.number()`：
+
+```ts
+// ❌ s 是 z.number()，拒绝字符串
+parentId: (s) => s.describe("父部门 ID"),
+
+// ✅ z.coerce.number() 先 Number(input) 再校验，字符串/数字都能过
+parentId: () => z.coerce.number().describe("父部门 ID"),
+```
+
+**原理**：`createUpdateSchema` 遍历表的 Drizzle 列，按类型自动生成 Zod schema：
+
+| Drizzle 列类型 | 自动生成 `s` |
+|---|---|
+| `varchar` | `z.string()` |
+| `smallint` | `z.number().int()` |
+| `bigint({ mode: "number" })` | `z.number()` |
+| `timestamp({ mode: "string" })` | `z.string()` |
+| `boolean` | `z.boolean()` |
+
+字段回调里的 `s` 就是对应列的 Zod schema——不传回调时直接用，传了可以覆盖（drizzle 文档："providing a Zod schema will overwrite it"）。
+
+**适用场景**：任何前端需要把数字字段当字符串传回的 PUT/PATCH 接口。如果多个模块有相同问题，考虑用 `createUpdateSchema` 的 factory 第二个参数加全局 `coerce` 配置，而不是逐字段改。
 
 **现象**：`PUT /users/:id` 的 body schema 把 `createdAt`/`createdBy`/`updatedAt`/`updatedBy`/`deletedAt`/`id`/`password` 全部暴露给前端，前端可直接篡改创建时间、清空 `deletedAt` 反软删、改 `id` 引发主键错乱。
 
