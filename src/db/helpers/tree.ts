@@ -76,7 +76,7 @@ export const buildTree = <T extends { id: number; parentId: number }>(
  * 使用示例：
  * ```ts
  * const where = and(
- *   isNull(sysDept.deletedAt),
+ *   isNull(sysDept.deleteTime),
  *   descendantsByTreePath(sysDept.treePath, "0,1,3")
  * );
  * // 查出 treePath="0,1,3" / "0,1,3,5" / "0,1,3,5,7" 等所有子孙

@@ -180,7 +180,7 @@ db.select().from(t).where(where)
 |---|---|
 | `id` / `parentId` 输出 `string` | 前端 JS 数字精度有限（大数如 9223372036854775807 会丢精度），后端用 `bigint` 主键时统一 string 化输出 |
 | `createTime` / `updateTime` 保留输出 | 前端列表和表单需要显示时间，`DeptResponse` 等响应 schema 不能 omit 这两个字段 |
-| `deletedAt` 不输出 | 软删时间不暴露给前端 |
+| `deleteTime` 不输出 | 软删时间不暴露给前端 |
 | `treePath` 不输出 | 物化路径是后端查询用，前端不需要 |
 | `createdBy` / `updatedBy` 按需保留 | 如果前端展示创建人/更新人则输出，否则 omit |
 
@@ -202,7 +202,7 @@ db.select().from(t).where(where)
 | Repository 包装 `CreateQueryBuilder().eq().like()` | elysia-admin | 直接用 Drizzle 链式 API |
 | MyBatis 拦截器自动改 SQL（数据权限） | youlai-boot | `dataScope(ctx)` 显式纯函数 |
 | 字符串错误码 `"A0001"` | youlai-boot | `as const` 字面量联合 |
-| `is_deleted: tinyint` | youlai-boot | `deleted_at: timestamp NULL` |
+| `is_deleted: tinyint` | youlai-boot | `delete_time: timestamp NULL` |
 
 ## 6. 借鉴清单（要抄的）
 

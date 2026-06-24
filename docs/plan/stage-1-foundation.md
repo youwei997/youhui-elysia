@@ -73,7 +73,7 @@ scripts
 - 导出类型 `DB = typeof db`
 
 `src/db/schema/_shared.ts`：
-- `auditColumns`：createdAt / updatedAt / createdBy / updatedBy / deletedAt（**不要 is_deleted**）
+- `auditColumns`：createdAt / updatedAt / createdBy / updatedBy / deleteTime（**不要 is_deleted**）
 - 导出可被 spread 的对象
 - 导出 helper：`tablePrefix`（如果要前缀）
 
@@ -118,7 +118,7 @@ scripts
 ## 避雷
 
 - ❌ 不要直接用 `process.env.XXX`，必须走 `config`
-- ❌ 不要用 `is_deleted: tinyint`，软删用 `deletedAt: timestamp` 更具表达力
+- ❌ 不要用 `is_deleted: tinyint`，软删用 `deleteTime: timestamp` 更具表达力
 - ❌ `tsconfig.json` 不要保留 `strict: false` 留下的妥协
 - ❌ 不要在 `src/db/schema/` 里写业务逻辑，schema 文件只声明表
 - ⚠️ docker-compose 的 volume 命名要带项目前缀（如 `youhui_pg_data`），避免和其他项目冲突

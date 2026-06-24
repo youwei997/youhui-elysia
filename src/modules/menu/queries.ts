@@ -51,7 +51,7 @@ export const findAllMenus = async (db: DB): Promise<MenuRoute[]> => {
 			params: sysMenu.params,
 		})
 		.from(sysMenu)
-		.where(and(isNull(sysMenu.deletedAt), ne(sysMenu.type, "B")))
+		.where(and(isNull(sysMenu.deleteTime), ne(sysMenu.type, "B")))
 		.orderBy(asc(sysMenu.sort));
 	// Drizzle 用 .select({ ... }) 投影字段后返回类型与 MenuRoute 不完全匹配，需显式断言
 	return rows as MenuRoute[];
@@ -98,9 +98,9 @@ export const findMenusByRoleCodes = async (
 		.where(
 			and(
 				inArray(sysRole.code, roleCodes),
-				isNull(sysRole.deletedAt),
+				isNull(sysRole.deleteTime),
 				eq(sysRole.status, 1),
-				isNull(sysMenu.deletedAt),
+				isNull(sysMenu.deleteTime),
 				ne(sysMenu.type, "B"),
 			),
 		)
@@ -119,7 +119,7 @@ export const findMenuById = async (
 	const rows = await db
 		.select()
 		.from(sysMenu)
-		.where(and(eq(sysMenu.id, id), isNull(sysMenu.deletedAt)))
+		.where(and(eq(sysMenu.id, id), isNull(sysMenu.deleteTime)))
 		.limit(1);
 	return rows[0];
 };
@@ -132,7 +132,7 @@ export const findAllMenusWithButtons = async (
 	keywords: string | undefined,
 	db: DB,
 ): Promise<(typeof sysMenu.$inferSelect)[]> => {
-	const where = [isNull(sysMenu.deletedAt)];
+	const where = [isNull(sysMenu.deleteTime)];
 	if (keywords) {
 		// Postgres ILIKE：大小写不敏感的 LIKE，无需手动 lower()
 		where.push(sql`${sysMenu.name} ILIKE ${`%${keywords}%`}`);
@@ -153,7 +153,7 @@ export const findMenuOptions = async (
 	onlyParent: boolean | undefined,
 	db: DB,
 ): Promise<Array<{ value: string; label: string; parentId: number }>> => {
-	const where = [isNull(sysMenu.deletedAt)];
+	const where = [isNull(sysMenu.deleteTime)];
 	if (onlyParent) {
 		where.push(ne(sysMenu.type, "B"));
 	}
@@ -183,7 +183,7 @@ const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 	const parent = await db
 		.select({ treePath: sysMenu.treePath })
 		.from(sysMenu)
-		.where(and(eq(sysMenu.id, parentId), isNull(sysMenu.deletedAt)))
+		.where(and(eq(sysMenu.id, parentId), isNull(sysMenu.deleteTime)))
 		.limit(1);
 	const parentPath = parent[0]?.treePath;
 	if (!parentPath) {
@@ -224,7 +224,7 @@ export const updateMenu = async (
 	const [menu] = await db
 		.update(sysMenu)
 		.set(updateData)
-		.where(and(eq(sysMenu.id, id), isNull(sysMenu.deletedAt)))
+		.where(and(eq(sysMenu.id, id), isNull(sysMenu.deleteTime)))
 		.returning();
 	return menu;
 };
@@ -248,7 +248,7 @@ export const softDeleteMenu = async (
 			.from(sysMenu)
 			.where(
 				and(
-					isNull(sysMenu.deletedAt),
+					isNull(sysMenu.deleteTime),
 					or(eq(sysMenu.id, id), sql`${sysMenu.treePath} ~ ${pattern}`),
 				),
 			);
@@ -261,10 +261,10 @@ export const softDeleteMenu = async (
 		// 软删：自身 + 所有子孙
 		const menus = await tx
 			.update(sysMenu)
-			.set({ deletedAt: new Date().toISOString() })
+			.set({ deleteTime: new Date().toISOString() })
 			.where(
 				and(
-					isNull(sysMenu.deletedAt),
+					isNull(sysMenu.deleteTime),
 					or(eq(sysMenu.id, id), sql`${sysMenu.treePath} ~ ${pattern}`),
 				),
 			)
@@ -296,7 +296,7 @@ export const isParentIdCyclic = async (
 	const parent = await db
 		.select({ treePath: sysMenu.treePath })
 		.from(sysMenu)
-		.where(and(eq(sysMenu.id, parentId), isNull(sysMenu.deletedAt)))
+		.where(and(eq(sysMenu.id, parentId), isNull(sysMenu.deleteTime)))
 		.limit(1);
 	if (!parent[0]) {
 		return false; // 父节点不存在，由 routes 层单独报错

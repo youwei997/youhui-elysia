@@ -20,7 +20,7 @@
 `src/db/schema/system/user.ts`：
 - 字段：id（serial）/ username / password / nickname / email / phone / gender / status / deptId / avatar / remark + auditColumns
 - 索引：username 唯一、deptId
-- 软删：`deletedAt`
+- 软删：`deleteTime`
 
 `scripts/seed.ts`：
 - 插入 1 个 admin 用户（密码先用 plain text，反正阶段 3 才接 bcrypt）
@@ -89,7 +89,7 @@
 - ❌ 不要写 `class UserService` —— 你是函数式优先
 - ❌ 不要在 schema 文件里手动复制字段定义 —— 用 `drizzle-orm/zod` 派生
 - ⚠️ 列表分页的 `pageSize` 必须有上限（如 100），否则 `?pageSize=99999` 会拖死 DB
-- ⚠️ 软删要在所有查询里默认加 `eq(deletedAt, null)`，可考虑在 `queries.ts` 内统一封装
+- ⚠️ 软删要在所有查询里默认加 `eq(deleteTime, null)`，可考虑在 `queries.ts` 内统一封装
 
 ## 验收清单
 
@@ -110,8 +110,8 @@
 - [x] `GET /users/:id` 详情，不存在时 404
 - [x] `POST /users` 创建，body 校验失败返回 422
 - [x] `PUT /users/:id` 更新（部分字段）
-- [x] `DELETE /users/:id` 软删（`deletedAt` 被设置，记录还在 DB）
-- [x] 删除后再查列表 / 详情都查不到（findUsers/findUserById/updateUser 三处已补 isNull(deletedAt)，见 commit 7eb9bff）
+- [x] `DELETE /users/:id` 软删（`deleteTime` 被设置，记录还在 DB）
+- [x] 删除后再查列表 / 详情都查不到（findUsers/findUserById/updateUser 三处已补 isNull(deleteTime)，见 commit 7eb9bff）
 
 ### 类型推导
 - [x] handler 内 `body` / `query` / `params` 完整类型推导
@@ -128,7 +128,7 @@
 - [x] `pagination.ts` 已实现（PageResult + pageQuerySchema，位于 db/helpers/）
 
 ### 已知 Blockers（需完成才能进阶段 3）
-- [x] queries 的 select 查询补 `eq(deletedAt, null)` 过滤（实际用 isNull，改了 3 处：列表/详情/更新，见 commit 7eb9bff）
+- [x] queries 的 select 查询补 `eq(deleteTime, null)` 过滤（实际用 isNull，改了 3 处：列表/详情/更新，见 commit 7eb9bff）
 - [x] OpenAPI 字段补 `.describe()`、路由补 `description`（见 commit fa5dd51 / 170a732）
 
 > ✅ **Blockers 全部清空**（2026-06-14）：软删过滤与 OpenAPI 字段描述均已完成，阶段 2 验收全 ✅，可进阶段 3。
@@ -152,6 +152,6 @@ curl -XDELETE http://localhost:3000/users/3
 
 1. **drizzle-orm/zod 的 refine 必须用箭头函数且参数不能标注 `z.ZodType`**——标注基类会让 `.describe()` 返回基类，整个 schema 退化为 `unknown`，下游 `db.insert().values()` 类型全炸。正确做法是去掉标注让 drizzle 推导成具体子类（如 `z.ZodString`）。
 2. **refine 对象不能抽成共享 const**——TS 的反向推导只在对象字面量直接作为函数实参时触发，抽常量会让箭头函数参数退化为 `any`（`noImplicitAny`）。Create/Update 共享描述时只能各 inline 一份。
-3. **软删过滤是纪律问题**：按 AGENTS.md 软删规则表，`findUsers`/`findUserById`/`updateUser` 三处必须加 `isNull(deletedAt)`，尤其 `updateUser` 能改活已删记录是隐患。用 `isNull()` 而非 `eq(deletedAt, null)`，Drizzle 推荐写法。
+3. **软删过滤是纪律问题**：按 AGENTS.md 软删规则表，`findUsers`/`findUserById`/`updateUser` 三处必须加 `isNull(deleteTime)`，尤其 `updateUser` 能改活已删记录是隐患。用 `isNull()` 而非 `eq(deleteTime, null)`，Drizzle 推荐写法。
 
 以上两个类型坑详见 `docs/troubleshooting.md`。

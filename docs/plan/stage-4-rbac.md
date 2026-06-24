@@ -126,7 +126,7 @@ export const dataScopeFilter = (
 queries 里使用：
 ```ts
 const where = and(
-  eq(users.deletedAt, null),
+  eq(users.deleteTime, null),
   // ...其他业务条件
   dataScopeFilter(ctx, users)  // 显式调用
 )

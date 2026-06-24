@@ -20,7 +20,7 @@ export const findUsers = async (
 	db: DB,
 ): Promise<PageResult<(typeof sysUser)["$inferSelect"]>> => {
 	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选
-	const where = [isNull(sysUser.deletedAt)];
+	const where = [isNull(sysUser.deleteTime)];
 	if (query.keywords) {
 		const keywordCondition = or(
 			like(sysUser.username, `%${query.keywords}%`),
@@ -63,7 +63,7 @@ export const findUserById = async (
 	const rows = await db
 		.select()
 		.from(sysUser)
-		.where(and(eq(sysUser.id, id), isNull(sysUser.deletedAt)));
+		.where(and(eq(sysUser.id, id), isNull(sysUser.deleteTime)));
 	return rows[0]; // 可能为 undefined，由 routes 层判断
 };
 
@@ -85,19 +85,19 @@ export const updateUser = async (
 	const [user] = await db
 		.update(sysUser)
 		.set(data)
-		.where(and(eq(sysUser.id, id), isNull(sysUser.deletedAt)))
+		.where(and(eq(sysUser.id, id), isNull(sysUser.deleteTime)))
 		.returning();
 	return user;
 };
 
-/** 软删除用户（自身就是设 deletedAt，按软删规则不需要加 deletedAt 过滤） */
+/** 软删除用户（自身就是设 deleteTime，按软删规则不需要加 deleteTime 过滤） */
 export const softDeleteUser = async (
 	id: number,
 	db: DB,
 ): Promise<typeof sysUser.$inferSelect | undefined> => {
 	const [user] = await db
 		.update(sysUser)
-		.set({ deletedAt: new Date().toISOString() })
+		.set({ deleteTime: new Date().toISOString() })
 		.where(eq(sysUser.id, id))
 		.returning();
 	return user;
@@ -144,7 +144,7 @@ export const findUserOptions = async (
 			nickname: sysUser.nickname,
 		})
 		.from(sysUser)
-		.where(and(isNull(sysUser.deletedAt), eq(sysUser.status, 1)));
+		.where(and(isNull(sysUser.deleteTime), eq(sysUser.status, 1)));
 	return rows.map((r) => ({
 		value: String(r.id),
 		label: r.nickname || r.username,
@@ -161,7 +161,7 @@ export const batchSoftDeleteUsers = async (
 	}
 	const users = await db
 		.update(sysUser)
-		.set({ deletedAt: new Date().toISOString() })
+		.set({ deleteTime: new Date().toISOString() })
 		.where(inArray(sysUser.id, ids))
 		.returning();
 	return users;
@@ -176,7 +176,7 @@ export const resetUserPassword = async (
 	const [user] = await db
 		.update(sysUser)
 		.set({ password })
-		.where(and(eq(sysUser.id, id), isNull(sysUser.deletedAt)))
+		.where(and(eq(sysUser.id, id), isNull(sysUser.deleteTime)))
 		.returning();
 	return user;
 };

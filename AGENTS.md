@@ -90,7 +90,7 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 
 - **`id` / `parentId` 响应给前端时统一转 `string`**（`bigint` 主键避免 JS 精度丢失）
 - **`createTime` / `updateTime` 保留输出**，前端列表和表单需要显示时间
-- **`deletedAt` / `treePath` 不输出**（软删时间 + 物化路径不暴露给前端）
+- **`deleteTime` / `treePath` 不输出**（软删时间 + 物化路径不暴露给前端）
 - 完整规则见 [`docs/architecture.md` 第 4.6 节](./docs/architecture.md#46-前端响应约定)
 
 ---
@@ -98,8 +98,8 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 ## 🗄️ 数据库（Drizzle）
 
 - **schema 即 TS 值**，不要把 schema 写成 class
-- **所有表必须包含 `auditColumns`**（createdAt / updatedAt / createdBy / updatedBy / deletedAt）
-- **软删用 `deletedAt: timestamp`**，禁用 `is_deleted: boolean`
+- **所有表必须包含 `auditColumns`**（createdAt / updatedAt / createdBy / updatedBy / deleteTime）
+- **软删用 `deleteTime: timestamp`**，禁用 `is_deleted: boolean`
 - **不要写 Repository 包装类**——直接用 Drizzle 链式 API，保留类型推导
 - 复杂查询用 SQL fragment（`` sql`...` ``），不要拼字符串
 - 事务必须用 `db.transaction(async tx => ...)`，禁止裸调用
@@ -109,16 +109,16 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 > Drizzle 没有全局查询过滤器，每个查询手动加
 > 记忆法：**改已有数据必加、查列表默认加、新增/删本身不加**
 
-| 操作类型 | 例子 | 需 `eq(deletedAt, null)` | 理由 |
+| 操作类型 | 例子 | 需 `eq(deleteTime, null)` | 理由 |
 |---|---|---|---|
 | 修改已有数据 | `updateUser` / 登录校验 / 唯一性校验 | ✅ 必须 | 不能改活已删记录 |
 | 列表/详情（普通用户） | `findUsers` / `findUserById` | ✅ 默认加 | 前端不应看到已删数据 |
 | 列表/详情（管理员查回收站） | 加 `includeDeleted` 参数 | ⚠️ 由调用方决定 | 数据恢复场景 |
 | 纯粹新增 | `createUser` | ❌ 不需要 | 不存在"已删" |
-| 设 `deletedAt` | `softDelete` / `restore` | ❌ 不需要 | 自身就是设这个值 |
+| 设 `deleteTime` | `softDelete` / `restore` | ❌ 不需要 | 自身就是设这个值 |
 
 ```ts
-const where = and(eq(users.deletedAt, null), eq(users.status, 1))
+const where = and(eq(users.deleteTime, null), eq(users.status, 1))
 const list = await db.select().from(users).where(where).limit(20)
 ```
 
@@ -186,7 +186,7 @@ if (!user) return null  // 静默吞错
 | `class XxxService { @Inject ... }` | 模块导出函数 + 闭包注入依赖 |
 | `class Dto { @IsString @ApiProperty }` / `abstract class BaseEntity` | Zod schema + `auditColumns` spread |
 | `@Controller` / `@Get` / `@Post` 装饰器 | Elysia 链式 API |
-| `is_deleted: tinyint` | `deletedAt: timestamp` |
+| `is_deleted: tinyint` | `deleteTime: timestamp` |
 | 静默 catch（吞错 + return null） | 重抛或转 BizError |
 | `process.env.XXX` 直接读 | 走 `src/config/` 的 zod schema |
 

@@ -29,7 +29,7 @@ export const findRoles = async (
 	},
 	db: DB,
 ): Promise<PageResult<typeof sysRole.$inferSelect>> => {
-	const where = [isNull(sysRole.deletedAt)];
+	const where = [isNull(sysRole.deleteTime)];
 	if (query.code) {
 		where.push(eq(sysRole.code, query.code));
 	}
@@ -63,7 +63,7 @@ export const findRoleById = async (
 	const rows = await db
 		.select()
 		.from(sysRole)
-		.where(and(eq(sysRole.id, id), isNull(sysRole.deletedAt)))
+		.where(and(eq(sysRole.id, id), isNull(sysRole.deleteTime)))
 		.limit(1);
 	return rows[0];
 };
@@ -103,7 +103,7 @@ export const updateRole = async (
 		const [role] = await tx
 			.update(sysRole)
 			.set(roleData)
-			.where(and(eq(sysRole.id, id), isNull(sysRole.deletedAt)))
+			.where(and(eq(sysRole.id, id), isNull(sysRole.deleteTime)))
 			.returning();
 
 		if (!role) {
@@ -145,7 +145,7 @@ export const softDeleteRole = async (
 		await tx.delete(sysRoleDept).where(eq(sysRoleDept.roleId, id));
 		const [role] = await tx
 			.update(sysRole)
-			.set({ deletedAt: new Date().toISOString() })
+			.set({ deleteTime: new Date().toISOString() })
 			.where(eq(sysRole.id, id))
 			.returning();
 		return role;
@@ -195,7 +195,7 @@ export const findValidMenuIds = async (
 	const rows = await db
 		.select({ id: sysMenu.id })
 		.from(sysMenu)
-		.where(and(inArray(sysMenu.id, menuIds), isNull(sysMenu.deletedAt)));
+		.where(and(inArray(sysMenu.id, menuIds), isNull(sysMenu.deleteTime)));
 	return rows.map((r) => r.id);
 };
 
@@ -215,7 +215,7 @@ export const findValidDeptIds = async (
 	const rows = await db
 		.select({ id: sysDept.id })
 		.from(sysDept)
-		.where(and(inArray(sysDept.id, deptIds), isNull(sysDept.deletedAt)));
+		.where(and(inArray(sysDept.id, deptIds), isNull(sysDept.deleteTime)));
 	return rows.map((r) => r.id);
 };
 
@@ -266,7 +266,7 @@ export const findRoleOptions = async (
 	const rows = await db
 		.select({ id: sysRole.id, name: sysRole.name })
 		.from(sysRole)
-		.where(isNull(sysRole.deletedAt))
+		.where(isNull(sysRole.deleteTime))
 		.orderBy(sysRole.sort);
 	return rows.map((r) => ({ value: String(r.id), label: r.name }));
 };
@@ -310,7 +310,7 @@ export const isRoleAssignedToUsers = async (
 		.select({ userId: sysUserRole.userId })
 		.from(sysUserRole)
 		.innerJoin(sysUser, eq(sysUserRole.userId, sysUser.id))
-		.where(and(eq(sysUserRole.roleId, roleId), isNull(sysUser.deletedAt)))
+		.where(and(eq(sysUserRole.roleId, roleId), isNull(sysUser.deleteTime)))
 		.limit(1);
 	return rows.length > 0;
 };
@@ -335,8 +335,8 @@ export const batchSoftDeleteRoles = async (
 		await tx.delete(sysRoleDept).where(inArray(sysRoleDept.roleId, ids));
 		const roles = await tx
 			.update(sysRole)
-			.set({ deletedAt: new Date().toISOString() })
-			.where(and(inArray(sysRole.id, ids), isNull(sysRole.deletedAt)))
+			.set({ deleteTime: new Date().toISOString() })
+			.where(and(inArray(sysRole.id, ids), isNull(sysRole.deleteTime)))
 			.returning();
 		return roles;
 	});

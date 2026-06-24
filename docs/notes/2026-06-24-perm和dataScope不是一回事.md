@@ -44,7 +44,7 @@ curl /users -H "Authorization: Bearer $STAFF_TOKEN"
 
 // dataScope 在查询层面：有权限的人，根据角色级别决定 SQL 的 WHERE 条件
 const where = and(
-  eq(users.deletedAt, null),
+  eq(users.deleteTime, null),
   dataScopeFilter(ctx, users)  // ← 这里决定能看到多少条
 )
 ```
@@ -76,7 +76,7 @@ export const userRoutes = new Elysia({ prefix: '/users' })
 // 4.6 阶段：dataScope 在 queries 层面，控制 SQL 过滤
 export const findUsers = async (query, db, ctx) => {
   const where = [
-    isNull(users.deletedAt),
+    isNull(users.deleteTime),
     dataScopeFilter(ctx, users),  // ← 工位划分：SQL 里加 WHERE 条件
     // ...其他业务过滤
   ]

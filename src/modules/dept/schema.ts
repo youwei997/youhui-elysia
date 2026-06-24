@@ -56,7 +56,7 @@ export const DeptParamsWithCommaIds = z
 /** 部门响应：排除软删标志、treePath、创建人/更新人，保留创建/更新时间 */
 export const DeptResponse = createSelectSchema(sysDept)
 	.omit({
-		deletedAt: true,
+		deleteTime: true,
 		treePath: true,
 		createdBy: true,
 		updatedBy: true,

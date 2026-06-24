@@ -14,7 +14,7 @@ export const findAllDepts = async (
 	query: { keywords?: string | undefined; status?: number | undefined } = {},
 	db: DB,
 ) => {
-	const where = [isNull(sysDept.deletedAt)];
+	const where = [isNull(sysDept.deleteTime)];
 	if (query.keywords) {
 		where.push(like(sysDept.name, `%${query.keywords}%`));
 	}
@@ -39,7 +39,7 @@ export const findDeptById = async (
 	const rows = await db
 		.select()
 		.from(sysDept)
-		.where(and(eq(sysDept.id, id), isNull(sysDept.deletedAt)))
+		.where(and(eq(sysDept.id, id), isNull(sysDept.deleteTime)))
 		.limit(1);
 	return rows[0];
 };
@@ -55,7 +55,7 @@ const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 	const parent = await db
 		.select({ treePath: sysDept.treePath })
 		.from(sysDept)
-		.where(and(eq(sysDept.id, parentId), isNull(sysDept.deletedAt)))
+		.where(and(eq(sysDept.id, parentId), isNull(sysDept.deleteTime)))
 		.limit(1);
 	// 父部门不存在或已删除：抛错
 	if (!parent[0]) {
@@ -84,7 +84,7 @@ export const isParentIdCyclic = async (
 	const parent = await db
 		.select({ treePath: sysDept.treePath })
 		.from(sysDept)
-		.where(and(eq(sysDept.id, newParentId), isNull(sysDept.deletedAt)))
+		.where(and(eq(sysDept.id, newParentId), isNull(sysDept.deleteTime)))
 		.limit(1);
 
 	// 父节点不存在：后续会在 calcTreePath 抛错，这里不管
@@ -131,7 +131,7 @@ export const updateDept = async (
 			const before = await tx
 				.select({ treePath: sysDept.treePath })
 				.from(sysDept)
-				.where(and(eq(sysDept.id, id), isNull(sysDept.deletedAt)))
+				.where(and(eq(sysDept.id, id), isNull(sysDept.deleteTime)))
 				.limit(1);
 			if (!before[0]) {
 				return undefined;
@@ -142,7 +142,7 @@ export const updateDept = async (
 			const [dept] = await tx
 				.update(sysDept)
 				.set({ ...updateData, treePath: newTreePath })
-				.where(and(eq(sysDept.id, id), isNull(sysDept.deletedAt)))
+				.where(and(eq(sysDept.id, id), isNull(sysDept.deleteTime)))
 				.returning();
 
 			// 级联更新子树的 treePath：替换前缀
@@ -154,7 +154,7 @@ export const updateDept = async (
 					})
 					.where(
 						and(
-							isNull(sysDept.deletedAt),
+							isNull(sysDept.deleteTime),
 							like(sysDept.treePath, `${oldTreePath},%`),
 						),
 					);
@@ -167,7 +167,7 @@ export const updateDept = async (
 	const [dept] = await db
 		.update(sysDept)
 		.set(updateData)
-		.where(and(eq(sysDept.id, id), isNull(sysDept.deletedAt)))
+		.where(and(eq(sysDept.id, id), isNull(sysDept.deleteTime)))
 		.returning();
 	return dept;
 };
@@ -187,7 +187,7 @@ export const softDeleteDept = async (
 			.from(sysDept)
 			.where(
 				and(
-					isNull(sysDept.deletedAt),
+					isNull(sysDept.deleteTime),
 					or(eq(sysDept.id, id), sql`${sysDept.treePath} ~ ${pattern}`),
 				),
 			);
@@ -206,7 +206,7 @@ export const softDeleteDept = async (
 		// 软删部门
 		await tx
 			.update(sysDept)
-			.set({ deletedAt: new Date().toISOString() })
+			.set({ deleteTime: new Date().toISOString() })
 			.where(inArray(sysDept.id, idsToDelete));
 
 		return idsToDelete.length;
@@ -231,7 +231,7 @@ export const batchSoftDeleteDepts = async (
 		await tx.delete(sysRoleDept).where(inArray(sysRoleDept.deptId, ids));
 		const depts = await tx
 			.update(sysDept)
-			.set({ deletedAt: new Date().toISOString() })
+			.set({ deleteTime: new Date().toISOString() })
 			.where(inArray(sysDept.id, ids))
 			.returning();
 		return depts;
@@ -248,7 +248,7 @@ export const isDeptUsedByUsers = async (
 	const rows = await db
 		.select({ id: sysUser.id })
 		.from(sysUser)
-		.where(and(eq(sysUser.deptId, deptId), isNull(sysUser.deletedAt)))
+		.where(and(eq(sysUser.deptId, deptId), isNull(sysUser.deleteTime)))
 		.limit(1);
 	return rows.length > 0;
 };

@@ -5,8 +5,8 @@ import { pageFields } from "@/lib/pagination";
 
 /**
  * 审计列黑名单：createInsertSchema / createUpdateSchema 直接从整张表派生时
- * 会把审计字段（createTime / createdBy / updateTime / updatedBy / deletedAt）
- * 一并暴露给前端，导致前端可篡改创建时间、反软删（清空 deletedAt）等。
+ * 会把审计字段（createTime / createdBy / updateTime / updatedBy / deleteTime）
+ * 一并暴露给前端，导致前端可篡改创建时间、反软删（清空 deleteTime）等。
  * 在各模块 schema.ts 中用 `.omit(auditKeys)` 统一排除。
  */
 export const auditKeys = {
@@ -15,7 +15,7 @@ export const auditKeys = {
 	createTime: true,
 	updatedBy: true,
 	updateTime: true,
-	deletedAt: true,
+	deleteTime: true,
 } as const;
 
 /**

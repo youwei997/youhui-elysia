@@ -2,7 +2,7 @@ import { bigint, timestamp } from "drizzle-orm/pg-core";
 
 /**
  * 通用审计字段 mixin（所有业务表必须 spread 此对象）
- * 使用 deletedAt（timestamp）而非 is_deleted（boolean），语义更明确且可保留删除时间
+ * 使用 deleteTime（timestamp）而非 is_deleted（boolean），语义更明确且可保留删除时间
  * 注意: createTime 和 updateTime 等时间字段必须加上 mode: "string" 才能正确映射为 ISO 字符串，兼容 Elysia 的 JSON Schema
  *     如果不加 mode: "string",Elysia和zod无法映射Date类型到json,终端会报警告'warn: Date cannot be represented in JSON Schema'
  */
@@ -20,5 +20,5 @@ export const auditColumns = {
 		.defaultNow()
 		.notNull(),
 	/** 删除时间（非空 = 已删除），语义优于 is_deleted */
-	deletedAt: timestamp("deleted_at", { withTimezone: true, mode: "string" }),
+	deleteTime: timestamp("deleted_at", { withTimezone: true, mode: "string" }),
 };

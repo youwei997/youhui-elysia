@@ -20,7 +20,7 @@ export const findActiveUserByUsername = async (
 		.where(
 			and(
 				eq(sysUser.username, username),
-				isNull(sysUser.deletedAt),
+				isNull(sysUser.deleteTime),
 				eq(sysUser.status, 1),
 			),
 		)
@@ -48,7 +48,7 @@ export const findUserRoles = async (
 		.where(
 			and(
 				eq(sysUserRole.userId, userId),
-				isNull(sysRole.deletedAt),
+				isNull(sysRole.deleteTime),
 				eq(sysRole.status, 1),
 			),
 		);
@@ -78,9 +78,9 @@ export const findUserPerms = async (
 		.where(
 			and(
 				eq(sysUserRole.userId, userId),
-				isNull(sysRole.deletedAt),
+				isNull(sysRole.deleteTime),
 				eq(sysRole.status, 1),
-				isNull(sysMenu.deletedAt),
+				isNull(sysMenu.deleteTime),
 				isNotNull(sysMenu.perm),
 				ne(sysMenu.perm, ""),
 			),

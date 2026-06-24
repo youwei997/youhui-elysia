@@ -83,7 +83,7 @@ export const UserUpdateBody = createUpdateSchema(sysUser, {
 export const UserResponse = createSelectSchema(sysUser)
 	.omit({
 		password: true,
-		deletedAt: true,
+		deleteTime: true,
 		createdBy: true,
 		updatedBy: true,
 	})
