@@ -59,6 +59,32 @@ const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {
 	return item;
 };
 
+/** 响应转换：parse 后 id / parentId 转 string */
+const parseMenu = (menu: Parameters<typeof MenuResponse.parse>[0]) => {
+	const parsed = MenuResponse.parse(menu);
+	return {
+		...parsed,
+		id: String(parsed.id),
+		parentId: String(parsed.parentId ?? 0),
+	};
+};
+
+/** 递归转换树中每个节点的 id / parentId */
+const stringifyTreeIds = <T extends { id: number; parentId: number }>(
+	nodes: TreeNode<T>[],
+): (Omit<T, "id" | "parentId"> & {
+	id: string;
+	parentId: string;
+	children: unknown[];
+})[] => {
+	return nodes.map((node) => ({
+		...node,
+		id: String(node.id),
+		parentId: String(node.parentId),
+		children: stringifyTreeIds(node.children),
+	}));
+};
+
 export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 	.use(authPlugin)
 	// ---- 路由菜单（前端动态路由，保持不变） ----
@@ -105,8 +131,14 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		"/",
 		async ({ query }) => {
 			const menus = await findAllMenusWithButtons(query.keywords, db);
-			const tree = buildTree(menus);
-			return tree;
+			const validMenus = menus
+				.filter((m) => m.parentId !== null)
+				.map((m) => ({
+					...m,
+					parentId: m.parentId as number,
+				}));
+			const tree = buildTree(validMenus);
+			return stringifyTreeIds(tree);
 		},
 		{
 			auth: true,
@@ -145,7 +177,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			if (!menu) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
-			return MenuResponse.parse(menu);
+			return parseMenu(menu);
 		},
 		{
 			auth: true,
@@ -173,7 +205,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 				}
 			}
 			const menu = await createMenu(body, db);
-			return MenuResponse.parse(menu);
+			return parseMenu(menu);
 		},
 		{
 			auth: true,
@@ -218,7 +250,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			if (!menu) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
-			return MenuResponse.parse(menu);
+			return parseMenu(menu);
 		},
 		{
 			auth: true,
@@ -241,7 +273,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
 			const deleted = await softDeleteMenu(params.id, db);
-			return deleted.map((m) => MenuResponse.parse(m));
+			return deleted.map((m) => parseMenu(m));
 		},
 		{
 			auth: true,

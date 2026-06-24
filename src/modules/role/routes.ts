@@ -60,12 +60,22 @@ const ensureValidDeptIds = async (deptIds: number[]) => {
 	}
 };
 
+/** 响应转换：parse 后 id 转 string */
+const parseRole = (role: Parameters<typeof RoleResponse.parse>[0]) => {
+	const parsed = RoleResponse.parse(role);
+	return { ...parsed, id: String(parsed.id) };
+};
+
 export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.use(authPlugin)
 	.get(
 		"/",
 		async ({ query }) => {
-			return findRoles(query, db);
+			const result = await findRoles(query, db);
+			return {
+				...result,
+				list: result.list.map((r) => parseRole(r)),
+			};
 		},
 		{
 			auth: true,
@@ -100,7 +110,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return RoleResponse.parse(role);
+			return parseRole(role);
 		},
 		{
 			auth: true,
@@ -121,7 +131,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
 			const { deptIds } = role;
-			const parsed = RoleResponse.parse(role);
+			const parsed = parseRole(role);
 			return { ...parsed, deptIds };
 		},
 		{
@@ -142,7 +152,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				await ensureValidDeptIds(body.deptIds);
 			}
 			const role = await createRole(body, db);
-			return RoleResponse.parse(role);
+			return parseRole(role);
 		},
 		{
 			auth: true,
@@ -171,7 +181,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return RoleResponse.parse(role);
+			return parseRole(role);
 		},
 		{
 			auth: true,
@@ -218,7 +228,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				}
 
 				const deleted = await batchSoftDeleteRoles(ids, db);
-				return deleted.map((r) => RoleResponse.parse(r));
+				return deleted.map((r) => parseRole(r));
 			}
 
 			// 单条删除
@@ -239,7 +249,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return RoleResponse.parse(role);
+			return parseRole(role);
 		},
 		{
 			auth: true,

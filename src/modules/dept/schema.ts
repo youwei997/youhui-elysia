@@ -53,14 +53,13 @@ export const DeptParamsWithCommaIds = z
 	.object({ id: z.string() })
 	.describe("部门 ID 路径参数（逗号分隔批量）");
 
-/** 部门响应：排除审计列与软删标志 */
+/** 部门响应：排除软删标志、treePath、创建人/更新人，保留创建/更新时间 */
 export const DeptResponse = createSelectSchema(sysDept)
 	.omit({
 		deletedAt: true,
+		treePath: true,
 		createdBy: true,
-		createdAt: true,
 		updatedBy: true,
-		updatedAt: true,
 	})
 	.describe("部门信息");
 

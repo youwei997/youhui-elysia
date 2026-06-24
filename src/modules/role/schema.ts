@@ -105,12 +105,10 @@ export const RoleAssignDeptsBody = z
 	})
 	.describe("绑定角色部门请求体（仅 dataScope=5 时启用）");
 
-/** 角色响应：排除审计列与软删标志 */
+/** 角色响应：排除软删标志、创建人/更新人，保留创建/更新时间 */
 export const RoleResponse = createSelectSchema(sysRole)
 	.omit({
 		deletedAt: true,
-		createdAt: true,
-		updatedAt: true,
 		createdBy: true,
 		updatedBy: true,
 	})

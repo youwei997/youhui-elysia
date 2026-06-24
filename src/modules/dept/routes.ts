@@ -1,6 +1,6 @@
-import { type TreeNode, buildTree } from "@/db/helpers/tree";
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
+import { buildTree, type TreeNode } from "@/db/helpers/tree";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import {
@@ -22,17 +22,44 @@ import {
 	DeptUpdateBody,
 } from "./schema";
 
+/** 响应转换：parse 后 id / parentId 转 string */
+const parseDept = (dept: Parameters<typeof DeptResponse.parse>[0]) => {
+	const parsed = DeptResponse.parse(dept);
+	return {
+		...parsed,
+		id: String(parsed.id),
+		parentId: String(parsed.parentId ?? 0),
+	};
+};
+
+/** 递归转换树中每个节点的 id / parentId */
+const stringifyTreeIds = <T extends { id: number; parentId: number }>(
+	nodes: TreeNode<T>[],
+): (Omit<T, "id" | "parentId"> & {
+	id: string;
+	parentId: string;
+	children: unknown[];
+})[] => {
+	return nodes.map((node) => ({
+		...node,
+		id: String(node.id),
+		parentId: String(node.parentId),
+		children: stringifyTreeIds(node.children),
+	}));
+};
+
 export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 	.use(authPlugin)
 	.get(
 		"/",
 		async ({ query }) => {
 			const list = await findAllDepts(query, db);
-			const items = list.map((d) => ({
-				...DeptResponse.parse(d),
-				parentId: d.parentId ?? 0,
-			}));
-			return buildTree(items);
+			const items = list
+				.map((d) => DeptResponse.parse(d))
+				.filter((d) => d.parentId !== null)
+				.map((d) => ({ ...d, parentId: d.parentId as number }));
+			const tree = buildTree(items);
+			return stringifyTreeIds(tree);
 		},
 		{
 			auth: true,
@@ -49,25 +76,21 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		"/options",
 		async () => {
 			const list = await findAllDepts({}, db);
-			const validList = list.filter(
-				(item): item is typeof item & { parentId: number } =>
-					item.parentId !== null,
-			);
-			const tree = buildTree(validList);
+			const items = list
+				.map((d) => DeptResponse.parse(d))
+				.filter((d) => d.parentId !== null)
+				.map((d) => ({ ...d, parentId: d.parentId as number }));
+			const tree = buildTree(items);
 
-			/** 递归映射为 { value, label, children? } 选项格式 */
 			const toOptions = (
-				nodes: TreeNode<(typeof validList)[number]>[],
+				nodes: TreeNode<(typeof items)[number]>[],
 			): { value: string; label: string; children?: unknown[] }[] => {
 				return nodes.map((node) => {
-					const option: {
-						value: string;
-						label: string;
-						children?: unknown[];
-					} = {
-						value: String(node.id),
-						label: node.name,
-					};
+					const option: { value: string; label: string; children?: unknown[] } =
+						{
+							value: String(node.id),
+							label: node.name,
+						};
 					if (node.children.length > 0) {
 						option.children = toOptions(node.children);
 					}
@@ -83,7 +106,8 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			detail: {
 				tags: ["Dept"],
 				summary: "部门下拉选项",
-				description: "返回树形 { value, label, children? }[] 供前端级联选择器使用",
+				description:
+					"返回树形 { value, label, children? }[] 供前端级联选择器使用",
 			},
 		},
 	)
@@ -94,7 +118,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
-			return DeptResponse.parse(dept);
+			return parseDept(dept);
 		},
 		{
 			auth: true,
@@ -113,12 +137,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
-			const parsed = DeptResponse.parse(dept);
-			return {
-				...parsed,
-				id: String(parsed.id),
-				parentId: String(parsed.parentId),
-			};
+			return parseDept(dept);
 		},
 		{
 			auth: true,
@@ -127,7 +146,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			detail: {
 				tags: ["Dept"],
 				summary: "获取部门表单数据",
-				description: "编辑部门时回填表单，仅含可编辑字段，排除审计列",
+				description: "编辑部门时回填表单",
 			},
 		},
 	)
@@ -141,7 +160,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 				}
 			}
 			const dept = await createDept(body, db);
-			return DeptResponse.parse(dept);
+			return parseDept(dept);
 		},
 		{
 			auth: true,
@@ -184,7 +203,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			if (!updated) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
-			return DeptResponse.parse(updated);
+			return parseDept(updated);
 		},
 		{
 			auth: true,

@@ -85,12 +85,11 @@ export const MenuUpdateBody = createUpdateSchema(sysMenu, {
 	})
 	.describe("更新菜单请求参数，未传字段保持原值");
 
-/** 菜单响应：排除审计列与软删标志 */
+/** 菜单响应：排除软删标志、treePath、创建人/更新人，保留创建/更新时间 */
 export const MenuResponse = createSelectSchema(sysMenu)
 	.omit({
 		deletedAt: true,
-		createdAt: true,
-		updatedAt: true,
+		treePath: true,
 		createdBy: true,
 		updatedBy: true,
 	})
