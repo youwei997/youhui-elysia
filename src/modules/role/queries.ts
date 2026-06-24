@@ -56,7 +56,10 @@ export const findRoles = async (
 };
 
 /** 根据 ID 查角色（软删过滤） */
-export const findRoleById = async (id: number, db: DB) => {
+export const findRoleById = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysRole.$inferSelect | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysRole)
@@ -69,7 +72,7 @@ export const findRoleById = async (id: number, db: DB) => {
 export const createRole = async (
 	data: z.infer<typeof RoleCreateBody>,
 	db: DB,
-) => {
+): Promise<typeof sysRole.$inferSelect> => {
 	const { deptIds, ...roleData } = data;
 
 	return await db.transaction(async (tx) => {
@@ -93,7 +96,7 @@ export const updateRole = async (
 	id: number,
 	data: z.infer<typeof RoleUpdateBody>,
 	db: DB,
-) => {
+): Promise<typeof sysRole.$inferSelect | undefined> => {
 	const { deptIds, ...roleData } = data;
 
 	return await db.transaction(async (tx) => {
@@ -132,7 +135,10 @@ export const updateRole = async (
  * 顺序保证：解绑过程若依赖"角色还存在"的事实，先删会留 FK 悬挂（虽然当前 schema 没建 FK，
  * 但语义上要保持"先解绑再标记删除"）
  */
-export const softDeleteRole = async (id: number, db: DB) => {
+export const softDeleteRole = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysRole.$inferSelect | undefined> => {
 	return await db.transaction(async (tx) => {
 		await tx.delete(sysUserRole).where(eq(sysUserRole.roleId, id));
 		await tx.delete(sysRoleMenu).where(eq(sysRoleMenu.roleId, id));
@@ -147,7 +153,10 @@ export const softDeleteRole = async (id: number, db: DB) => {
 };
 
 /** 查某角色已绑定的菜单 ID 列表（前端"角色编辑"页回显用） */
-export const findRoleMenuIds = async (roleId: number, db: DB) => {
+export const findRoleMenuIds = async (
+	roleId: number,
+	db: DB,
+): Promise<number[]> => {
 	const rows = await db
 		.select({ menuId: sysRoleMenu.menuId })
 		.from(sysRoleMenu)
@@ -156,7 +165,10 @@ export const findRoleMenuIds = async (roleId: number, db: DB) => {
 };
 
 /** 查某角色已绑定的部门 ID 列表 */
-export const findRoleDeptIds = async (roleId: number, db: DB) => {
+export const findRoleDeptIds = async (
+	roleId: number,
+	db: DB,
+): Promise<number[]> => {
 	const rows = await db
 		.select({ deptId: sysRoleDept.deptId })
 		.from(sysRoleDept)
@@ -217,7 +229,7 @@ export const replaceRoleMenus = async (
 	roleId: number,
 	menuIds: z.infer<typeof RoleAssignMenusBody>,
 	db: DB,
-) => {
+): Promise<void> => {
 	return await db.transaction(async (tx) => {
 		await tx.delete(sysRoleMenu).where(eq(sysRoleMenu.roleId, roleId));
 		if (menuIds.length > 0) {
@@ -236,7 +248,7 @@ export const replaceRoleDepts = async (
 	roleId: number,
 	body: z.infer<typeof RoleAssignDeptsBody>,
 	db: DB,
-) => {
+): Promise<void> => {
 	return await db.transaction(async (tx) => {
 		await tx.delete(sysRoleDept).where(eq(sysRoleDept.roleId, roleId));
 		if (body.deptIds.length > 0) {
@@ -248,7 +260,9 @@ export const replaceRoleDepts = async (
 };
 
 /** 角色下拉选项（供前端下拉选择器使用） */
-export const findRoleOptions = async (db: DB) => {
+export const findRoleOptions = async (
+	db: DB,
+): Promise<Array<{ value: string; label: string }>> => {
 	const rows = await db
 		.select({ id: sysRole.id, name: sysRole.name })
 		.from(sysRole)
@@ -261,7 +275,10 @@ export const findRoleOptions = async (db: DB) => {
  * 获取角色表单数据（含已绑定的部门 ID 列表）
  * 当 dataScope=5（CUSTOM）时额外查询 sys_role_dept
  */
-export const findRoleFormData = async (id: number, db: DB) => {
+export const findRoleFormData = async (
+	id: number,
+	db: DB,
+): Promise<(typeof sysRole.$inferSelect & { deptIds: number[] }) | undefined> => {
 	const role = await findRoleById(id, db);
 	if (!role) {
 		return undefined;
@@ -303,7 +320,10 @@ export const isRoleAssignedToUsers = async (
  * 单事务内完成所有 junction 表清理 + 角色软删，减少往返。
  * 前置拦截（受保护角色 / 已绑定用户）由 routes 层负责。
  */
-export const batchSoftDeleteRoles = async (ids: number[], db: DB) => {
+export const batchSoftDeleteRoles = async (
+	ids: number[],
+	db: DB,
+): Promise<typeof sysRole.$inferSelect[]> => {
 	if (ids.length === 0) {
 		return [];
 	}

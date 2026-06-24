@@ -55,7 +55,10 @@ export const findUsers = async (
 };
 
 /** 根据 ID 查询用户（默认过滤已软删记录） */
-export const findUserById = async (id: number, db: DB) => {
+export const findUserById = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysUser.$inferSelect | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysUser)
@@ -67,7 +70,7 @@ export const findUserById = async (id: number, db: DB) => {
 export const createUser = async (
 	data: z.infer<typeof UserCreateBody>,
 	db: DB,
-) => {
+): Promise<typeof sysUser.$inferSelect | undefined> => {
 	const [user] = await db.insert(sysUser).values(data).returning();
 	return user;
 };
@@ -77,7 +80,7 @@ export const updateUser = async (
 	id: number,
 	data: z.infer<typeof UserUpdateBody>,
 	db: DB,
-) => {
+): Promise<typeof sysUser.$inferSelect | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set(data)
@@ -86,8 +89,11 @@ export const updateUser = async (
 	return user;
 };
 
-/** 软删除用户（自身就是设 deletedAt，按软删规则表不需要加 deletedAt 过滤） */
-export const softDeleteUser = async (id: number, db: DB) => {
+/** 软删除用户（自身就是设 deletedAt，按软删规则不需要加 deletedAt 过滤） */
+export const softDeleteUser = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysUser.$inferSelect | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ deletedAt: new Date().toISOString() })
@@ -97,7 +103,10 @@ export const softDeleteUser = async (id: number, db: DB) => {
 };
 
 /** 查某用户已绑定的角色 ID 列表（前端"用户编辑"页回显用） */
-export const findUserRoleIds = async (userId: number, db: DB) => {
+export const findUserRoleIds = async (
+	userId: number,
+	db: DB,
+): Promise<number[]> => {
 	const rows = await db
 		.select({ roleId: sysUserRole.roleId })
 		.from(sysUserRole)
@@ -109,7 +118,10 @@ export const findUserRoleIds = async (userId: number, db: DB) => {
  * 获取用户表单数据（含已绑定的角色 ID 列表）
  * 返回 { ...user, roleIds }，对齐前端 UserForm 类型
  */
-export const findUserFormData = async (id: number, db: DB) => {
+export const findUserFormData = async (
+	id: number,
+	db: DB,
+): Promise<(typeof sysUser.$inferSelect & { roleIds: number[] }) | undefined> => {
 	const user = await findUserById(id, db);
 	if (!user) {
 		return undefined;
@@ -119,7 +131,9 @@ export const findUserFormData = async (id: number, db: DB) => {
 };
 
 /** 用户下拉选项（供前端下拉选择器使用），仅返回启用且未删除的用户 */
-export const findUserOptions = async (db: DB) => {
+export const findUserOptions = async (
+	db: DB,
+): Promise<Array<{ value: string; label: string }>> => {
 	const rows = await db
 		.select({
 			id: sysUser.id,
@@ -135,7 +149,10 @@ export const findUserOptions = async (db: DB) => {
 };
 
 /** 批量软删除用户 */
-export const batchSoftDeleteUsers = async (ids: number[], db: DB) => {
+export const batchSoftDeleteUsers = async (
+	ids: number[],
+	db: DB,
+): Promise<typeof sysUser.$inferSelect[]> => {
 	if (ids.length === 0) {
 		return [];
 	}
@@ -152,7 +169,7 @@ export const resetUserPassword = async (
 	id: number,
 	password: string,
 	db: DB,
-) => {
+): Promise<typeof sysUser.$inferSelect | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ password })

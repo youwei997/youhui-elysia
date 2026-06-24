@@ -7,15 +7,12 @@ import { signAccessToken, signRefreshToken, verifyToken } from "@/lib/jwt";
 import { verifyPassword } from "@/lib/password";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
+import { clearLoginFailCount, incrementLoginFailCount, incrementTokenVersion, isAccountLocked } from "@/lib/login-lock";
 import { authPlugin } from "@/plugins/auth";
 import {
-	clearLoginFailCount,
 	findActiveUserByUsername,
 	findUserPerms,
 	findUserRoles,
-	incrementLoginFailCount,
-	incrementTokenVersion,
-	isAccountLocked,
 } from "./queries";
 import { LoginBody, RefreshTokenQuery } from "./schema";
 

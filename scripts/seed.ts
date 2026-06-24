@@ -15,7 +15,7 @@ const DEFAULT_PASSWORD =
 /** 当前时间戳（ISO 8601），用于审计字段填充 */
 const NOW = new Date().toISOString();
 
-async function main() {
+const main = async () => {
 	console.log("🌱 开始写入种子数据...");
 
 	// ==========================================

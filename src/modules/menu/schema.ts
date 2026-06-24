@@ -41,7 +41,7 @@ export const MenuCreateBody = createInsertSchema(sysMenu, {
 	sort: (s) => s.describe("排序"),
 	icon: (s) => s.describe("图标"),
 	redirect: (s) => s.describe("跳转路径"),
-	params: (_s) => z.any().optional().describe("路由参数（JSON 对象）"),
+	params: (_s) => z.unknown().optional().describe("路由参数（JSON 对象）"),
 })
 	.omit(auditKeys)
 	.refine(
@@ -76,7 +76,7 @@ export const MenuUpdateBody = createUpdateSchema(sysMenu, {
 	sort: (s) => s.describe("排序"),
 	icon: (s) => s.describe("图标"),
 	redirect: (s) => s.describe("跳转路径"),
-	params: (_s) => z.any().optional().describe("路由参数（JSON 对象）"),
+	params: (_s) => z.unknown().optional().describe("路由参数（JSON 对象）"),
 })
 	.omit({
 		...auditKeys,

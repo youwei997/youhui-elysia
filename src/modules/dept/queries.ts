@@ -32,7 +32,10 @@ export const findAllDepts = async (
 /**
  * 根据 ID 查部门（软删过滤）
  */
-export const findDeptById = async (id: number, db: DB) => {
+export const findDeptById = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysDept.$inferSelect | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysDept)
@@ -100,7 +103,7 @@ export const isParentIdCyclic = async (
 export const createDept = async (
 	data: z.infer<typeof DeptCreateBody>,
 	db: DB,
-) => {
+): Promise<typeof sysDept.$inferSelect | undefined> => {
 	const treePath = await calcTreePath(data.parentId ?? 0, db);
 	const [dept] = await db
 		.insert(sysDept)
@@ -116,7 +119,7 @@ export const updateDept = async (
 	id: number,
 	data: z.infer<typeof DeptUpdateBody>,
 	db: DB,
-) => {
+): Promise<typeof sysDept.$inferSelect | undefined> => {
 	const updateData: Record<string, unknown> = { ...data };
 
 	// 只有 parentId 明确传值且非 null 时才重新计算 treePath
@@ -172,7 +175,10 @@ export const updateDept = async (
 /**
  * 软删除部门（级联删除子树 + 清理关联表）
  */
-export const softDeleteDept = async (id: number, db: DB) => {
+export const softDeleteDept = async (
+	id: number,
+	db: DB,
+): Promise<number | undefined> => {
 	const pattern = `(^|,)${id}(,|$)`;
 	return await db.transaction(async (tx) => {
 		// 查出要删的所有部门 ID（自身 + 子树）
@@ -214,7 +220,10 @@ export const softDeleteDept = async (id: number, db: DB) => {
  * 单事务内完成 sys_role_dept 清理 + 部门软删，减少往返。
  * 前置拦截（用户引用校验）由 routes 层负责。
  */
-export const batchSoftDeleteDepts = async (ids: number[], db: DB) => {
+export const batchSoftDeleteDepts = async (
+	ids: number[],
+	db: DB,
+): Promise<typeof sysDept.$inferSelect[]> => {
 	if (ids.length === 0) {
 		return [];
 	}

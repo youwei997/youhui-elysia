@@ -110,7 +110,10 @@ export const findMenusByRoleCodes = async (
 /**
  * 根据 ID 查菜单（软删过滤）
  */
-export const findMenuById = async (id: number, db: DB) => {
+export const findMenuById = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysMenu.$inferSelect | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysMenu)
@@ -126,7 +129,7 @@ export const findMenuById = async (id: number, db: DB) => {
 export const findAllMenusWithButtons = async (
 	keywords: string | undefined,
 	db: DB,
-) => {
+): Promise<typeof sysMenu.$inferSelect[]> => {
 	const where = [isNull(sysMenu.deletedAt)];
 	if (keywords) {
 		// Postgres ILIKE：大小写不敏感的 LIKE，无需手动 lower()
@@ -147,7 +150,7 @@ export const findAllMenusWithButtons = async (
 export const findMenuOptions = async (
 	onlyParent: boolean | undefined,
 	db: DB,
-) => {
+): Promise<Array<{ value: string; label: string; parentId: number }>> => {
 	const where = [isNull(sysMenu.deletedAt)];
 	if (onlyParent) {
 		where.push(ne(sysMenu.type, "B"));
@@ -180,7 +183,10 @@ const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 		.from(sysMenu)
 		.where(and(eq(sysMenu.id, parentId), isNull(sysMenu.deletedAt)))
 		.limit(1);
-	const parentPath = parent[0]?.treePath ?? "0";
+	const parentPath = parent[0]?.treePath;
+	if (!parentPath) {
+		throw new Error(`父菜单 ID=${parentId} 不存在或已删除`);
+	}
 	return `${parentPath},${parentId}`;
 };
 
@@ -191,7 +197,7 @@ const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 export const createMenu = async (
 	data: z.infer<typeof MenuCreateBody>,
 	db: DB,
-) => {
+): Promise<typeof sysMenu.$inferSelect | undefined> => {
 	const treePath = await calcTreePath(data.parentId ?? 0, db);
 	const [menu] = await db
 		.insert(sysMenu)
@@ -208,7 +214,7 @@ export const updateMenu = async (
 	id: number,
 	data: z.infer<typeof MenuUpdateBody>,
 	db: DB,
-) => {
+): Promise<typeof sysMenu.$inferSelect | undefined> => {
 	const updateData: Record<string, unknown> = { ...data };
 	if (data.parentId !== undefined) {
 		updateData.treePath = await calcTreePath(data.parentId, db);
@@ -228,7 +234,10 @@ export const updateMenu = async (
  *   tree_path ~ '(^|,)ID(,|$)' 匹配路径中含有该 ID 的节点（身为祖先或自身）
  *   加上自身 id 直接匹配覆盖根节点边界情况
  */
-export const softDeleteMenu = async (id: number, db: DB) => {
+export const softDeleteMenu = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysMenu.$inferSelect[]> => {
 	const pattern = `(^|,)${id}(,|$)`;
 	return await db.transaction(async (tx) => {
 		// 先清理 sys_role_menu 中所有引用（被删节点及其子孙可能被角色绑定）
