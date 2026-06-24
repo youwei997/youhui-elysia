@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import type z from "zod";
-import { type DB, db as defaultDb } from "@/db/client";
+import type { DB } from "@/db/client";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysRoleDept } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
@@ -11,14 +11,14 @@ import type { DeptCreateBody, DeptUpdateBody } from "./schema";
  * 支持可选的 keywords（名称模糊匹配）和 status 筛选
  */
 export const findAllDepts = async (
-	db: DB = defaultDb,
-	query?: { keywords?: string | undefined; status?: number | undefined },
+	query: { keywords?: string | undefined; status?: number | undefined } = {},
+	db: DB,
 ) => {
 	const where = [isNull(sysDept.deletedAt)];
-	if (query?.keywords) {
+	if (query.keywords) {
 		where.push(like(sysDept.name, `%${query.keywords}%`));
 	}
-	if (query?.status !== undefined) {
+	if (query.status !== undefined) {
 		where.push(eq(sysDept.status, query.status));
 	}
 	const rows = await db
@@ -32,7 +32,7 @@ export const findAllDepts = async (
 /**
  * 根据 ID 查部门（软删过滤）
  */
-export const findDeptById = async (db: DB = defaultDb, id: number) => {
+export const findDeptById = async (id: number, db: DB) => {
 	const rows = await db
 		.select()
 		.from(sysDept)
@@ -44,7 +44,7 @@ export const findDeptById = async (db: DB = defaultDb, id: number) => {
 /**
  * 计算 treePath：parentId 为 0 → "0"，否则取父节点的 treePath + "," + parentId
  */
-const calcTreePath = async (db: DB, parentId: number): Promise<string> => {
+const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 	// 顶级部门：treePath 固定为 "0"
 	if (parentId === 0) {
 		return "0";
@@ -65,9 +65,9 @@ const calcTreePath = async (db: DB, parentId: number): Promise<string> => {
  * 防循环：目标节点的 parentId 不能是自己或自己的子孙
  */
 export const isParentIdCyclic = async (
-	db: DB,
 	targetId: number,
 	newParentId: number,
+	db: DB,
 ): Promise<boolean> => {
 	// 顶级部门永远安全
 	if (newParentId === 0) {
@@ -98,10 +98,10 @@ export const isParentIdCyclic = async (
  * 创建部门（自动计算 treePath）
  */
 export const createDept = async (
-	db: DB = defaultDb,
 	data: z.infer<typeof DeptCreateBody>,
+	db: DB,
 ) => {
-	const treePath = await calcTreePath(db, data.parentId ?? 0);
+	const treePath = await calcTreePath(data.parentId ?? 0, db);
 	const [dept] = await db
 		.insert(sysDept)
 		.values({ ...data, treePath })
@@ -113,15 +113,15 @@ export const createDept = async (
  * 更新部门（parentId 变更时重新计算 treePath，级联更新子树的 treePath）
  */
 export const updateDept = async (
-	db: DB = defaultDb,
 	id: number,
 	data: z.infer<typeof DeptUpdateBody>,
+	db: DB,
 ) => {
 	const updateData: Record<string, unknown> = { ...data };
 
 	// 只有 parentId 明确传值且非 null 时才重新计算 treePath
 	if (data.parentId !== undefined && data.parentId !== null) {
-		const newTreePath = await calcTreePath(db, data.parentId);
+		const newTreePath = await calcTreePath(data.parentId, db);
 
 		return await db.transaction(async (tx) => {
 			// 查出旧的 treePath（更新前），用于级联替换
@@ -172,7 +172,7 @@ export const updateDept = async (
 /**
  * 软删除部门（级联删除子树 + 清理关联表）
  */
-export const softDeleteDept = async (db: DB = defaultDb, id: number) => {
+export const softDeleteDept = async (id: number, db: DB) => {
 	const pattern = `(^|,)${id}(,|$)`;
 	return await db.transaction(async (tx) => {
 		// 查出要删的所有部门 ID（自身 + 子树）
@@ -197,10 +197,10 @@ export const softDeleteDept = async (db: DB = defaultDb, id: number) => {
 			.delete(sysRoleDept)
 			.where(inArray(sysRoleDept.deptId, idsToDelete));
 
-		// 软删部门（设 deletedAt = NOW()）
+		// 软删部门
 		await tx
 			.update(sysDept)
-			.set({ deletedAt: sql`NOW()` })
+			.set({ deletedAt: new Date().toISOString() })
 			.where(inArray(sysDept.id, idsToDelete));
 
 		return idsToDelete.length;
@@ -214,10 +214,7 @@ export const softDeleteDept = async (db: DB = defaultDb, id: number) => {
  * 单事务内完成 sys_role_dept 清理 + 部门软删，减少往返。
  * 前置拦截（用户引用校验）由 routes 层负责。
  */
-export const batchSoftDeleteDepts = async (
-	db: DB = defaultDb,
-	ids: number[],
-) => {
+export const batchSoftDeleteDepts = async (ids: number[], db: DB) => {
 	if (ids.length === 0) {
 		return [];
 	}
@@ -225,7 +222,7 @@ export const batchSoftDeleteDepts = async (
 		await tx.delete(sysRoleDept).where(inArray(sysRoleDept.deptId, ids));
 		const depts = await tx
 			.update(sysDept)
-			.set({ deletedAt: sql`NOW()` })
+			.set({ deletedAt: new Date().toISOString() })
 			.where(inArray(sysDept.id, ids))
 			.returning();
 		return depts;
@@ -236,8 +233,8 @@ export const batchSoftDeleteDepts = async (
  * 检查部门是否被用户引用（删除前校验）
  */
 export const isDeptUsedByUsers = async (
-	db: DB = defaultDb,
 	deptId: number,
+	db: DB,
 ): Promise<boolean> => {
 	const rows = await db
 		.select({ id: sysUser.id })

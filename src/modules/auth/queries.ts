@@ -15,12 +15,12 @@ const FAIL_TTL = 15 * 60;
 
 /**
  * 根据用户名查找有效用户（软删过滤 + 状态正常）
- * @param db Drizzle 实例（事务场景下传入 tx）
  * @param username 用户名
+ * @param db Drizzle 实例（事务场景下传入 tx）
  */
 export const findActiveUserByUsername = async (
-	db: DB,
 	username: string,
+	db: DB,
 ): Promise<typeof sysUser.$inferSelect | undefined> => {
 	const rows = await db
 		.select()
@@ -80,8 +80,8 @@ export const incrementTokenVersion = async (
  * 返回 { code, dataScope }，供 JWT payload 注入 roles / dataScopes 字段
  */
 export const findUserRoles = async (
-	db: DB,
 	userId: number,
+	db: DB,
 ): Promise<Array<{ code: string; dataScope: number | null }>> => {
 	const rows = await db
 		.select({
@@ -111,8 +111,8 @@ export const findUserRoles = async (
  * 因此 ROOT 用户此函数可能返回 []，业务层不应依赖 perms 推断 ROOT 身份。
  */
 export const findUserPerms = async (
-	db: DB,
 	userId: number,
+	db: DB,
 ): Promise<string[]> => {
 	const rows = await db
 		.select({ perm: sysMenu.perm })

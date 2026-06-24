@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import type z from "zod";
-import { type DB, db as defaultDb } from "@/db/client";
+import type { DB } from "@/db/client";
 import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
@@ -30,9 +30,7 @@ export type MenuRoute = {
  * 获取所有非按钮菜单（供 ROOT 角色使用）
  * 按 sort 升序排列
  */
-export const findAllMenus = async (
-	db: DB = defaultDb,
-): Promise<MenuRoute[]> => {
+export const findAllMenus = async (db: DB): Promise<MenuRoute[]> => {
 	const rows = await db
 		.select({
 			id: sysMenu.id,
@@ -67,8 +65,8 @@ export const findAllMenus = async (
  * 排序：按菜单 sort 升序
  */
 export const findMenusByRoleCodes = async (
-	db: DB = defaultDb,
 	roleCodes: string[],
+	db: DB,
 ): Promise<MenuRoute[]> => {
 	if (roleCodes.length === 0) {
 		return [];
@@ -112,7 +110,7 @@ export const findMenusByRoleCodes = async (
 /**
  * 根据 ID 查菜单（软删过滤）
  */
-export const findMenuById = async (db: DB = defaultDb, id: number) => {
+export const findMenuById = async (id: number, db: DB) => {
 	const rows = await db
 		.select()
 		.from(sysMenu)
@@ -126,8 +124,8 @@ export const findMenuById = async (db: DB = defaultDb, id: number) => {
  * 按 sort 升序排列
  */
 export const findAllMenusWithButtons = async (
-	db: DB = defaultDb,
-	keywords?: string,
+	keywords: string | undefined,
+	db: DB,
 ) => {
 	const where = [isNull(sysMenu.deletedAt)];
 	if (keywords) {
@@ -147,8 +145,8 @@ export const findAllMenusWithButtons = async (
  * onlyParent 为 true 时过滤按钮（type != 'B'）
  */
 export const findMenuOptions = async (
-	db: DB = defaultDb,
-	onlyParent?: boolean,
+	onlyParent: boolean | undefined,
+	db: DB,
 ) => {
 	const where = [isNull(sysMenu.deletedAt)];
 	if (onlyParent) {
@@ -173,7 +171,7 @@ export const findMenuOptions = async (
 /**
  * 计算 treePath：parentId 为 0 → "0"，否则取父节点的 treePath + parentId
  */
-const calcTreePath = async (db: DB, parentId: number): Promise<string> => {
+const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 	if (parentId === 0) {
 		return "0";
 	}
@@ -191,10 +189,10 @@ const calcTreePath = async (db: DB, parentId: number): Promise<string> => {
  * treePath 根据 parentId 自动计算
  */
 export const createMenu = async (
-	db: DB = defaultDb,
 	data: z.infer<typeof MenuCreateBody>,
+	db: DB,
 ) => {
-	const treePath = await calcTreePath(db, data.parentId ?? 0);
+	const treePath = await calcTreePath(data.parentId ?? 0, db);
 	const [menu] = await db
 		.insert(sysMenu)
 		.values({ ...data, treePath })
@@ -207,13 +205,13 @@ export const createMenu = async (
  * 如果 parentId 变了，重新计算 treePath
  */
 export const updateMenu = async (
-	db: DB = defaultDb,
 	id: number,
 	data: z.infer<typeof MenuUpdateBody>,
+	db: DB,
 ) => {
 	const updateData: Record<string, unknown> = { ...data };
 	if (data.parentId !== undefined) {
-		updateData.treePath = await calcTreePath(db, data.parentId);
+		updateData.treePath = await calcTreePath(data.parentId, db);
 	}
 	const [menu] = await db
 		.update(sysMenu)
@@ -230,7 +228,7 @@ export const updateMenu = async (
  *   tree_path ~ '(^|,)ID(,|$)' 匹配路径中含有该 ID 的节点（身为祖先或自身）
  *   加上自身 id 直接匹配覆盖根节点边界情况
  */
-export const softDeleteMenu = async (db: DB = defaultDb, id: number) => {
+export const softDeleteMenu = async (id: number, db: DB) => {
 	const pattern = `(^|,)${id}(,|$)`;
 	return await db.transaction(async (tx) => {
 		// 先清理 sys_role_menu 中所有引用（被删节点及其子孙可能被角色绑定）
@@ -274,9 +272,9 @@ export const softDeleteMenu = async (db: DB = defaultDb, id: number) => {
  * 纯 JS 字符串操作，不依赖 SQL 正则，避免跨平台兼容问题。
  */
 export const isParentIdCyclic = async (
-	db: DB = defaultDb,
 	nodeId: number,
 	parentId: number,
+	db: DB,
 ): Promise<boolean> => {
 	if (parentId === 0) {
 		return false; // 顶级永远不会循环

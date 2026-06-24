@@ -102,7 +102,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			}
 
 			// 3. 查找有效用户（软删过滤 + 状态正常）
-			const user = await findActiveUserByUsername(db, username);
+			const user = await findActiveUserByUsername(username, db);
 			if (!user) {
 				// 不暴露"用户不存在"，统一提示密码错误（防止枚举用户名）
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
@@ -120,8 +120,8 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 
 			// 并发查角色 + 权限（互不依赖，一起跑更快）
 			const [userRoles, userPerms] = await Promise.all([
-				findUserRoles(db, user.id),
-				findUserPerms(db, user.id),
+				findUserRoles(user.id, db),
+				findUserPerms(user.id, db),
 			]);
 
 			const tokenVersion = Number(
@@ -177,8 +177,8 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			// 3. 从 JWT sub（userId）重新查角色/权限，确保刷新后权限是最新的
 			const userId = Number(oldPayload.sub);
 			const [userRoles, userPerms] = await Promise.all([
-				findUserRoles(db, userId),
-				findUserPerms(db, userId),
+				findUserRoles(userId, db),
+				findUserPerms(userId, db),
 			]);
 
 			const tokenVersion = Number(

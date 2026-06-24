@@ -1,6 +1,6 @@
 import { and, count, eq, inArray, isNull, like, or } from "drizzle-orm";
 import type z from "zod";
-import { db } from "@/db/client";
+import type { DB } from "@/db/client";
 import type { PageResult } from "@/db/helpers/pagination";
 import { sysUserRole } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
@@ -9,13 +9,16 @@ import type { UserCreateBody, UserUpdateBody } from "./schema";
 /**
  * 查询用户列表（分页 + 可选过滤）
  */
-export const findUsers = async (query: {
-	pageNum: number;
-	pageSize: number;
-	keywords?: string;
-	status?: number;
-	deptId?: number;
-}): Promise<PageResult<(typeof sysUser)["$inferSelect"]>> => {
+export const findUsers = async (
+	query: {
+		pageNum: number;
+		pageSize: number;
+		keywords?: string;
+		status?: number;
+		deptId?: number;
+	},
+	db: DB,
+): Promise<PageResult<(typeof sysUser)["$inferSelect"]>> => {
 	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选
 	const where = [isNull(sysUser.deletedAt)];
 	if (query.keywords) {
@@ -52,7 +55,7 @@ export const findUsers = async (query: {
 };
 
 /** 根据 ID 查询用户（默认过滤已软删记录） */
-export const findUserById = async (id: number) => {
+export const findUserById = async (id: number, db: DB) => {
 	const rows = await db
 		.select()
 		.from(sysUser)
@@ -61,7 +64,10 @@ export const findUserById = async (id: number) => {
 };
 
 /** 创建用户 */
-export const createUser = async (data: z.infer<typeof UserCreateBody>) => {
+export const createUser = async (
+	data: z.infer<typeof UserCreateBody>,
+	db: DB,
+) => {
 	const [user] = await db.insert(sysUser).values(data).returning();
 	return user;
 };
@@ -70,6 +76,7 @@ export const createUser = async (data: z.infer<typeof UserCreateBody>) => {
 export const updateUser = async (
 	id: number,
 	data: z.infer<typeof UserUpdateBody>,
+	db: DB,
 ) => {
 	const [user] = await db
 		.update(sysUser)
@@ -80,7 +87,7 @@ export const updateUser = async (
 };
 
 /** 软删除用户（自身就是设 deletedAt，按软删规则表不需要加 deletedAt 过滤） */
-export const softDeleteUser = async (id: number) => {
+export const softDeleteUser = async (id: number, db: DB) => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ deletedAt: new Date().toISOString() })
@@ -90,7 +97,7 @@ export const softDeleteUser = async (id: number) => {
 };
 
 /** 查某用户已绑定的角色 ID 列表（前端"用户编辑"页回显用） */
-export const findUserRoleIds = async (userId: number) => {
+export const findUserRoleIds = async (userId: number, db: DB) => {
 	const rows = await db
 		.select({ roleId: sysUserRole.roleId })
 		.from(sysUserRole)
@@ -102,17 +109,17 @@ export const findUserRoleIds = async (userId: number) => {
  * 获取用户表单数据（含已绑定的角色 ID 列表）
  * 返回 { ...user, roleIds }，对齐前端 UserForm 类型
  */
-export const findUserFormData = async (id: number) => {
-	const user = await findUserById(id);
+export const findUserFormData = async (id: number, db: DB) => {
+	const user = await findUserById(id, db);
 	if (!user) {
 		return undefined;
 	}
-	const roleIds = await findUserRoleIds(id);
+	const roleIds = await findUserRoleIds(id, db);
 	return { ...user, roleIds };
 };
 
 /** 用户下拉选项（供前端下拉选择器使用），仅返回启用且未删除的用户 */
-export const findUserOptions = async () => {
+export const findUserOptions = async (db: DB) => {
 	const rows = await db
 		.select({
 			id: sysUser.id,
@@ -128,7 +135,7 @@ export const findUserOptions = async () => {
 };
 
 /** 批量软删除用户 */
-export const batchSoftDeleteUsers = async (ids: number[]) => {
+export const batchSoftDeleteUsers = async (ids: number[], db: DB) => {
 	if (ids.length === 0) {
 		return [];
 	}
@@ -141,7 +148,11 @@ export const batchSoftDeleteUsers = async (ids: number[]) => {
 };
 
 /** 重置用户密码（软删过滤，禁止重置已删用户的密码） */
-export const resetUserPassword = async (id: number, password: string) => {
+export const resetUserPassword = async (
+	id: number,
+	password: string,
+	db: DB,
+) => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ password })

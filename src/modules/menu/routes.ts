@@ -71,8 +71,8 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			// 1. 查菜单列表：ROOT 查全部，其他按角色过滤
 			const isRoot = user.roles.includes("ROOT");
 			const menus = isRoot
-				? await findAllMenus()
-				: await findMenusByRoleCodes(db, user.roles);
+				? await findAllMenus(db)
+				: await findMenusByRoleCodes(user.roles, db);
 
 			// 2. 平面列表 → 嵌套树
 			const tree = buildTree(menus);
@@ -102,7 +102,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 	.get(
 		"/",
 		async ({ query }) => {
-			const menus = await findAllMenusWithButtons(db, query.keywords);
+			const menus = await findAllMenusWithButtons(query.keywords, db);
 			const tree = buildTree(menus);
 			return tree;
 		},
@@ -120,8 +120,8 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		"/options",
 		async ({ query }) => {
 			return findMenuOptions(
-				db,
 				query.onlyParent === "true" || query.onlyParent === "1",
+				db,
 			);
 		},
 		{
@@ -137,7 +137,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 	.get(
 		"/:id/form",
 		async ({ params }) => {
-			const menu = await findMenuById(db, params.id);
+			const menu = await findMenuById(params.id, db);
 			if (!menu) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
@@ -162,12 +162,12 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			}
 			// 前置校验：parentId != 0 时父节点必须存在
 			if (body.parentId && body.parentId !== 0) {
-				const parent = await findMenuById(db, body.parentId);
+				const parent = await findMenuById(body.parentId, db);
 				if (!parent) {
 					throw new BizError(ERR_CODE.MENU_PARENT_NOT_FOUND);
 				}
 			}
-			return createMenu(db, body);
+			return createMenu(body, db);
 		},
 		{
 			auth: true,
@@ -183,7 +183,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 	.put(
 		"/:id",
 		async ({ params, body }) => {
-			const existing = await findMenuById(db, params.id);
+			const existing = await findMenuById(params.id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
@@ -198,16 +198,16 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			}
 			// 前置校验：parentId 防循环
 			if (body.parentId !== undefined && body.parentId !== 0) {
-				const parent = await findMenuById(db, body.parentId);
+				const parent = await findMenuById(body.parentId, db);
 				if (!parent) {
 					throw new BizError(ERR_CODE.MENU_PARENT_NOT_FOUND);
 				}
-				const isCyclic = await isParentIdCyclic(db, params.id, body.parentId);
+				const isCyclic = await isParentIdCyclic(params.id, body.parentId, db);
 				if (isCyclic) {
 					throw new BizError(ERR_CODE.MENU_PARENT_CYCLE);
 				}
 			}
-			const menu = await updateMenu(db, params.id, body);
+			const menu = await updateMenu(params.id, body, db);
 			if (!menu) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
@@ -228,11 +228,11 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 	.delete(
 		"/:id",
 		async ({ params }) => {
-			const existing = await findMenuById(db, params.id);
+			const existing = await findMenuById(params.id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
-			const deleted = await softDeleteMenu(db, params.id);
+			const deleted = await softDeleteMenu(params.id, db);
 			return deleted;
 		},
 		{

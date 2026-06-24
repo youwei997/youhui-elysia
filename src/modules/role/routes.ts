@@ -1,4 +1,5 @@
 import { Elysia } from "elysia";
+import { db } from "@/db/client";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import {
@@ -48,7 +49,7 @@ const ensureNotProtected = (role: { code: string }) => {
  */
 const ensureValidDeptIds = async (deptIds: number[]) => {
 	if (deptIds.length === 0) return;
-	const validIds = await findValidDeptIds(undefined, deptIds);
+	const validIds = await findValidDeptIds(deptIds, db);
 	if (validIds.length !== deptIds.length) {
 		const validSet = new Set(validIds);
 		const invalid = deptIds.filter((id) => !validSet.has(id));
@@ -64,7 +65,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.get(
 		"/",
 		async ({ query }) => {
-			return findRoles(undefined, query);
+			return findRoles(query, db);
 		},
 		{
 			auth: true,
@@ -79,7 +80,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.get(
 		"/options",
 		async () => {
-			return findRoleOptions(undefined);
+			return findRoleOptions(db);
 		},
 		{
 			auth: true,
@@ -93,7 +94,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.get(
 		"/:id",
 		async ({ params }) => {
-			const role = await findRoleById(undefined, params.id);
+			const role = await findRoleById(params.id, db);
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
@@ -112,7 +113,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.get(
 		"/:id/form",
 		async ({ params }) => {
-			const role = await findRoleFormData(undefined, params.id);
+			const role = await findRoleFormData(params.id, db);
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
@@ -136,7 +137,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (body.deptIds) {
 				await ensureValidDeptIds(body.deptIds);
 			}
-			return createRole(undefined, body);
+			return createRole(body, db);
 		},
 		{
 			auth: true,
@@ -152,7 +153,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.put(
 		"/:id",
 		async ({ params, body }) => {
-			const existing = await findRoleById(undefined, params.id);
+			const existing = await findRoleById(params.id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
@@ -160,7 +161,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (body.deptIds) {
 				await ensureValidDeptIds(body.deptIds);
 			}
-			const role = await updateRole(undefined, params.id, body);
+			const role = await updateRole(params.id, body, db);
 			return role;
 		},
 		{
@@ -193,12 +194,12 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 
 				// 逐条前置校验：受保护角色 / 已绑定用户
 				for (const id of ids) {
-					const existing = await findRoleById(undefined, id);
+					const existing = await findRoleById(id, db);
 					if (!existing) {
 						throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 					}
 					ensureNotProtected(existing);
-					if (await isRoleAssignedToUsers(undefined, id)) {
+					if (await isRoleAssignedToUsers(id, db)) {
 						throw new BizError(
 							ERR_CODE.ROLE_HAS_ASSIGNED_USERS,
 							`角色 ${existing.name} 下存在已分配用户，无法删除`,
@@ -206,7 +207,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 					}
 				}
 
-				return batchSoftDeleteRoles(undefined, ids);
+				return batchSoftDeleteRoles(ids, db);
 			}
 
 			// 单条删除
@@ -215,15 +216,15 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
 
-			const existing = await findRoleById(undefined, id);
+			const existing = await findRoleById(id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
 			ensureNotProtected(existing);
-			if (await isRoleAssignedToUsers(undefined, id)) {
+			if (await isRoleAssignedToUsers(id, db)) {
 				throw new BizError(ERR_CODE.ROLE_HAS_ASSIGNED_USERS);
 			}
-			const role = await softDeleteRole(undefined, id);
+			const role = await softDeleteRole(id, db);
 			return role;
 		},
 		{
@@ -240,11 +241,11 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.get(
 		"/:id/menu-ids",
 		async ({ params }) => {
-			const existing = await findRoleById(undefined, params.id);
+			const existing = await findRoleById(params.id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return await findRoleMenuIds(undefined, params.id);
+			return await findRoleMenuIds(params.id, db);
 		},
 		{
 			auth: true,
@@ -258,11 +259,11 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.get(
 		"/:id/dept-ids",
 		async ({ params }) => {
-			const existing = await findRoleById(undefined, params.id);
+			const existing = await findRoleById(params.id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			return await findRoleDeptIds(undefined, params.id);
+			return await findRoleDeptIds(params.id, db);
 		},
 		{
 			auth: true,
@@ -276,14 +277,13 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.put(
 		"/:id/menus",
 		async ({ params, body }) => {
-			const existing = await findRoleById(undefined, params.id);
+			const existing = await findRoleById(params.id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
 			// 业务规则前置校验：所有 menuId 必须存在且未软删
-			// 抽到 routes 层用 BizError 抛，符合 AGENTS.md "queries 不抛 HTTP 错误"
 			if (body.length > 0) {
-				const validIds = await findValidMenuIds(undefined, body);
+				const validIds = await findValidMenuIds(body, db);
 				if (validIds.length !== body.length) {
 					const validSet = new Set(validIds);
 					const invalid = body.filter((id) => !validSet.has(id));
@@ -293,7 +293,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 					);
 				}
 			}
-			await replaceRoleMenus(undefined, params.id, body);
+			await replaceRoleMenus(params.id, body, db);
 			return true;
 		},
 		{
@@ -310,7 +310,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.put(
 		"/:id/depts",
 		async ({ params, body }) => {
-			const existing = await findRoleById(undefined, params.id);
+			const existing = await findRoleById(params.id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
@@ -322,9 +322,8 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				);
 			}
 			// 业务规则前置校验：所有 deptId 必须存在且未软删
-			// 避免传非法 deptId 导致 sys_role_dept 留下悬空关联
 			if (body.deptIds.length > 0) {
-				const validIds = await findValidDeptIds(undefined, body.deptIds);
+				const validIds = await findValidDeptIds(body.deptIds, db);
 				if (validIds.length !== body.deptIds.length) {
 					const validSet = new Set(validIds);
 					const invalid = body.deptIds.filter((id) => !validSet.has(id));
@@ -334,7 +333,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 					);
 				}
 			}
-			await replaceRoleDepts(undefined, params.id, body);
+			await replaceRoleDepts(params.id, body, db);
 			return true;
 		},
 		{

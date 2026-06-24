@@ -27,7 +27,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 	.get(
 		"/",
 		async ({ query }) => {
-			const list = await findAllDepts(db, query);
+			const list = await findAllDepts(query, db);
 			const validList = list.filter(
 				(item): item is typeof item & { parentId: number } =>
 					item.parentId !== null,
@@ -47,7 +47,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 	.get(
 		"/options",
 		async () => {
-			const list = await findAllDepts(db);
+			const list = await findAllDepts({}, db);
 			return list.map((item) => ({
 				value: String(item.id),
 				label: item.name,
@@ -65,7 +65,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 	.get(
 		"/:id",
 		async ({ params }) => {
-			const dept = await findDeptById(db, params.id);
+			const dept = await findDeptById(params.id, db);
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
@@ -83,7 +83,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 	.get(
 		"/:id/form",
 		async ({ params }) => {
-			const dept = await findDeptById(db, params.id);
+			const dept = await findDeptById(params.id, db);
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
@@ -108,12 +108,12 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		"/",
 		async ({ body }) => {
 			if (body.parentId && body.parentId !== 0) {
-				const parent = await findDeptById(db, body.parentId);
+				const parent = await findDeptById(body.parentId, db);
 				if (!parent) {
 					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 				}
 			}
-			const dept = await createDept(db, body);
+			const dept = await createDept(body, db);
 			return DeptResponse.parse(dept);
 		},
 		{
@@ -129,7 +129,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 	.put(
 		"/:id",
 		async ({ params, body }) => {
-			const existing = await findDeptById(db, params.id);
+			const existing = await findDeptById(params.id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
@@ -138,13 +138,13 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 				body.parentId !== null &&
 				body.parentId !== 0
 			) {
-				const parent = await findDeptById(db, body.parentId);
+				const parent = await findDeptById(body.parentId, db);
 				if (!parent) {
 					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 				}
 			}
 			if (body.parentId !== undefined && body.parentId !== null) {
-				const cyclic = await isParentIdCyclic(db, params.id, body.parentId);
+				const cyclic = await isParentIdCyclic(params.id, body.parentId, db);
 				if (cyclic) {
 					throw new BizError(
 						ERR_CODE.DEPT_PARENT_CYCLE,
@@ -152,7 +152,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 					);
 				}
 			}
-			const updated = await updateDept(db, params.id, body);
+			const updated = await updateDept(params.id, body, db);
 			if (!updated) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
@@ -183,11 +183,11 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 				}
 				for (const id of ids) {
-					const existing = await findDeptById(db, id);
+					const existing = await findDeptById(id, db);
 					if (!existing) {
 						throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 					}
-					const inUse = await isDeptUsedByUsers(db, id);
+					const inUse = await isDeptUsedByUsers(id, db);
 					if (inUse) {
 						throw new BizError(
 							ERR_CODE.DEPT_HAS_USERS,
@@ -195,21 +195,21 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 						);
 					}
 				}
-				return await batchSoftDeleteDepts(db, ids);
+				return await batchSoftDeleteDepts(ids, db);
 			}
 			const id = Number(idStr);
 			if (Number.isNaN(id)) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
-			const existing = await findDeptById(db, id);
+			const existing = await findDeptById(id, db);
 			if (!existing) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
-			const inUse = await isDeptUsedByUsers(db, id);
+			const inUse = await isDeptUsedByUsers(id, db);
 			if (inUse) {
 				throw new BizError(ERR_CODE.DEPT_HAS_USERS, "部门下存在用户，无法删除");
 			}
-			const count = await softDeleteDept(db, id);
+			const count = await softDeleteDept(id, db);
 			return { deletedCount: count };
 		},
 		{

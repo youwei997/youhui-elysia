@@ -33,13 +33,13 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			const userInfo = await findUserById(userId);
+			const userInfo = await findUserById(userId, db);
 			if (!userInfo) {
 				throw notFound();
 			}
 			const [roles, perms] = await Promise.all([
-				findUserRoles(db, userId),
-				findUserPerms(db, userId),
+				findUserRoles(userId, db),
+				findUserPerms(userId, db),
 			]);
 			return {
 				userId: userInfo.id,
@@ -62,7 +62,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.get(
 		"/",
 		async ({ query }) => {
-			return findUsers(query);
+			return findUsers(query, db);
 		},
 		{
 			auth: true,
@@ -77,7 +77,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.get(
 		"/options",
 		async () => {
-			return findUserOptions();
+			return findUserOptions(db);
 		},
 		{
 			auth: true,
@@ -91,7 +91,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.get(
 		"/:id/form",
 		async ({ params }) => {
-			const data = await findUserFormData(params.id);
+			const data = await findUserFormData(params.id, db);
 			if (!data) {
 				throw notFound();
 			}
@@ -112,7 +112,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.get(
 		"/:id",
 		async ({ params }) => {
-			const user = await findUserById(params.id);
+			const user = await findUserById(params.id, db);
 			if (!user) {
 				throw notFound();
 			}
@@ -131,7 +131,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.post(
 		"/",
 		async ({ body }) => {
-			return createUser(body);
+			return createUser(body, db);
 		},
 		{
 			auth: true,
@@ -147,7 +147,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		"/:id/password/reset",
 		async ({ params, query }) => {
 			const { password } = query;
-			const user = await resetUserPassword(params.id, password);
+			const user = await resetUserPassword(params.id, password, db);
 			if (!user) {
 				throw notFound();
 			}
@@ -167,7 +167,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.put(
 		"/:id",
 		async ({ params, body }) => {
-			const user = await updateUser(params.id, body);
+			const user = await updateUser(params.id, body, db);
 			if (!user) {
 				throw notFound();
 			}
@@ -194,13 +194,13 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 					.split(",")
 					.map((s) => Number(s.trim()))
 					.filter((n) => !Number.isNaN(n));
-				return batchSoftDeleteUsers(ids);
+				return batchSoftDeleteUsers(ids, db);
 			}
 			const id = Number(idStr);
 			if (Number.isNaN(id)) {
 				throw notFound();
 			}
-			const user = await softDeleteUser(id);
+			const user = await softDeleteUser(id, db);
 			if (!user) {
 				throw notFound();
 			}
