@@ -54,7 +54,9 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 
 - **优先函数 + 闭包**，禁止 class 重度使用
 - **所有函数统一用箭头函数**，不用 `function` 声明
-- **箭头函数必须用 `{}` 大括号包裹函数体**，禁止简写体（`() => value` 应写为 `() => { return value }`）
+- **箭头函数体规则**：
+  - 简单单行直接返回表达式的，允许简写体 `(param) => expression`，如 `(e) => e.path.join(".")`
+  - 多行逻辑、含副作用、需要变量声明或早返回的，必须用 `{}` 大括号包裹，如 `(items) => { const result = []; ...; return result; }`
 - **仅以下场景允许 class**：第三方库要求、需要 `instanceof` 判别、明确的状态机；其他一律用函数
 - **依赖注入用闭包或 Elysia `decorate` / `derive`**，禁止任何形式的 DI 容器、`@Injectable`、reflect-metadata
 - **顶层 `const` 导出 > 单例模式**
