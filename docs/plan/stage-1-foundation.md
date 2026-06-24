@@ -73,7 +73,7 @@ scripts
 - 导出类型 `DB = typeof db`
 
 `src/db/schema/_shared.ts`：
-- `auditColumns`：createdAt / updatedAt / createdBy / updatedBy / deleteTime（**不要 is_deleted**）
+- `auditColumns`：createTime / updateTime / createdBy / updatedBy / deleteTime（**不要 is_deleted**）
 - 导出可被 spread 的对象
 - 导出 helper：`tablePrefix`（如果要前缀）
 

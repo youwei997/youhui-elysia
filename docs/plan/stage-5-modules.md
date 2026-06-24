@@ -17,8 +17,8 @@
 ### 5.1 操作日志（plugin/audit-log）(1d)
 
 `db/schema/system/oper-log.ts`：
-- 字段抄 youlai-boot 的 sys_log：userId / username / module / action / method / url / ip / ipRegion / userAgent / requestParams / responseResult / status / errorMsg / costMs / createdAt
-- 索引：userId / createdAt / module
+- 字段抄 youlai-boot 的 sys_log：userId / username / module / action / method / url / ip / ipRegion / userAgent / requestParams / responseResult / status / errorMsg / costMs / created_at
+- 索引：userId / created_at / module
 
 `src/plugins/audit-log.ts`：
 - 在 `onAfterHandle` 里采集（成功路径）
@@ -37,7 +37,7 @@ modules/oper-log：
 ### 5.2 登录日志 + 在线用户 (0.5d)
 
 `db/schema/system/login-log.ts`：
-- 字段：userId / username / ip / ipRegion / userAgent / browser / os / status（'success' | 'fail'）/ errorMsg / createdAt
+- 字段：userId / username / ip / ipRegion / userAgent / browser / os / status（'success' | 'fail'）/ errorMsg / created_at
 
 `modules/login-log/`：列表查询。
 

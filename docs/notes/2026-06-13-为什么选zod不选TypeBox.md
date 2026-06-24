@@ -12,9 +12,9 @@
 
 ## 我发现的问题：表 schema ≠ 路由 schema
 
-表里有「审计字段」——createdAt / createdBy / updatedAt / updatedBy / deleteTime。这些是**服务端控制**的，前端根本不该传：
+表里有「审计字段」——createTime / createdBy / updateTime / updatedBy / deleteTime。这些是**服务端控制**的，前端根本不该传：
 
-- `createdAt` / `createdBy`：谁创建的、什么时候创建的，是服务端决定的，不能让前端指定
+- `createTime` / `createdBy`：谁创建的、什么时候创建的，是服务端决定的，不能让前端指定
 - `deleteTime`：这是软删标志，前端要是能传 `"deleteTime": null`，就能把已删记录"复活"（反软删）
 
 所以"表 schema 直接给路由用"这个理想，实际落地是：**派生完还得手动 omit 掉一堆字段**。
@@ -27,7 +27,7 @@ const _createUser = createInsertSchema(table.user, {
 })
 
 new Elysia().post('/sign-up', ..., {
-  body: t.Omit(_createUser, ['id', 'salt', 'createdAt'])  // ← 必须 omit
+  body: t.Omit(_createUser, ['id', 'salt', 'createTime'])  // ← 必须 omit
 })
 ```
 

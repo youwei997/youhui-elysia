@@ -98,7 +98,7 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 ## 🗄️ 数据库（Drizzle）
 
 - **schema 即 TS 值**，不要把 schema 写成 class
-- **所有表必须包含 `auditColumns`**（createdAt / updatedAt / createdBy / updatedBy / deleteTime）
+- **所有表必须包含 `auditColumns`**（createTime / updateTime / createdBy / updatedBy / deleteTime）
 - **软删用 `deleteTime: timestamp`**，禁用 `is_deleted: boolean`
 - **不要写 Repository 包装类**——直接用 Drizzle 链式 API，保留类型推导
 - 复杂查询用 SQL fragment（`` sql`...` ``），不要拼字符串

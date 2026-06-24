@@ -141,11 +141,11 @@ Object literal may only specify known properties, and 'id' does not exist...
 **修复**：timestamp 字段加 `mode: "string"`，让 drizzle-zod 推导为 `z.string()`（ISO 字符串）：
 
 ```ts
-// 改前
-createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+// 改前（旧命名）
+createTime: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 
-// 改后
-createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
+// 改后（加 mode: "string"）
+createTime: timestamp("created_at", { withTimezone: true, mode: "string" }).defaultNow().notNull(),
 ```
 
 配套改动：手动设值处传 ISO 字符串而非 Date 对象：
@@ -239,7 +239,7 @@ parentId: () => z.coerce.number().describe("父部门 ID"),
 
 **适用场景**：任何前端需要把数字字段当字符串传回的 PUT/PATCH 接口。如果多个模块有相同问题，考虑用 `createUpdateSchema` 的 factory 第二个参数加全局 `coerce` 配置，而不是逐字段改。
 
-**现象**：`PUT /users/:id` 的 body schema 把 `createdAt`/`createdBy`/`updatedAt`/`updatedBy`/`deleteTime`/`id`/`password` 全部暴露给前端，前端可直接篡改创建时间、清空 `deleteTime` 反软删、改 `id` 引发主键错乱。
+**现象**：`PUT /users/:id` 的 body schema 把 `createTime`/`createdBy`/`updateTime`/`updatedBy`/`deleteTime`/`id`/`password` 全部暴露给前端，前端可直接篡改创建时间、清空 `deleteTime` 反软删、改 `id` 引发主键错乱。
 
 **原因**：
 
@@ -250,8 +250,8 @@ parentId: () => z.coerce.number().describe("父部门 ID"),
 
 ```ts
 const auditKeys = {
-  id: true, createdBy: true, createdAt: true,
-  updatedBy: true, updatedAt: true, deleteTime: true,
+  id: true, createdBy: true, createTime: true,
+  updatedBy: true, updateTime: true, deleteTime: true,
 } as const;
 
 // Create Body：排除 id + 审计列
@@ -265,7 +265,7 @@ export const UserUpdateBody = createUpdateSchema(sysUser, { ... })
 
 **原则**：
 
-- 审计列（createdAt/createdBy/.../deleteTime）永远由服务端控制，前端不可注入
+- 审计列（createTime/createdBy/.../deleteTime）永远由服务端控制，前端不可注入
 - `id` 从路径参数来，不在 body
 - `password` 更新走专用接口（带旧密码校验），不在通用 PUT 里
 - 业务枚举字段（gender/status）用 `z.literal` 联合覆盖 smallint 原始范围，消除 `-32768~32767` 这种无意义边界
