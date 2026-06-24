@@ -1,9 +1,9 @@
 import { and, count, eq, inArray, isNull, like, or } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
-import type { PageResult } from "@/lib/pagination";
 import { sysUserRole } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
+import type { PageResult } from "@/lib/pagination";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
 
 /**
@@ -122,7 +122,9 @@ export const findUserRoleIds = async (
 export const findUserFormData = async (
 	id: number,
 	db: DB,
-): Promise<(typeof sysUser.$inferSelect & { roleIds: number[] }) | undefined> => {
+): Promise<
+	(typeof sysUser.$inferSelect & { roleIds: number[] }) | undefined
+> => {
 	const user = await findUserById(id, db);
 	if (!user) {
 		return undefined;
@@ -153,7 +155,7 @@ export const findUserOptions = async (
 export const batchSoftDeleteUsers = async (
 	ids: number[],
 	db: DB,
-): Promise<typeof sysUser.$inferSelect[]> => {
+): Promise<(typeof sysUser.$inferSelect)[]> => {
 	if (ids.length === 0) {
 		return [];
 	}

@@ -223,7 +223,7 @@ export const softDeleteDept = async (
 export const batchSoftDeleteDepts = async (
 	ids: number[],
 	db: DB,
-): Promise<typeof sysDept.$inferSelect[]> => {
+): Promise<(typeof sysDept.$inferSelect)[]> => {
 	if (ids.length === 0) {
 		return [];
 	}

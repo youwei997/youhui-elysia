@@ -4,10 +4,15 @@ import { generateCaptcha, verifyCaptcha } from "@/lib/captcha";
 import { BizError, ERR_CODE } from "@/lib/errors";
 import type { JwtPayload } from "@/lib/jwt";
 import { signAccessToken, signRefreshToken, verifyToken } from "@/lib/jwt";
+import {
+	clearLoginFailCount,
+	incrementLoginFailCount,
+	incrementTokenVersion,
+	isAccountLocked,
+} from "@/lib/login-lock";
 import { verifyPassword } from "@/lib/password";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
-import { clearLoginFailCount, incrementLoginFailCount, incrementTokenVersion, isAccountLocked } from "@/lib/login-lock";
 import { authPlugin } from "@/plugins/auth";
 import {
 	findActiveUserByUsername,

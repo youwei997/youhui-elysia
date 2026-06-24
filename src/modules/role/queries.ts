@@ -1,7 +1,6 @@
 import { and, count, eq, inArray, isNull, like } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
-import type { PageResult } from "@/lib/pagination";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysMenu } from "@/db/schema/system/menu";
 import {
@@ -11,6 +10,7 @@ import {
 } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
+import type { PageResult } from "@/lib/pagination";
 import type {
 	RoleAssignDeptsBody,
 	RoleAssignMenusBody,
@@ -278,7 +278,9 @@ export const findRoleOptions = async (
 export const findRoleFormData = async (
 	id: number,
 	db: DB,
-): Promise<(typeof sysRole.$inferSelect & { deptIds: number[] }) | undefined> => {
+): Promise<
+	(typeof sysRole.$inferSelect & { deptIds: number[] }) | undefined
+> => {
 	const role = await findRoleById(id, db);
 	if (!role) {
 		return undefined;
@@ -323,7 +325,7 @@ export const isRoleAssignedToUsers = async (
 export const batchSoftDeleteRoles = async (
 	ids: number[],
 	db: DB,
-): Promise<typeof sysRole.$inferSelect[]> => {
+): Promise<(typeof sysRole.$inferSelect)[]> => {
 	if (ids.length === 0) {
 		return [];
 	}

@@ -97,6 +97,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 				description:
 					"返回当前用户角色可见的菜单路由树（不含按钮），供前端动态生成路由表",
 			},
+			// 不加 perm：所有登录用户都需要此接口生成前端路由
 		},
 	)
 	// ---- 管理端 CRUD ----
@@ -109,6 +110,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
+			perm: ["sys:menu:list"],
 			query: MenuListQuery,
 			detail: {
 				tags: ["Menu"],
@@ -127,6 +129,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
+			perm: ["sys:menu:list"],
 			query: MenuOptionsQuery,
 			detail: {
 				tags: ["Menu"],
@@ -146,6 +149,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
+			perm: ["sys:menu:list"],
 			params: MenuParamsWithId,
 			detail: {
 				tags: ["Menu"],
@@ -173,6 +177,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
+			perm: ["sys:menu:create"],
 			body: MenuCreateBody,
 			detail: {
 				tags: ["Menu"],
@@ -217,6 +222,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
+			perm: ["sys:menu:update"],
 			body: MenuUpdateBody,
 			params: MenuParamsWithId,
 			detail: {
@@ -239,6 +245,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
+			perm: ["sys:menu:delete"],
 			params: MenuParamsWithId,
 			detail: {
 				tags: ["Menu"],

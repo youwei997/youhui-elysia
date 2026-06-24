@@ -7,6 +7,7 @@ import { roleRoutes } from "@/modules/role/routes";
 import { userRoutes } from "@/modules/user/routes";
 import { authPlugin } from "@/plugins/auth";
 import { errorHandler } from "@/plugins/error-handler";
+import { permissionPlugin } from "@/plugins/permission";
 import { requestContext } from "@/plugins/request-context";
 import { responseWrap } from "@/plugins/response-wrap";
 
@@ -17,6 +18,7 @@ export const app = new Elysia()
 	.use(responseWrap)
 	.use(errorHandler)
 	.use(authPlugin)
+	.use(permissionPlugin)
 	.use(
 		openapi({
 			scalar: { showDeveloperTools: "never" },

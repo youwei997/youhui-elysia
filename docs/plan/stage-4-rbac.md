@@ -203,12 +203,12 @@ const where = and(
 - [x] 子树查询 helper 可工作（descendantsByTreePath）
 
 ### Permission macro
-- [ ] 路由可声明 `perm: 'sys:user:create'`
-- [ ] 用户无该 perm 返回 403
-- [ ] 用户有该 perm（来自任一角色）放行
-- [ ] 通配 perm `*:*:*`（admin 用）短路通过
-- [ ] 多 perm 任一满足即放行（OR 语义）
-- [ ] requireRole macro 同样可工作
+- [x] 路由可声明 `perm: 'sys:user:create'`
+- [x] 用户无该 perm 返回 403
+- [x] 用户有该 perm（来自任一角色）放行
+- [x] 通配 perm `*:*:*`（admin 用）短路通过
+- [x] 多 perm 任一满足即放行（OR 语义）
+- [x] requireRole macro 同样可工作
 
 ### 数据权限
 - [ ] dataScope 5 档枚举均有实现

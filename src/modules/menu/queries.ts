@@ -131,7 +131,7 @@ export const findMenuById = async (
 export const findAllMenusWithButtons = async (
 	keywords: string | undefined,
 	db: DB,
-): Promise<typeof sysMenu.$inferSelect[]> => {
+): Promise<(typeof sysMenu.$inferSelect)[]> => {
 	const where = [isNull(sysMenu.deletedAt)];
 	if (keywords) {
 		// Postgres ILIKE：大小写不敏感的 LIKE，无需手动 lower()
@@ -239,7 +239,7 @@ export const updateMenu = async (
 export const softDeleteMenu = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysMenu.$inferSelect[]> => {
+): Promise<(typeof sysMenu.$inferSelect)[]> => {
 	const pattern = `(^|,)${id}(,|$)`;
 	return await db.transaction(async (tx) => {
 		// 先清理 sys_role_menu 中所有引用（被删节点及其子孙可能被角色绑定）
