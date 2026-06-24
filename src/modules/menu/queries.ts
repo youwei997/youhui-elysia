@@ -53,6 +53,7 @@ export const findAllMenus = async (db: DB): Promise<MenuRoute[]> => {
 		.from(sysMenu)
 		.where(and(isNull(sysMenu.deletedAt), ne(sysMenu.type, "B")))
 		.orderBy(asc(sysMenu.sort));
+	// Drizzle 用 .select({ ... }) 投影字段后返回类型与 MenuRoute 不完全匹配，需显式断言
 	return rows as MenuRoute[];
 };
 
@@ -104,6 +105,7 @@ export const findMenusByRoleCodes = async (
 			),
 		)
 		.orderBy(asc(sysMenu.sort));
+	// Drizzle 用 .select({ ... }) 投影字段后返回类型与 MenuRoute 不完全匹配，需显式断言
 	return rows as MenuRoute[];
 };
 

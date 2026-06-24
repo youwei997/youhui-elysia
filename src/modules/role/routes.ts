@@ -34,7 +34,7 @@ import {
 const PROTECTED_CODES = ["ROOT"] as const;
 
 const ensureNotProtected = (role: { code: string }) => {
-	if ((PROTECTED_CODES as readonly string[]).includes(role.code)) {
+	if (new Set(PROTECTED_CODES).has(role.code)) {
 		throw new BizError(
 			ERR_CODE.ROLE_PROTECTED,
 			`内置角色 ${role.code} 受保护，禁止该操作`,

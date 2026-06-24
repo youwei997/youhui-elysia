@@ -183,7 +183,7 @@ const where = and(
 
 ### 数据建模
 - [x] sys_role / sys_menu / sys_dept 三表 + 三关联表已建
-- [ ] dept.treePath 字段在创建/更新时自动维护（4.4 Dept 模块实现）
+- [x] dept.treePath 字段在创建/更新时自动维护（4.4 Dept 模块实现）
 - [x] 种子数据完整：7 角色（ROOT/ADMIN/GUEST/DEPT_MANAGER/DEPT_MEMBER/EMPLOYEE/CUSTOM_USER），部门树 2 层，菜单 25 条
 
 ### Role 模块

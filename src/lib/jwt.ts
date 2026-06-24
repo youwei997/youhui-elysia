@@ -78,6 +78,8 @@ export const verifyToken = async (token: string): Promise<JwtPayload> => {
 		clockTolerance: 60,
 	});
 
+	// jose 的 jwtVerify 返回 payload 类型为 JWTPayload，无法直接收窄到我们的 JwtPayload
+	// 这里显式断言，因为结构在签发时就是 JwtPayload，只是 TS 层面丢失
 	const jwtPayload = payload as unknown as JwtPayload;
 
 	// 第二层：校验 tokenVersion（用户级版本号，改密码 / 踢全部端时失效）

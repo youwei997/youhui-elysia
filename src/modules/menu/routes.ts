@@ -52,6 +52,7 @@ const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {
 	if (menu.visible === 0) meta.hidden = true;
 	if (menu.keepAlive === 1) meta.keepAlive = true;
 	if (menu.alwaysShow === 1) meta.alwaysShow = true;
+	// jsonb 字段从 DB 取出为 unknown，前端需要 Record<string, unknown> 类型
 	if (menu.params) meta.params = menu.params as Record<string, unknown>;
 
 	item.meta = meta;
