@@ -131,7 +131,8 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.post(
 		"/",
 		async ({ body }) => {
-			return createUser(body, db);
+			const user = await createUser(body, db);
+			return UserResponse.parse(user);
 		},
 		{
 			auth: true,
@@ -151,7 +152,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			if (!user) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
-			return user;
+			return UserResponse.parse(user);
 		},
 		{
 			auth: true,
@@ -171,7 +172,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			if (!user) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
-			return user;
+			return UserResponse.parse(user);
 		},
 		{
 			auth: true,
@@ -194,7 +195,8 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 					.split(",")
 					.map((s) => Number(s.trim()))
 					.filter((n) => !Number.isNaN(n));
-				return batchSoftDeleteUsers(ids, db);
+				const deleted = await batchSoftDeleteUsers(ids, db);
+				return deleted.map((u) => UserResponse.parse(u));
 			}
 			const id = Number(idStr);
 			if (Number.isNaN(id)) {
@@ -204,7 +206,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			if (!user) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
-			return user;
+			return UserResponse.parse(user);
 		},
 		{
 			auth: true,

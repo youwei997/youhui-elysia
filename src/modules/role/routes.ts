@@ -137,7 +137,8 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (body.deptIds) {
 				await ensureValidDeptIds(body.deptIds);
 			}
-			return createRole(body, db);
+			const role = await createRole(body, db);
+			return RoleResponse.parse(role);
 		},
 		{
 			auth: true,
@@ -162,7 +163,10 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				await ensureValidDeptIds(body.deptIds);
 			}
 			const role = await updateRole(params.id, body, db);
-			return role;
+			if (!role) {
+				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+			}
+			return RoleResponse.parse(role);
 		},
 		{
 			auth: true,
@@ -207,7 +211,8 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 					}
 				}
 
-				return batchSoftDeleteRoles(ids, db);
+				const deleted = await batchSoftDeleteRoles(ids, db);
+				return deleted.map((r) => RoleResponse.parse(r));
 			}
 
 			// 单条删除
@@ -225,7 +230,10 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				throw new BizError(ERR_CODE.ROLE_HAS_ASSIGNED_USERS);
 			}
 			const role = await softDeleteRole(id, db);
-			return role;
+			if (!role) {
+				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+			}
+			return RoleResponse.parse(role);
 		},
 		{
 			auth: true,

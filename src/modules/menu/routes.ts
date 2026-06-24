@@ -167,7 +167,8 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 					throw new BizError(ERR_CODE.MENU_PARENT_NOT_FOUND);
 				}
 			}
-			return createMenu(body, db);
+			const menu = await createMenu(body, db);
+			return MenuResponse.parse(menu);
 		},
 		{
 			auth: true,
@@ -211,7 +212,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			if (!menu) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
-			return menu;
+			return MenuResponse.parse(menu);
 		},
 		{
 			auth: true,
@@ -233,7 +234,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
 			const deleted = await softDeleteMenu(params.id, db);
-			return deleted;
+			return deleted.map((m) => MenuResponse.parse(m));
 		},
 		{
 			auth: true,

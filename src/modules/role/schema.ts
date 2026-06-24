@@ -109,6 +109,8 @@ export const RoleAssignDeptsBody = z
 export const RoleResponse = createSelectSchema(sysRole)
 	.omit({
 		deletedAt: true,
+		createdAt: true,
+		updatedAt: true,
 		createdBy: true,
 		updatedBy: true,
 	})

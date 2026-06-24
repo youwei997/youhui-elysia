@@ -89,6 +89,8 @@ export const MenuUpdateBody = createUpdateSchema(sysMenu, {
 export const MenuResponse = createSelectSchema(sysMenu)
 	.omit({
 		deletedAt: true,
+		createdAt: true,
+		updatedAt: true,
 		createdBy: true,
 		updatedBy: true,
 	})
