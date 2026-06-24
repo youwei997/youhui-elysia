@@ -172,6 +172,21 @@ db.select().from(t).where(where)
 - **`type` 别名 > `interface`**（除非要扩展第三方）
 - **`as const` > 枚举**
 
+### 4.6 前端响应约定
+
+**所有模块的响应字段统一遵守以下规则：**
+
+| 规则 | 说明 |
+|---|---|
+| `id` / `parentId` 输出 `string` | 前端 JS 数字精度有限（大数如 9223372036854775807 会丢精度），后端用 `bigint` 主键时统一 string 化输出 |
+| `createdAt` / `updatedAt` 保留输出 | 前端列表和表单需要显示时间，`DeptResponse` 等响应 schema 不能 omit 这两个字段 |
+| `deletedAt` 不输出 | 软删时间不暴露给前端 |
+| `treePath` 不输出 | 物化路径是后端查询用，前端不需要 |
+| `createdBy` / `updatedBy` 按需保留 | 如果前端展示创建人/更新人则输出，否则 omit |
+
+**实现方式：** 在 `schema.ts` 的 `*Response` 中用 `.omit()` 或 `.extend()` 控制输出字段。
+`id`/`parentId` 在 routes 层做 `String()` 转换（因为 `buildTree` 等工具需要数字类型，不能在 schema 层直接改）。
+
 ## 5. 反例参考（不要做）
 
 来自三项目分析，已确认要避开：
