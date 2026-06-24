@@ -26,6 +26,7 @@ export const findUsers = async (
 			like(sysUser.username, `%${query.keywords}%`),
 			like(sysUser.nickname, `%${query.keywords}%`),
 		);
+		// Drizzle 的 or() 返回类型可能为 undefined，防御性检查避免推入空条件
 		if (keywordCondition) {
 			where.push(keywordCondition);
 		}

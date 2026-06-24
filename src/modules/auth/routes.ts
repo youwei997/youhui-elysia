@@ -79,8 +79,9 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 		async ({ body }) => {
 			const { username, password, captchaId, captchaCode } = body;
 
-			// 1. 校验验证码（如果前端传了 captchaId / captchaCode 则必须校验）
+			// 业务规则：前端传了其中一个验证码字段，就必须两个都传，否则不完整
 			if (captchaId || captchaCode) {
+				// 验证码必须成对传入：传了其中一个就必须传另一个，不能只传 id 或只传 code
 				if (!captchaId || !captchaCode) {
 					throw new BizError(
 						ERR_CODE.CAPTCHA_REQUIRED,
@@ -106,8 +107,8 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			}
 
 			// 4. 校验密码
-			const valid = await verifyPassword(password, user.password);
-			if (!valid) {
+			const isPasswordCorrect = await verifyPassword(password, user.password);
+			if (!isPasswordCorrect) {
 				await incrementLoginFailCount(username);
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 			}
