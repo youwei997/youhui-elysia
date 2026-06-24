@@ -32,8 +32,8 @@
 - `src/db/schema/<domain>/` — Drizzle schema（按业务域分文件）
 - `src/modules/<domain>/` — 业务模块三件套
 - `src/plugins/` — 横切关注点（错误处理 / 响应壳 / 鉴权 / 日志 / i18n / 限流）
-- `src/lib/` — 工具与抽象（result / errors / jwt / cache / storage / queue / logger）
-- `src/db/helpers/` — 通用查询工具（pagination / tree / data-scope）
+- `src/lib/` — 工具与抽象（result / errors / jwt / cache / storage / queue / logger / pagination）
+- `src/db/helpers/` — 通用查询工具（tree / data-scope）
 - `scripts/` — CLI 脚本（seed / gen）
 - **不要**创建 `services/` / `controllers/` / `repositories/` / `interfaces/impl/` 这种 Java 风格目录
 

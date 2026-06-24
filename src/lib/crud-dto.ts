@@ -1,7 +1,7 @@
 import type { AnyPgTable } from "drizzle-orm/pg-core";
 import { createInsertSchema, createUpdateSchema } from "drizzle-orm/zod";
 import { z } from "zod";
-import { pageFields } from "@/db/helpers/pagination";
+import { pageFields } from "@/lib/pagination";
 
 /**
  * 审计列黑名单：createInsertSchema / createUpdateSchema 直接从整张表派生时

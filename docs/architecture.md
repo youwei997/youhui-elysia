@@ -48,7 +48,6 @@ youhui-elysia/
 │   │   │   ├── codegen/          # gen_table / gen_table_column
 │   │   │   └── monitor/          # online/job
 │   │   └── helpers/
-│   │       ├── pagination.ts
 │   │       ├── tree.ts           # tree_path 子树查询
 │   │       └── data-scope.ts     # ⭐ 数据权限纯函数
 │   ├── modules/                  # 业务模块：一个领域 = 三文件
@@ -69,13 +68,18 @@ youhui-elysia/
 │   │   ├── rate-limit.ts
 │   │   └── i18n.ts               # Accept-Language → 文案映射
 │   ├── lib/
+│   │   ├── captcha.ts            # 验证码生成校验
+│   │   ├── crud-dto.ts           # DTO 工厂（list/create/update）
 │   │   ├── errors.ts             # 错误码 as const + BizError 工厂
 │   │   ├── jwt.ts                # jose 包装 + 三层失效
-│   │   ├── cache.ts              # WithCache 防击穿
-│   │   ├── crud-dto.ts           # DTO 工厂（list/create/update）
+│   │   ├── login-lock.ts         # Redis 登录锁定
+│   │   ├── logger.ts             # pino
+│   │   ├── pagination.ts         # 通用分页 DTO（零 Drizzle）
+│   │   ├── password.ts           # bcrypt 密码哈希
+│   │   ├── redis-keys.ts         # Redis 键规约
+│   │   ├── redis.ts              # Redis 客户端包装
 │   │   ├── storage/              # 存储抽象 + drivers
-│   │   ├── queue.ts              # pg-boss 包装
-│   │   └── logger.ts             # pino
+│   │   └── test/                 # 单元测试
 │   ├── codegen/                  # ⭐ 后端代码生成器
 │   │   ├── meta-reader.ts        # 从 information_schema 读
 │   │   ├── templates/            # eta 模板：schema/routes/queries

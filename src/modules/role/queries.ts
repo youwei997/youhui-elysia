@@ -1,7 +1,7 @@
 import { and, count, eq, inArray, isNull, like } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
-import type { PageResult } from "@/db/helpers/pagination";
+import type { PageResult } from "@/lib/pagination";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysMenu } from "@/db/schema/system/menu";
 import {
