@@ -154,10 +154,34 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 	.get(
 		"/options",
 		async ({ query }) => {
-			return findMenuOptions(
+			const items = await findMenuOptions(
 				query.onlyParent === "true" || query.onlyParent === "1",
 				db,
 			);
+			// findMenuOptions 返回平面列表，需要组装成树
+			const nodes = items.map((item) => ({
+				id: Number(item.value),
+				label: item.label,
+				parentId: item.parentId,
+			}));
+			const tree = buildTree(nodes);
+			// 递归转成 { value, label, children } 格式
+			const toOption = (
+				node: TreeNode<{
+					id: number;
+					label: string;
+					parentId: number;
+				}>,
+			): {
+				value: string;
+				label: string;
+				children: unknown[];
+			} => ({
+				value: String(node.id),
+				label: node.label,
+				children: node.children.map(toOption),
+			});
+			return tree.map(toOption);
 		},
 		{
 			auth: true,
