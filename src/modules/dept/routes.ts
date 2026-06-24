@@ -1,6 +1,6 @@
+import { type TreeNode, buildTree } from "@/db/helpers/tree";
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
-import { buildTree } from "@/db/helpers/tree";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import {
@@ -49,10 +49,33 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		"/options",
 		async () => {
 			const list = await findAllDepts({}, db);
-			return list.map((item) => ({
-				value: String(item.id),
-				label: item.name,
-			}));
+			const validList = list.filter(
+				(item): item is typeof item & { parentId: number } =>
+					item.parentId !== null,
+			);
+			const tree = buildTree(validList);
+
+			/** 递归将树形节点映射为 { value, label, children? } 选项格式 */
+			const toOptions = (
+				nodes: TreeNode<(typeof validList)[number]>[],
+			): { value: string; label: string; children?: unknown[] }[] => {
+				return nodes.map((node) => {
+					const option: {
+						value: string;
+						label: string;
+						children?: unknown[];
+					} = {
+						value: String(node.id),
+						label: node.name,
+					};
+					if (node.children.length > 0) {
+						option.children = toOptions(node.children);
+					}
+					return option;
+				});
+			};
+
+			return toOptions(tree);
 		},
 		{
 			auth: true,
@@ -60,7 +83,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			detail: {
 				tags: ["Dept"],
 				summary: "部门下拉选项",
-				description: "返回 { value, label }[] 供前端下拉选择器使用",
+				description: "返回嵌套树形 { value, label, children? }[] 供前端级联选择器使用",
 			},
 		},
 	)
