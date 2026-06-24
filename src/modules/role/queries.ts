@@ -18,23 +18,19 @@ import type {
 	RoleUpdateBody,
 } from "./schema";
 
-/** 角色列表查询（软删过滤 + 可选 code/name/status 过滤） */
+/** 角色列表查询（软删过滤 + 可选 keywords/status 过滤） */
 export const findRoles = async (
 	query: {
 		pageNum: number;
 		pageSize: number;
-		code?: string;
-		name?: string;
+		keywords?: string;
 		status?: number;
 	},
 	db: DB,
 ): Promise<PageResult<typeof sysRole.$inferSelect>> => {
 	const where = [isNull(sysRole.deleteTime)];
-	if (query.code) {
-		where.push(eq(sysRole.code, query.code));
-	}
-	if (query.name) {
-		where.push(like(sysRole.name, `%${query.name}%`));
+	if (query.keywords) {
+		where.push(like(sysRole.name, `%${query.keywords}%`));
 	}
 	if (query.status !== undefined) {
 		where.push(eq(sysRole.status, query.status));

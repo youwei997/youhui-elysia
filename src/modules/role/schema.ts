@@ -46,8 +46,7 @@ const codeSchema = z
 
 /** 角色列表查询参数 */
 export const RoleListQuery = createListQuery(sysRole, {
-	code: z.string().optional().describe("角色编码（精确匹配）"),
-	name: z.string().optional().describe("角色名称（模糊搜索）"),
+	keywords: z.string().optional().describe("搜索关键字（模糊匹配名称与编码）"),
 	status: statusSchema.optional().describe("状态：1-正常 0-停用"),
 }).describe("角色列表查询参数");
 
