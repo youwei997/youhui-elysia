@@ -179,7 +179,7 @@ db.select().from(t).where(where)
 | 规则 | 说明 |
 |---|---|
 | `id` / `parentId` 输出 `string` | 前端 JS 数字精度有限（大数如 9223372036854775807 会丢精度），后端用 `bigint` 主键时统一 string 化输出 |
-| `createdAt` / `updatedAt` 保留输出 | 前端列表和表单需要显示时间，`DeptResponse` 等响应 schema 不能 omit 这两个字段 |
+| `createTime` / `updateTime` 保留输出 | 前端列表和表单需要显示时间，`DeptResponse` 等响应 schema 不能 omit 这两个字段 |
 | `deletedAt` 不输出 | 软删时间不暴露给前端 |
 | `treePath` 不输出 | 物化路径是后端查询用，前端不需要 |
 | `createdBy` / `updatedBy` 按需保留 | 如果前端展示创建人/更新人则输出，否则 omit |
