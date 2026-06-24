@@ -68,8 +68,9 @@ const parseRole = (role: Parameters<typeof RoleResponse.parse>[0]) => {
 		...parsed,
 		id: String(parsed.id),
 		dataScopeLabel:
-			DATA_SCOPE_LABEL_MAP[parsed.dataScope as keyof typeof DATA_SCOPE_LABEL_MAP] ??
-			"未知",
+			DATA_SCOPE_LABEL_MAP[
+				parsed.dataScope as keyof typeof DATA_SCOPE_LABEL_MAP
+			] ?? "未知",
 	};
 };
 
