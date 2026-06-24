@@ -34,6 +34,7 @@ export const ERR_CODE = {
 	ACCESS_UNAUTHORIZED: "A0301", // 访问未授权
 	/** A04xx 请求参数错误 */
 	USER_REQUEST_PARAMETER_ERROR: "A0400", // 用户请求参数错误
+	USER_NOT_FOUND: "A0404", // 用户不存在
 	/** A041x Role 模块业务错误 */
 	ROLE_NOT_FOUND: "A0410", // 角色不存在
 	ROLE_CODE_OR_NAME_DUPLICATE: "A0411", // 角色编码或名称已存在
@@ -81,6 +82,7 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.REFRESH_TOKEN_INVALID]: "刷新令牌无效或已过期",
 	[ERR_CODE.ACCESS_UNAUTHORIZED]: "访问未授权",
 	[ERR_CODE.USER_REQUEST_PARAMETER_ERROR]: "用户请求参数错误",
+	[ERR_CODE.USER_NOT_FOUND]: "用户不存在",
 	[ERR_CODE.ROLE_NOT_FOUND]: "角色不存在",
 	[ERR_CODE.ROLE_CODE_OR_NAME_DUPLICATE]: "角色编码或名称已存在",
 	[ERR_CODE.ROLE_HAS_ASSIGNED_USERS]: "角色已分配用户，请先解除关联",
