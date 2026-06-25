@@ -11,8 +11,8 @@
     "lint": "biome lint src/",
     "format": "biome format --write src/",
     "check": "biome check --write src/",
-    "typecheck": "bun run --check src/index.ts",
-    "typecheck-tsgo": "tsgo --noEmit"
+    "check:dev": "bun run --check src/index.ts",
+    "tsgo": "tsgo --noEmit"
   },
   "dependencies": {
     "@elysia/jwt": "^1.4.2",
