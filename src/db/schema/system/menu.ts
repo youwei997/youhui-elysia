@@ -49,8 +49,6 @@ export const sysMenu = pgTable("sys_menu", {
 	params: jsonb("params"),
 	/** 菜单范围（1=平台 2=业务），对 youlai-boot 兼容字段 */
 	scope: smallint("scope").default(1).notNull(),
-	/** 外链地址（非空 = 外链菜单） */
-	externalUrl: varchar("external_url", { length: 255 }).default(""),
 	/** 审计字段 */
 	...auditColumns,
 });

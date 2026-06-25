@@ -31,7 +31,7 @@ export const MenuOptionsQuery = z
 export const MenuCreateBody = createInsertSchema(sysMenu, {
 	type: (_s) => menuTypeSchema,
 	name: (s) => s.min(1, "菜单名称不能为空").describe("菜单名称"),
-	parentId: (s) => s.describe("父菜单 ID，0 表示顶级"),
+	parentId: (_s) => z.coerce.number().describe("父菜单 ID，0 表示顶级"),
 	routeName: (s) => s.describe("路由名称"),
 	routePath: (s) => s.describe("路由路径"),
 	component: (s) => s.describe("组件路径"),
@@ -67,7 +67,7 @@ export const MenuCreateBody = createInsertSchema(sysMenu, {
  */
 export const MenuUpdateBody = createUpdateSchema(sysMenu, {
 	name: (s) => s.min(1, "菜单名称不能为空").describe("菜单名称"),
-	parentId: (s) => s.describe("父菜单 ID，0 表示顶级"),
+	parentId: (_s) => z.coerce.number().describe("父菜单 ID，0 表示顶级"),
 	routeName: (s) => s.describe("路由名称"),
 	routePath: (s) => s.describe("路由路径"),
 	component: (s) => s.describe("组件路径"),
@@ -118,7 +118,6 @@ export const MenuDetailResponse = createSelectSchema(sysMenu)
 	.extend({
 		alwaysShow: z.number().nullable().default(0),
 		keepAlive: z.number().nullable().default(0),
-		externalUrl: z.string().nullable().default(""),
 	})
 	.describe("菜单详情");
 
