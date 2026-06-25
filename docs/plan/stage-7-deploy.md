@@ -212,7 +212,7 @@ CMD ["bun", "dist/index.js"]
 ### 整体
 - [ ] 全项目 grep `TODO` / `FIXME`：每条都有 issue 或处理计划
 - [ ] 全项目 grep `as any` / `as never`：每个都有理由（写 ADR 或注释）
-- [ ] `bun run check && bun run typecheck && bun test` 全绿
+- [ ] `bun run check && bun run tsc && bun test` 全绿
 
 ### 可被复现
 - [ ] 别人 clone 后按 README 5 分钟内跑起来

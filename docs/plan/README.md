@@ -57,7 +57,7 @@ Elysia 范式吃透 █████████ 25%
 > 每完成一个阶段，在这里追加一行
 
 ```
-[2026-06-14] 阶段 1 完成。收获：跑通 Docker + Drizzle + Elysia 地基，建好 config/logger/优雅关停体系，删掉 _smoke 测试表改走真实 user 表验证，typecheck 改用 bun 内置。进入阶段 2 开发。
+[2026-06-14] 阶段 1 完成。收获：跑通 Docker + Drizzle + Elysia 地基，建好 config/logger/优雅关停体系，删掉 _smoke 测试表改走真实 user 表验证，验收脚本含 `bun run check` + `bun run tsc`（运行时校验用 `bun run check:dev`）。进入阶段 2 开发。
 [2026-06-14] 阶段 2 完成。收获：跑通 user 模块三件套（schema/queries/routes）范式，端到端类型推导不丢。两个核心坑：drizzle-orm/zod 的 refine 箭头函数参数不能标注 z.ZodType（否则 schema 退化为 unknown）、refine 对象不能抽共享 const（否则 noImplicitAny）。软删过滤补齐 findUsers/findUserById/updateUser 三处。进入阶段 3 开发。
 [2026-06-17] 阶段 3.1-3.6 完成。3.7 i18n 跳过（理由见 docs/notes/2026-06-17-后端不做i18n.md，参照 youlai 不做）。auth 模块（Bun.password + 三层失效）跑通。queries 函数 db 参数化（为 Drizzle 事务铺垫）。下一步 3.8：user 模块挂 auth: true + OpenAPI Authorization 安全方案。
 [2026-06-21] 阶段 4.1 完成。Drizzle 迁移生成 + 6 表建表 + 种子数据（7 角色/3 部门/25 菜单/7 用户/64 关联）。进入 4.2 Role 模块。

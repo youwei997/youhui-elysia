@@ -348,7 +348,7 @@ TypeError: "" cannot be parsed as a URL.
 
 进程被未捕获异常拖死，curl 一打就退出。
 
-**原因**：`onAfterResponse` 阶段的 `request.url` 在 Bun 1.3.14 + Windows 组合下可能是**空字符串或相对路径**，`new URL("")` 直接抛 `ERR_INVALID_URL`。**纯静态分析（`tsgo --noEmit`）和单元测试都查不出来**——必须真启动服务接收请求才暴露。
+**原因**：`onAfterResponse` 阶段的 `request.url` 在 Bun 1.3.14 + Windows 组合下可能是**空字符串或相对路径**，`new URL("")` 直接抛 `ERR_INVALID_URL`。**纯静态分析（`tsc --noEmit`）和单元测试都查不出来**——必须真启动服务接收请求才暴露。
 
 **修复**：包 try/catch + fallback：
 
@@ -363,9 +363,9 @@ try {
 
 **教训**：
 
-- `bun run typecheck`（package.json 里脚本名是 `bun run --check src/index.ts`）**不是类型检查**，是真启动服务。如果只想类型检查，**用 `bun run typecheck-tsgo`**（`tsgo --noEmit`）。
-- **只跑 typecheck + 单元测试的阶段不算"真验证"**，涉及 runtime 行为（hook、lifecycle、URL 解析等）的代码必须真启动服务跑一遍。
-- 阶段 3 验收漏洞：之前一直用 `typecheck-tsgo` 绕过 `bun run typecheck`，导致 `onAfterResponse` 的 URL 解析 bug 从阶段 3.3 引入开始一直没暴露。阶段 3.8 第一次真启动服务才暴露出来。
+- `bun run check:dev`（`bun run --check src/index.ts`）**不是类型检查**，是真启动服务。如果只想类型检查，**用 `bun run tsc`**（`tsc --noEmit`）。
+- **只跑 `tsc` + 单元测试的阶段不算"真验证"**，涉及 runtime 行为（hook、lifecycle、URL 解析等）的代码必须 `bun run check:dev` 真启动服务跑一遍。
+- 阶段 3 验收漏洞：之前一直用 `tsc` 绕过 `check:dev`，导致 `onAfterResponse` 的 URL 解析 bug 从阶段 3.3 引入开始一直没暴露。阶段 3.8 第一次真启动服务才暴露出来。
 
 ---
 

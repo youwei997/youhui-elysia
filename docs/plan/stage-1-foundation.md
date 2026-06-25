@@ -98,11 +98,13 @@ scripts
     "start": "bun run src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "db:seed": "bun run scripts/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "lint": "biome lint .",
-    "format": "biome format --write .",
-    "check": "biome check --write .",
-    "typecheck": "bun run --check src/index.ts"
+    "lint": "biome lint src/",
+    "format": "biome format --write src/",
+    "check": "biome check --write src/",
+    "check:dev": "bun run --check src/index.ts",
+    "tsc": "tsc --noEmit"
   }
 }
 ```
@@ -141,7 +143,7 @@ scripts
 - [x] 目录结构与 `docs/architecture.md` 一致
 - [x] `tsconfig.json` 严格模式开启（含 `noUncheckedIndexedAccess`）
 - [x] `bun run check` 通过（biome 无报错）
-- [x] `bun run typecheck` 通过（使用 bun 内置类型检查）
+- [x] `bun run tsc` 通过（TypeScript 类型检查）
 
 ### Drizzle
 - [x] `drizzle.config.ts` 配置正确

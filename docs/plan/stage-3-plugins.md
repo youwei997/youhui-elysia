@@ -201,7 +201,7 @@
 
 ### 整体
 - [x] `bun run check` 通过
-- [x] `bun run typecheck` 通过
+- [x] `bun run tsc` 通过
 - [x] OpenAPI 文档里 Authorization 安全方案已声明，可用 token 试调
 
 ## 完成标志

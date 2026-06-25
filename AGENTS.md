@@ -207,7 +207,7 @@ if (!user) return null  // 静默吞错
 - **commit message 必须中文**，遵循模板：`<类型>: <简述>`
   - 类型：`feat` / `fix` / `refactor` / `docs` / `chore` / `test` / `perf`
 - 单次 commit 聚焦一件事，**不要混合**重构和新功能
-- 提交前运行 `bun run check`（biome）+ `bun run typecheck`
+- 提交前运行 `bun run check`（biome）+ `bun run tsc`（类型检查）；涉及 hook / lifecycle 等运行时行为时额外跑 `bun run check:dev`（真启动服务）
 - 关键决策同步写入 `docs/adr/`
 
 ---

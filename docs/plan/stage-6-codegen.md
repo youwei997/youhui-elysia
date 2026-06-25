@@ -169,7 +169,7 @@ bun gen remove <tableId>       # 删除元数据（不删生成的代码）
 ### 模板
 - [ ] 三个 .eta 模板齐
 - [ ] 生成的代码 biome format 后无报错
-- [ ] 生成的代码通过 typecheck
+- [ ] 生成的代码通过 `bun run tsc`
 - [ ] 生成的代码风格与手写模块一致（命名 / import / 注释）
 
 ### 生成器引擎
