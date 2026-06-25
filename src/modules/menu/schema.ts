@@ -88,15 +88,39 @@ export const MenuUpdateBody = createUpdateSchema(sysMenu, {
 	})
 	.describe("更新菜单请求参数，未传字段保持原值");
 
-/** 菜单响应：排除软删标志、treePath、创建人/更新人，保留创建/更新时间 */
+/** 菜单列表响应：排除审计字段 + alwaysShow/keepAlive + 前端列表不需要的字段 */
 export const MenuResponse = createSelectSchema(sysMenu)
 	.omit({
 		deleteTime: true,
 		treePath: true,
 		createdBy: true,
 		updatedBy: true,
+		createTime: true,
+		updateTime: true,
+		alwaysShow: true,
+		keepAlive: true,
+		params: true,
+		scope: true,
 	})
-	.describe("菜单信息");
+	.describe("菜单列表项");
+
+/** 菜单详情响应：保留 alwaysShow/keepAlive（编辑表单需要）
+ * smallint 列在 Drizzle 里可空（无 .notNull()），但 createSelectSchema 可能推导为非 nullable，
+ * 显式 extend 覆盖为 nullable 以防 DB 里有 NULL 值。
+ */
+export const MenuDetailResponse = createSelectSchema(sysMenu)
+	.omit({
+		deleteTime: true,
+		treePath: true,
+		createdBy: true,
+		updatedBy: true,
+	})
+	.extend({
+		alwaysShow: z.number().nullable().default(0),
+		keepAlive: z.number().nullable().default(0),
+		externalUrl: z.string().nullable().default(""),
+	})
+	.describe("菜单详情");
 
 /** 菜单 ID 路径参数（coerce.number 将字符串转数字） */
 export const MenuParamsWithId = z

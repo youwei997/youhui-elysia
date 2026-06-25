@@ -25,44 +25,42 @@ export type TreeNode<T> = T & {
 };
 
 /**
- * @param items 平面节点列表，每个元素必须包含 id:number 和 parentId:number
+ * @param items 平面节点列表，每个元素必须包含 id 和 parentId（number 或 string 均可）
  * @returns 根节点数组，每个根节点内部 children 递归嵌套子节点
+ *
+ * 根判定：parentId == 0（宽松相等，同时兼容 number 0 和 string "0"）
  */
-export const buildTree = <T extends { id: number; parentId: number }>(
+export const buildTree = <
+	T extends { id: number | string; parentId: number | string },
+>(
 	items: T[],
 ): TreeNode<T>[] => {
 	// ─── 第一遍：建 lookup 表 ───
-	// 目的：后续按 id 查找节点时用 O(1) 取值，不需要嵌套循环
-	// 同时给每个节点挂一个空的 children[]，后续往里面推子节点
-	const lookup: Record<number, TreeNode<T>> = {};
+	// 统一用 String() 作为 key，兼容 number / string 两种 id 类型
+	const lookup: Record<string, TreeNode<T>> = {};
 	for (const item of items) {
-		lookup[item.id] = { ...item, children: [] };
+		lookup[String(item.id)] = { ...item, children: [] };
 	}
 
 	// ─── 第二遍：挂载父子关系 ───
-	// 遍历原数组（不是 lookup，保持原始顺序），用 lookup 表找父节点
 	const roots: TreeNode<T>[] = [];
 	for (const item of items) {
-		// 从 lookup 取出已经套壳（带 children[]）的当前节点
-		const node = lookup[item.id];
+		const node = lookup[String(item.id)];
 		if (!node) {
-			// 理论上不会走到这里（第一遍已放入），纯防御
 			continue;
 		}
 
-		// 查父节点：parentId=0 就是根，否则去 lookup 找
-		const parent = item.parentId !== 0 ? lookup[item.parentId] : undefined;
+		// 宽松判定根：parentId == 0 同时覆盖 number 0 和 string "0"
+		const parentIdStr = String(item.parentId);
+		const parent = parentIdStr !== "0" ? lookup[parentIdStr] : undefined;
 
 		if (parent) {
-			// 找到父节点 → 把自己挂到父节点的 children 里
 			parent.children.push(node);
 		} else {
-			// 没找到父节点（parentId=0 或父不在 lookup）→ 自己就是根
 			roots.push(node);
 		}
 	}
 
-	// 只返回根节点数组，前端需要全量时拿根往下递归 children 即可
 	return roots;
 };
 

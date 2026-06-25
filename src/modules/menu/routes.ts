@@ -18,6 +18,7 @@ import {
 } from "./queries";
 import {
 	MenuCreateBody,
+	MenuDetailResponse,
 	MenuListQuery,
 	MenuOptionsQuery,
 	MenuParamsWithId,
@@ -59,7 +60,7 @@ const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {
 	return item;
 };
 
-/** 响应转换：parse 后 id / parentId 转 string */
+/** 列表响应转换：parse 后 id / parentId 转 string */
 const parseMenu = (menu: Parameters<typeof MenuResponse.parse>[0]) => {
 	const parsed = MenuResponse.parse(menu);
 	return {
@@ -69,8 +70,22 @@ const parseMenu = (menu: Parameters<typeof MenuResponse.parse>[0]) => {
 	};
 };
 
+/** 详情响应转换：保留 alwaysShow / keepAlive */
+const parseMenuDetail = (
+	menu: Parameters<typeof MenuDetailResponse.parse>[0],
+) => {
+	const parsed = MenuDetailResponse.parse(menu);
+	return {
+		...parsed,
+		id: String(parsed.id),
+		parentId: String(parsed.parentId ?? 0),
+	};
+};
+
 /** 递归转换树中每个节点的 id / parentId */
-const stringifyTreeIds = <T extends { id: number; parentId: number }>(
+const stringifyTreeIds = <
+	T extends { id: number | string; parentId: number | string },
+>(
 	nodes: TreeNode<T>[],
 ): (Omit<T, "id" | "parentId"> & {
 	id: string;
@@ -135,7 +150,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 				.filter((m) => m.parentId !== null)
 				.map((m) => {
 					const { alwaysShow, keepAlive, ...rest } = m;
-					return { ...rest, parentId: m.parentId as number };
+					return parseMenu({ ...rest, parentId: m.parentId as number });
 				});
 			const tree = buildTree(validMenus);
 			return stringifyTreeIds(tree);
@@ -202,7 +217,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			if (!menu) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
-			return parseMenu(menu);
+			return parseMenuDetail(menu);
 		},
 		{
 			auth: true,
@@ -230,7 +245,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 				}
 			}
 			const menu = await createMenu(body, db);
-			return parseMenu(menu);
+			return parseMenuDetail(menu);
 		},
 		{
 			auth: true,
@@ -275,7 +290,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			if (!menu) {
 				throw notFound(ERR_CODE.MENU_NOT_FOUND);
 			}
-			return parseMenu(menu);
+			return parseMenuDetail(menu);
 		},
 		{
 			auth: true,
