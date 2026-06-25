@@ -89,7 +89,7 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 ### 🖥️ 前端响应约定
 
 - **`id` / `parentId` 响应给前端时统一转 `string`**（`bigint` 主键避免 JS 精度丢失）
-- **`createTime` / `updateTime` 保留输出**，前端列表和表单需要显示时间
+- **`createTime` / `updateTime` 保留输出**，前端列表和表单需要显示时间（例外：菜单树形列表无需返回时间字段）
 - **`deleteTime` / `treePath` 不输出**（软删时间 + 物化路径不暴露给前端）
 - 完整规则见 [`docs/architecture.md` 第 4.6 节](./docs/architecture.md#46-前端响应约定)
 
