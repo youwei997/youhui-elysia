@@ -164,7 +164,15 @@ db.select().from(t).where(where)
 
 `dataScope(ctx, t)` 是纯函数，根据 `ctx.user.dataScopes` 返回 SQL fragment。
 
-### 4.5 代码风格
+### 4.5 超管短路机制
+
+**`isSuperUser()` 判断逻辑**（`plugins/permission.ts`）：
+
+- **ROOT 角色**（`roles.includes("ROOT")`）：按 seed 约定，ROOT 不绑菜单、perms 为空，必须靠 roles 判断 — **当前唯一生效的短路条件**
+- **通配符 `*:*:*`**（`perms.includes("*:*:*")`）：RuoYi 体系惯例，表示"所有权限"。
+  **当前项目状态**：seed 数据中没有任何角色被赋予此 perm。保留此检查仅作为防御性兜底，防止管理员手动在数据库设置该值后漏放行。
+
+### 4.6 代码风格
 
 - **函数 > class**。仅这些场景允许 class：第三方接口要求、需要 `instanceof` 判别、明确状态机
 - **闭包注入依赖 > 类构造器注入**
@@ -172,7 +180,7 @@ db.select().from(t).where(where)
 - **`type` 别名 > `interface`**（除非要扩展第三方）
 - **`as const` > 枚举**
 
-### 4.6 前端响应约定
+### 4.7 前端响应约定
 
 **所有模块的响应字段统一遵守以下规则：**
 
