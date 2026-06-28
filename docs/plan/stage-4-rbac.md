@@ -100,7 +100,9 @@
 `src/db/helpers/data-scope.ts`：
 
 ```ts
-type DataScope = 'ALL' | 'DEPT' | 'DEPT_AND_SUB' | 'SELF' | 'CUSTOM'
+// DataScope 用 number 1-5 对齐 sys_role.data_scope (smallint)
+const DATA_SCOPE = { ALL: 1, DEPT_AND_SUB: 2, DEPT: 3, SELF: 4, CUSTOM: 5 } as const
+type DataScope = 1 | 2 | 3 | 4 | 5
 
 type DataScopeContext = {
   userId: number
@@ -112,10 +114,11 @@ type DataScopeContext = {
 // 返回 SQL fragment（drizzle 可用）
 export const dataScopeFilter = (
   ctx: DataScopeContext,
-  table: { deptId: PgColumn, createdBy: PgColumn }
+  tables: { user: { deptId: PgColumn, createdBy: PgColumn }, dept?: PgTable & { id: PgColumn, treePath: PgColumn } }
 ): SQL | undefined => {
   // 多角色取并集（OR）
-  // ALL → undefined（不加条件）
+  // 空 scopes → undefined（不限）
+  // 任一 ALL → undefined（短路）
   // DEPT → eq(table.deptId, ctx.deptId)
   // DEPT_AND_SUB → table.deptId IN (子树)
   // SELF → eq(table.createdBy, ctx.userId)
@@ -136,6 +139,8 @@ const where = and(
 - 一开始可以只实现 ALL / SELF 两档，跑通流程
 - DEPT_AND_SUB 用 `treePath LIKE 'rootPath,%'` 或 `treePath = rootPath` 即可（不用递归 CTE）
 - 多角色取并集：用 `or(...)` 包多个 scope 条件
+
+> 📋 **详细执行手册**：[`stage-4-data-scope.md`](./stage-4-data-scope.md)（A → B → C 串行步骤 + 5 个 Review 知识点 + Ship 核对清单）
 
 ### 4.7 用户菜单树接口 (0.5d)
 
@@ -170,7 +175,7 @@ const where = and(
 
 - ❌ **不要**用拦截器自动改 SQL（魔法、隐藏、不可调试）—— 这是阶段 4 的核心反例
 - ❌ **不要**把 perms 写成接口路径（如 `/api/users/create`），用业务码（`sys:user:create`）
-- ❌ **不要**在数据库里硬编码"超级管理员跳过权限"，用 perms 集合判断 `*:*:*` 通配
+- ❌ **不要**在数据库里硬编码"超级管理员跳过权限"。超管短路通过 `roles.includes("ROOT")` 或 `perms.includes("*:*:*")` 判断，详见 `architecture.md` §4.5
 - ❌ **不要**把树形结构在 SQL 里 join 出来，DB 查平面 + 内存 buildTree 更清晰
 - ❌ **不要**把 dataScope 逻辑写成 class 或装饰器，纯函数
 - ⚠️ tree_path 维护：父节点改 parentId 时，子树所有节点的 treePath 都要更新（事务）
@@ -206,7 +211,7 @@ const where = and(
 - [x] 路由可声明 `perm: 'sys:user:create'`
 - [x] 用户无该 perm 返回 403
 - [x] 用户有该 perm（来自任一角色）放行
-- [x] 通配 perm `*:*:*`（admin 用）短路通过
+- [x] 超管短路：`roles.includes("ROOT")` 或 `perms.includes("*:*:*")` 跳过权限校验（详见 `architecture.md` §4.5）
 - [x] 多 perm 任一满足即放行（OR 语义）
 - [x] requireRole macro 同样可工作
 
@@ -254,5 +259,6 @@ curl /roles -H "Authorization: Bearer $STAFF_TOKEN"     # 403
 curl /menus/my-tree -H "Authorization: Bearer $MANAGER_TOKEN"
 # 看不到"系统管理"目录
 ```
+
 
 ## 本阶段收获（完成后填写）
