@@ -1,13 +1,27 @@
 import { and, count, eq, inArray, isNull, like, or } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
+import {
+	dataScopeFilter,
+	type DataScopeContext,
+} from "@/db/helpers/data-scope";
+import { sysDept } from "@/db/schema/system/dept";
 import { sysUserRole } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
 import type { PageResult } from "@/lib/pagination";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
 
 /**
- * 查询用户列表（分页 + 可选过滤）
+ * 查询用户列表（分页 + 可选过滤 + 数据权限）
+ *
+ * 数据权限 ctx 必传：由 routes 层调用 buildDataScopeContext 装配
+ * - ROOT/ALL → dataScopeFilter 返回 undefined → 不加过滤
+ * - SELF → created_by = userId
+ * - DEPT → dept_id = ctx.deptId
+ * - DEPT_AND_SUB → dept_id IN (dept subtree)
+ * - CUSTOM → dept_id IN customDeptIds
+ *
+ * 多角色取并集（OR 聚合），任一 ALL 短路不限（安全语义核心）
  */
 export const findUsers = async (
 	query: {
@@ -17,9 +31,10 @@ export const findUsers = async (
 		status?: number;
 		deptId?: number;
 	},
+	ctx: DataScopeContext,
 	db: DB,
 ): Promise<PageResult<(typeof sysUser)["$inferSelect"]>> => {
-	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选
+	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选 + 数据权限
 	const where = [isNull(sysUser.deleteTime)];
 	if (query.keywords) {
 		const keywordCondition = or(
@@ -36,6 +51,12 @@ export const findUsers = async (
 	}
 	if (query.deptId !== undefined) {
 		where.push(eq(sysUser.deptId, query.deptId));
+	}
+
+	// 数据权限过滤（ALL 短路时返回 undefined，不推入空条件）
+	const scopeFilter = dataScopeFilter(ctx, { user: sysUser, dept: sysDept });
+	if (scopeFilter) {
+		where.push(scopeFilter);
 	}
 
 	const list = await db

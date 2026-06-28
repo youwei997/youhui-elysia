@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
+import { buildDataScopeContext } from "@/db/helpers/data-scope";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { findUserPerms, findUserRoles } from "@/modules/auth/queries";
 import { authPlugin } from "@/plugins/auth";
@@ -68,8 +69,18 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.get(
 		"/",
-		async ({ query }) => {
-			const result = await findUsers(query, db);
+		async ({ user, query }) => {
+			// auth: true macro 运行时拦截 null，类型层手动收窄
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			// 装配数据权限上下文（3 次查询并行：user / customDeptIds，treePath 串行）
+			const dataScopeCtx = await buildDataScopeContext(
+				Number(user.sub),
+				user.dataScopes,
+				db,
+			);
+			const result = await findUsers(query, dataScopeCtx, db);
 			return {
 				...result,
 				list: result.list.map((u) => parseUser(u)),
@@ -82,7 +93,8 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			detail: {
 				tags: ["User"],
 				summary: "用户列表（分页）",
-				description: "支持关键字模糊搜索、状态筛选和部门过滤",
+				description:
+					"支持关键字模糊搜索、状态筛选和部门过滤；按当前用户角色 dataScope 自动裁剪数据",
 			},
 		},
 	)

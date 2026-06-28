@@ -26,8 +26,13 @@
  * ```
  */
 
-import { eq, inArray, or, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { DB } from "@/db/client";
+import { sysDept } from "@/db/schema/system/dept";
+import { sysRoleDept, sysUserRole } from "@/db/schema/system/relation";
+import { sysRole } from "@/db/schema/system/role";
+import { sysUser } from "@/db/schema/system/user";
 import { descendantsByTreePath } from "./tree";
 
 /**
@@ -177,4 +182,72 @@ const scopeToCondition = (
 			// 未知 scope（如 null/0/6+/序列化异常值）→ 忽略，不计入聚合
 			return undefined;
 	}
+};
+
+/**
+ * 装配 DataScopeContext（routes 层调一次，给列表查询用）
+ *
+ * ponytail: deptId / customDeptIds 并行查，treePath 依赖 deptId 串行查；
+ * 全部用软删过滤 + 简短链式，没有 N+1
+ *
+ * @param userId 当前用户 ID（来自 JWT.sub）
+ * @param dataScopes 用户的多个角色 dataScope 数组（来自 JWT.dataScopes）
+ * @param db Drizzle 实例
+ */
+export const buildDataScopeContext = async (
+	userId: number,
+	dataScopes: number[],
+	db: DB,
+): Promise<DataScopeContext> => {
+	const [deptId, customDeptIds] = await Promise.all([
+		// 1. 当前用户所属部门（可能为 null：超管无部门）
+		db
+			.select({ deptId: sysUser.deptId })
+			.from(sysUser)
+			.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+			.limit(1)
+			.then((rows) => rows[0]?.deptId ?? null),
+
+		// 2. CUSTOM scope 的 deptIds（多角色取并集，内存 Set 去重）
+		dataScopes.includes(DATA_SCOPE.CUSTOM)
+			? db
+					.select({ deptId: sysRoleDept.deptId })
+					.from(sysUserRole)
+					.innerJoin(sysRole, eq(sysRole.id, sysUserRole.roleId))
+					.innerJoin(sysRoleDept, eq(sysRoleDept.roleId, sysRole.id))
+					.where(
+						and(
+							eq(sysUserRole.userId, userId),
+							isNull(sysRole.deleteTime),
+							eq(sysRole.dataScope, DATA_SCOPE.CUSTOM),
+						),
+					)
+					.then((rows) => Array.from(new Set(rows.map((r) => r.deptId))))
+			: Promise.resolve([] as number[]),
+	]);
+
+	// 3. dept → treePath（依赖 deptId，必须串行）
+	const treePath =
+		deptId == null
+			? null
+			: (
+					await db
+						.select({ treePath: sysDept.treePath })
+						.from(sysDept)
+						.where(and(eq(sysDept.id, deptId), isNull(sysDept.deleteTime)))
+						.limit(1)
+				)[0]?.treePath ?? null;
+
+	// 4. scopes 去重 + CUSTOM 携带 customDeptIds（多个 CUSTOM 共享同一 union 集）
+	const seen = new Set<number>();
+	const scopes: ScopeEntry[] = [];
+	for (const scope of dataScopes) {
+		if (seen.has(scope)) continue;
+		seen.add(scope);
+		scopes.push(
+			scope === DATA_SCOPE.CUSTOM ? { scope, customDeptIds } : { scope },
+		);
+	}
+
+	return { userId, deptId, treePath, scopes };
 };
