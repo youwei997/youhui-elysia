@@ -2,8 +2,8 @@ import { and, count, eq, inArray, isNull, like, or } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
 import {
-	dataScopeFilter,
 	type DataScopeContext,
+	dataScopeFilter,
 } from "@/db/helpers/data-scope";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysUserRole } from "@/db/schema/system/relation";

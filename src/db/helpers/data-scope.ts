@@ -230,13 +230,13 @@ export const buildDataScopeContext = async (
 	const treePath =
 		deptId == null
 			? null
-			: (
+			: ((
 					await db
 						.select({ treePath: sysDept.treePath })
 						.from(sysDept)
 						.where(and(eq(sysDept.id, deptId), isNull(sysDept.deleteTime)))
 						.limit(1)
-				)[0]?.treePath ?? null;
+				)[0]?.treePath ?? null);
 
 	// 4. scopes 去重 + CUSTOM 携带 customDeptIds（多个 CUSTOM 共享同一 union 集）
 	const seen = new Set<number>();
