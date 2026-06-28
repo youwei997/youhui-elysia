@@ -10,7 +10,7 @@ import { type AuthContext, authPlugin } from "@/plugins/auth";
  * 1. roles 含 ROOT —— 与前端 v-hasPerm 指令语义对齐
  *    ROOT 角色按约定不绑定菜单（perms 为空），必须靠 roles 判断
  * 2. perms 含 *:*:* —— RuoYi 体系通配符惯例
- *    
+ *
  * ⚠️ *:*:* 当前状态：
  *    本项目的 seed 数据中没有任何角色被赋予此 perm。保留此检查仅作为
  *    防御性兜底，防止管理员手动在数据库设置了该值。实际只有 ROOT 短路在生效。
