@@ -216,11 +216,11 @@ const where = and(
 - [x] requireRole macro 同样可工作
 
 ### 数据权限
-- [ ] dataScope 5 档枚举均有实现
-- [ ] DEPT_AND_SUB 用 treePath 子树查询，跑通
-- [ ] CUSTOM 从 sys_role_dept 查 deptIds
-- [ ] 多角色取并集：admin（ALL）+ 其他 → 等同于 ALL
-- [ ] user 模块的 GET /users 接入 dataScope，三角色返回不同数据集
+- [x] dataScope 5 档枚举均有实现
+- [x] DEPT_AND_SUB 用 treePath 子树查询，跑通
+- [x] CUSTOM 从 sys_role_dept 查 deptIds
+- [x] 多角色取并集：admin（ALL）+ 其他 → 等同于 ALL
+- [x] user 模块的 GET /users 接入 dataScope，三角色返回不同数据集
 
 ### 菜单树接口
 - [ ] `/menus/my-tree` 按角色返回不同菜单树

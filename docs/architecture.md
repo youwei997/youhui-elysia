@@ -153,16 +153,56 @@ HTTP 请求进来
 
 ### 4.4 数据权限（关键）
 
-**显式 query helper，不是 SQL 拦截器**：
+#### 4.4.1 核心原则：显式 helper，不是 SQL 拦截器
 
 ```ts
 // ❌ 不要：拦截器自动改 SQL（魔法、隐藏、难调试）
 // ✅ 要：显式调用纯函数
-const where = and(eq(t.deleted, false), dataScope(ctx, t))
+const where = and(eq(t.deleted, false), dataScopeFilter(ctx, { user: sysUser, dept: sysDept }))
 db.select().from(t).where(where)
 ```
 
-`dataScope(ctx, t)` 是纯函数，根据 `ctx.user.dataScopes` 返回 SQL fragment。
+`dataScopeFilter(ctx, tables)` 是纯函数，根据 `ctx.scopes` 返回 SQL fragment；`ctx` 由 routes 层通过 `buildDataScopeContext(...)` 装配（见 `src/db/helpers/data-scope.ts`）。
+
+#### 4.4.2 三层权限全景
+
+每个请求依次经过：
+
+| 层级 | 触发点 | 不通过时表现 | 代码位置 |
+|---|---|---|---|
+| 1. 认证 | `auth: true` macro | 401 未登录 | `plugins/auth.ts` |
+| 2. 接口权限 | `perm: [...]` macro | 403 权限不足 | `plugins/permission.ts` |
+| 3. 数据权限 | `dataScopeFilter(ctx, tables)` 在 queries 层调用 | 返回过滤后数据（不是错误） | `db/helpers/data-scope.ts` |
+
+perm 管门，dataScope 管桌。多数列表查询两层都有；创建/更新类接口只用 perm。
+
+#### 4.4.3 五档 × ctx 字段对照表（速查）
+
+`DataScopeContext` 由 routes 层调 `buildDataScopeContext(userId, dataScopes, db)` 装配，下表说明每档用到哪些字段：
+
+| dataScope（数值） | 含义 | 用 `ctx.userId` | 用 `ctx.deptId` | 用 `ctx.treePath`（由 deptId 派生） | 用 `ctx.scopes[i].customDeptIds` |
+|---|---|---|---|---|---|
+| 1 = ALL | 所有数据 | - | - | - | - |
+| 2 = DEPT_AND_SUB | 部门及子部门 | - | -（间接派生） | ✓ | - |
+| 3 = DEPT | 本部门 | - | ✓ | - | - |
+| 4 = SELF | 本人 | ✓ | - | - | - |
+| 5 = CUSTOM | 自定义部门列表 | - | - | - | ✓ |
+
+**关键认知**：
+
+- **`ctx.deptId` 只被 DEPT 档使用**（DEPT_AND_SUB 通过 treePath 间接用）。其他三档完全不看它。
+- **`ctx.deptId` ≠ `sys_user.dept_id` 列**：前者是"当前登录用户属于哪个部门"（运行时值），后者是"被查询的用户属于哪个部门"（DB 列）。两件事都用 `dept_id` 命名但语义不同，详见 `notes/2026-06-24-perm和dataScope不是一回事.md` 末尾"延伸：ctx 字段对照"小节。
+- **多角色并集**：`scopes` 是所有角色 scope 的扁平去重数组。任一 ALL（scope=1）短路返回 `undefined`（不加 WHERE）—— admin 即使有 CUSTOM 角色也看全部，安全语义核心。
+- **安全降级**：`ctx.deptId = null` + DEPT 档 → `sql\`1=0\``（零结果，不抛错）。超管通常无部门，但 ROOT 是 ALL 短路根本不会到这两档。
+
+#### 4.4.4 ROOT 双层短路
+
+ROOT 角色（`roles.includes("ROOT")`）在 Layer 2 和 Layer 3 各有一个短路点：
+
+- **Layer 2（perm 层）**：`isSuperUser()` 检测到 ROOT → 直接 return，跳过 perm 数组比对（详见 §4.5）
+- **Layer 3（dataScope 层）**：`dataScopeFilter` 检测 `scopes.some(s => s.scope === ALL)` → 返回 `undefined`（不加 WHERE）
+
+两个短路缺一不可：只短路 Layer 2 → 数据范围受限；只短路 Layer 3 → perm 卡死连入口都进不去。
 
 ### 4.5 超管短路机制
 
