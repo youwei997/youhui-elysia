@@ -100,35 +100,76 @@ const stringifyTreeIds = <
 	}));
 };
 
+/** 当前用户菜单树 + 权限列表响应类型 */
+export type MyTreeResponse = {
+	/** 按角色裁剪的菜单路由树（不含按钮） */
+	menuTree: RouteItem[];
+	/** 权限编码列表，供前端 v-permission 指令使用 */
+	perms: string[];
+};
+
+/**
+ * 构建当前用户的菜单路由树
+ *
+ * ROOT 查全部非按钮菜单，其他角色按角色绑定的菜单过滤。
+ * 返回值可直接用于 /routes 和 /my-tree 两个接口。
+ */
+const buildUserMenuTree = async (
+	user: AuthContext["user"],
+): Promise<RouteItem[]> => {
+	if (!user) {
+		return [];
+	}
+
+	const isRoot = user.roles.includes("ROOT");
+	const menus = isRoot
+		? await findAllMenus(db)
+		: await findMenusByRoleCodes(user.roles, db);
+
+	const tree = buildTree(menus);
+
+	const mapToRouteItem = (
+		nodes: TreeNode<(typeof menus)[number]>[],
+	): RouteItem[] => {
+		return nodes.map((node) =>
+			toRouteItem(node, mapToRouteItem(node.children)),
+		);
+	};
+
+	return mapToRouteItem(tree);
+};
+
 export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 	.use(authPlugin)
+	// ---- 当前用户菜单树 + 权限列表 ----
+	.get(
+		"/my-tree",
+		async ({ user }: AuthContext): Promise<MyTreeResponse> => {
+			if (!user) {
+				return { menuTree: [], perms: [] };
+			}
+
+			const menuTree = await buildUserMenuTree(user);
+			// perms 来自 JWT（登录时写入），角色变更通过 tokenVersion+1 强制重新登录生效
+			const perms = user.perms;
+
+			return { menuTree, perms };
+		},
+		{
+			auth: true,
+			detail: {
+				tags: ["Menu"],
+				summary: "当前用户菜单树 + 权限列表",
+				description:
+					"返回当前用户角色可见的菜单路由树（不含按钮）和权限编码列表，供前端动态路由 + v-permission 使用",
+			},
+		},
+	)
 	// ---- 路由菜单（前端动态路由，保持不变） ----
 	.get(
 		"/routes",
 		async ({ user }: AuthContext) => {
-			if (!user) {
-				return [];
-			}
-
-			// 1. 查菜单列表：ROOT 查全部，其他按角色过滤
-			const isRoot = user.roles.includes("ROOT");
-			const menus = isRoot
-				? await findAllMenus(db)
-				: await findMenusByRoleCodes(user.roles, db);
-
-			// 2. 平面列表 → 嵌套树
-			const tree = buildTree(menus);
-
-			// 3. 映射为 RouteItem 结构
-			const mapToRouteItem = (
-				nodes: TreeNode<(typeof menus)[number]>[],
-			): RouteItem[] => {
-				return nodes.map((node) =>
-					toRouteItem(node, mapToRouteItem(node.children)),
-				);
-			};
-
-			return mapToRouteItem(tree);
+			return buildUserMenuTree(user);
 		},
 		{
 			auth: true,

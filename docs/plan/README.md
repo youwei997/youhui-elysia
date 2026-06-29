@@ -9,8 +9,8 @@
 | 1 · 地基 | ⭐ | 3-4d | ✅ 已完成 | [stage-1-foundation.md](./stage-1-foundation.md) |
 | 2 · 基础 CRUD | ⭐⭐ | 2-3d | ✅ 已完成 | [stage-2-basic-crud.md](./stage-2-basic-crud.md) |
 | 3 · 横切 Plugin 体系 | ⭐⭐⭐ | 4-5d | ✅ 已完成 | [stage-3-plugins.md](./stage-3-plugins.md) |
-| 4 · 权限核心 | ⭐⭐⭐⭐⭐ | 6-7d | 🟡 进行中 | [stage-4-rbac.md](./stage-4-rbac.md) |
-| 5 · 进阶辅助模块 | ⭐⭐⭐ | 4-5d | ⬜ 未开始 | [stage-5-modules.md](./stage-5-modules.md) |
+| 4 · 权限核心 | ⭐⭐⭐⭐⭐ | 6-7d | ✅ 已完成 | [stage-4-rbac.md](./stage-4-rbac.md) |
+| 5 · 进阶辅助模块 | ⭐⭐⭐ | 4-5d | 🟡 进行中 | [stage-5-modules.md](./stage-5-modules.md) |
 | 6 · 代码生成器 | ⭐⭐⭐⭐ | 5-6d | ⬜ 未开始 | [stage-6-codegen.md](./stage-6-codegen.md) |
 | 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
 
@@ -65,4 +65,5 @@ Elysia 范式吃透 █████████ 25%
 [2026-06-23] 阶段 4.3 完成。Menu 模块三件套落地（8 路由 + 10 queries 函数），核心：1）treePath 物化路径自动维护；2）treePath ~ 正则级联软删 + sys_role_menu 事务清理；3）isParentIdCyclic 纯字符串检测防循环；4）type=B perm 必填双保险（Zod refine + routes 防御）；5）/menus/routes 按 ROOT/角色返回前端动态路由树（不含按钮）。已知口子：未返回 perm 列表（前端 v-permission 依赖，等 4.7 合并到 /menus/my-tree）。进入 4.4 Dept 模块。
 [2026-06-23] 阶段 4.4 完成。Dept 模块三件套落地（5 路由 + 8 queries 函数），核心：1）treePath 在 insert/update 时自动维护，update 改父部门时事务级联更新子树 treePath；2）treePath 正则匹配级联软删子树 + sys_role_dept 事务清理；3）isParentIdCyclic 防循环 + routes 层前置校验链（父存在→防循环→用户引用）；4）descendantsByTreePath helper 供数据权限使用。docs/notes 补充设计要点笔记。进入 4.5 Permission macro。
 [2026-06-28] 阶段 4.5-4.6 完成。4.5 Permission macro：鉴权与权限分离（auth plugin + permission plugin），isSuperUser ROOT/*:*:* 双层短路，perm/requireRole 两个 macro + 6 单测。4.6 dataScope：纯函数 dataScopeFilter（5 档 switch + ALL 短路 + 边界降级）+ 8 单测 + buildDataScopeContext 装配 + GET /users 接入。进入 4.7 菜单树接口。
+[2026-06-29] 阶段 4.7-4.8 完成。4.7 新增 GET /menus/my-tree 接口，复用 buildUserMenuTree + JWT perms，返回 { menuTree, perms } 供前端动态路由 + v-permission 使用。同时重构 /routes 接口共享 buildUserMenuTree。4.8 ADR-0002 权限模型文档，记录 5 个设计决策（显式 macro、显式 query helper、超管短路、多角色并集、tokenVersion 生效策略）及反对方案。阶段 4 全部完成，进入阶段 5。
 ```

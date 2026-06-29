@@ -223,13 +223,13 @@ const where = and(
 - [x] user 模块的 GET /users 接入 dataScope，三角色返回不同数据集
 
 ### 菜单树接口
-- [ ] `/menus/my-tree` 按角色返回不同菜单树
-- [ ] 按钮被过滤
-- [ ] 同时返回 perm 字符串列表
+- [x] `/menus/my-tree` 按角色返回不同菜单树
+- [x] 按钮被过滤
+- [x] 同时返回 perm 字符串列表
 
 ### ADR
-- [ ] `docs/adr/001-permission-model.md` 已写
-- [ ] 含决策、理由、反对方案、取舍、生效策略
+- [x] `docs/adr/0002-permission-model.md` 已写
+- [x] 含决策、理由、反对方案、取舍、生效策略
 
 ### 端到端验证（最重要）
 - [ ] 用 admin 登录调 `/users` 看到全部用户
