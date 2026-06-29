@@ -1,4 +1,4 @@
-# 阶段 5 · 进阶辅助模块（企业级广度）
+﻿# 阶段 5 · 进阶辅助模块（企业级广度）
 
 > 难度 ⭐⭐⭐ · 工时 4-5 天 · 学到：onAfterHandle、缓存防击穿、存储抽象、队列、限流
 > 节奏：每个模块 0.5-1 天，完成一个就有一个完整能力。**难度回落，是巩固期**
@@ -14,26 +14,152 @@
 
 ## 子任务清单
 
-### 5.1 操作日志（plugin/audit-log）(1d)
+### 5.1 操作日志(plugin/audit-log)(1d)
 
-`db/schema/system/oper-log.ts`：
-- 字段抄 youlai-boot 的 sys_log：userId / username / module / action / method / url / ip / ipRegion / userAgent / requestParams / responseResult / status / errorMsg / costMs / created_at
-- 索引：userId / created_at / module
+> **设计决策详见 `docs/notes/` 3 篇笔记**:
+> - `2026-06-29-oper-log-物理删除策略.md` —— 不走软删,DELETE 走硬删,5.5 定时清理也走硬删
+> - `2026-06-29-auditColumns-局部复用案例.md` —— 复用策略约定:完整复用 vs 局部复用
+> - `2026-06-29-索引命名约定.md` —— `idx_<table>_<col>` 临时约定,阶段 5 收尾 review
 
-`src/plugins/audit-log.ts`：
-- 在 `onAfterHandle` 里采集（成功路径）
-- 在 `onError` 里采集（失败路径）
-- 异步落库（**不要阻塞响应**），用 `setImmediate` 或 pg-boss 队列
-- 路由通过 `audit: { module: 'user', action: 'create' }` macro 声明
-- **未声明 audit 的路由不记录**（避免日志爆炸）
-- 字段脱敏：password / token / secret 类字段在 requestParams 里替换为 `***`
-- 大请求体截断（如 > 4KB）
+#### 5.1.1 数据库层(0.3d)✅ 已完成
 
-modules/oper-log：
-- `GET /oper-logs` 列表（带搜索：用户名 / 模块 / 时间范围）
-- `DELETE /oper-logs/:id` 删除（仅 admin）
-- `DELETE /oper-logs` 批量清理（按时间）
+**目标**:`sys_oper_log` 表 + 索引
 
+**涉及文件**:`src/db/schema/system/oper-log.ts`(新)
+
+**字段**:
+- 元数据全量:userId / username / module / action / method / url / ip / ipRegion / userAgent / status / errorMsg / costMs
+- `requestParams`(jsonb,仅 POST / PUT / PATCH 存,4KB 截断 + 脱敏)
+- `responseResult`(jsonb,仅失败存,4KB 截断;成功不写)
+- 时间:局部复用 `auditColumns.createTime`(不写 createdBy / updatedBy / updateTime / deleteTime)
+
+**索引**(3 个):`idx_oper_log_user_id` / `idx_oper_log_create_time` / `idx_oper_log_module_action`
+
+**验收**:`bun run db:generate` + `db:push` 通过,物理删除策略文档化
+
+---
+
+#### 5.1.2 脱敏 + 截断工具(0.1d)
+
+**目标**:`src/lib/audit-mask.ts` —— 采集前的预处理工具
+
+**涉及文件**:
+- `src/lib/audit-mask.ts`(新)
+- `src/lib/test/audit-mask.test.ts`(新,bun:test 单测)
+
+**关键设计**:
+- 敏感字段白名单:`password` / `oldPassword` / `newPassword` / `token` / `accessToken` / `refreshToken` / `secret` / `apiKey` / `clientSecret` 等
+- 递归遍历 object / array,匹配到敏感字段值 → 替换为 `***`
+- 大 body 截断:`JSON.stringify` 后字节数 > 4096 → 保留前 N 字符 + `"...truncated"` 标记
+- 不抛错(不存在的字段、不支持的类型直接跳过)
+
+**验收**:
+- [ ] 密码 / token 字段递归替换为 `***`
+- [ ] 4KB 截断生效,带 truncated 标记
+- [ ] 单测覆盖:嵌套对象 / 数组 / 边界(刚好 4096 / 4097) / 不存在的字段
+
+---
+
+#### 5.1.3 audit-log plugin(0.2d)
+
+**目标**:`src/plugins/audit-log.ts` 采集 plugin + macro 声明
+
+**涉及文件**:
+- `src/plugins/audit-log.ts`(新)
+- `src/plugins/test/audit-log.test.ts`(新)
+
+**关键设计**:
+
+1. **macro 声明合并到 OpenAPI detail**:
+   ```ts
+   .macro({
+     audit: {
+       module: (t) => t.String(),
+       action: (t) => t.String(),
+     },
+   })
+   ```
+
+2. **路由声明**:
+   ```ts
+   .post('/users', handler, {
+     detail: { tags: ['用户'], summary: '创建用户' },
+     audit: { module: 'user', action: 'create' },
+   })
+   ```
+
+3. **采集点**:
+   - `onAfterResponse`:成功路径(纯观察,不动响应)
+   - `onError`:失败路径(早于 `error-handler` plugin 介入)
+
+4. **异步落库**:`setImmediate(() => db.insert(sysOperLog).values({...}))`,**绝不 await**
+
+5. **采集异常降级**:`setImmediate` 内的 catch 只 log,不抛(不能让日志拖垮业务)
+
+6. **采集字段**:
+   - 从 `ctx.request` 拿 method / url / User-Agent
+   - 从 ctx 拿 `userId` / `username`(从 auth plugin derive)
+   - 计算 `costMs`(`Date.now() - startTime`,startTime 存 ctx)
+   - `requestParams`:仅 POST/PUT/PATCH,从 `ctx.body` 取
+   - `responseResult`:仅失败,从 `ctx.error` / response 取
+   - 全部过 5.1.2 的 `audit-mask` 脱敏 + 截断
+
+**验收**:
+- [ ] 路由声明 `audit` 后才记录,未声明路由零开销
+- [ ] 成功请求落库一条
+- [ ] 失败请求落库一条,errorMsg 完整
+- [ ] `setImmediate` 异步,响应耗时不变
+- [ ] 采集异常不抛出(主请求照常 200)
+
+---
+
+#### 5.1.4 模块三件套(0.2d)
+
+**目标**:`modules/oper-log/{schema,queries,routes}.ts` + 3 个 REST 接口
+
+**涉及文件**:
+- `src/modules/oper-log/schema.ts`(新)
+- `src/modules/oper-log/queries.ts`(新)
+- `src/modules/oper-log/routes.ts`(新)
+
+**接口**:
+- `GET /oper-logs`(权限 `sys:oper-log:query`):query page / pageSize / username / module / startTime / endTime,排序 `createTime DESC`
+- `DELETE /oper-logs/:id`(权限 `sys:oper-log:delete`)
+- `DELETE /oper-logs`(权限 `sys:oper-log:delete`,批量按 `createTime < ?`)
+
+**验收**:
+- [ ] 列表支持多条件搜索
+- [ ] DELETE 单条生效(硬删)
+- [ ] DELETE 批量按时间清理
+- [ ] 权限 macro 生效(无权限 → 403)
+
+---
+
+#### 5.1.5 接入验证(0.1-0.2d)
+
+**目标**:给 user / role / menu / dept 路由挂 `audit` 声明 + 端到端验证
+
+**关键路由**(每个模块至少挂 create / update / delete):
+- user:create / update / delete / reset-password
+- role:create / update / delete / assign-menus / assign-depts
+- menu:create / update / delete
+- dept:create / update / delete
+
+**端到端验证**:
+1. 启动服务,登录拿 token
+2. 调 `POST /users` → `sys_oper_log` 多一条 `module=user, action=create`
+3. 检查 `requestParams.password` 字段是 `***`(脱敏生效)
+4. 调失败请求 → `sys_oper_log` 多一条 `status=0, errorMsg` 非空
+5. 跨表清理:5.5 定时任务跑一次,`create_time < 30天前` 的记录被硬删
+
+**验收**:
+- [ ] user / role / menu / dept 核心写接口都挂 audit
+- [ ] 端到端:操作一次 → 日志表多一条
+- [ ] 脱敏生效
+- [ ] 失败请求也被记录
+- [ ] 5.1 全部验收清单过完(对照原计划文档末尾的"验收清单"段)
+
+---
 ### 5.2 登录日志 + 在线用户 (0.5d)
 
 `db/schema/system/login-log.ts`：
