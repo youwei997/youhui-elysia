@@ -29,6 +29,10 @@ const isSuperUser = (user: AuthContext["user"]): boolean => {
  * - perm: string[]        → 用户 perms 包含数组中任一即放行
  * - requireRole: string[] → 用户 roles 包含数组中任一即放行
  *
+ * 注：perm/requireRole 统一用 string[] 不用 string | string[]，
+ * 调用处全传数组（如 perm: ["sys:user:list"]），内部直接 .some()，
+ * 少一个类型分支判断，保持统一。
+ *
  * 短路放行：roles 含 "ROOT" 或 perms 含 "*:*:*" 跳过校验
  * （详见 isSuperUser 函数说明）
  * 多值：数组用 OR 语义（任一满足即放行）
