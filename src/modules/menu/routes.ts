@@ -187,12 +187,12 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		"/",
 		async ({ query }) => {
 			const menus = await findAllMenusWithButtons(query.keywords, db);
-			const validMenus = menus
-				.filter((m) => m.parentId !== null)
-				.map((m) => {
-					const { alwaysShow, keepAlive, ...rest } = m;
-					return parseMenu({ ...rest, parentId: m.parentId as number });
-				});
+			// parentId 在 schema 定义为 .notNull().default(0)，DB 层永远不为 null，
+			// 因此不需要 isNotNull 过滤，直接 map 即可
+			const validMenus = menus.map((m) => {
+				const { alwaysShow, keepAlive, ...rest } = m;
+				return parseMenu({ ...rest, parentId: m.parentId as number });
+			});
 			const tree = buildTree(validMenus);
 			return stringifyTreeIds(tree);
 		},

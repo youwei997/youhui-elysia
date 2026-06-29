@@ -243,7 +243,8 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 						);
 					}
 				}
-				return await batchSoftDeleteDepts(ids, db);
+				const deleted = await batchSoftDeleteDepts(ids, db);
+				return deleted.map((d) => parseDept(d));
 			}
 			const id = Number(idStr);
 			if (Number.isNaN(id)) {
