@@ -19,7 +19,7 @@
 
 ## 📖 2. 项目规范来源
 
-- 项目架构、编码约定（§4）、反例参考（§5）、借鉴清单（§6）、Git 工作流（§7），均以 `docs/architecture.md` 为准。
+- 项目架构、编码约定（§4）、反例参考（§5）、借鉴清单（§6），均以 `docs/architecture.md` 为准。
 - `AGENTS.md` 只保留 AI 执行规则，不重复完整架构规范。
 - 如果 `AGENTS.md` 与 `docs/architecture.md` 表述不一致，以 `docs/architecture.md` 为准。
 
@@ -59,7 +59,7 @@
 - 每个阶段开始前阅读 `docs/plan/stage-N-*.md` 的“前置检查”。
 - 每完成一个子任务勾选验收清单。
 - 阶段全部完成后，用验收清单核对一遍再进入下一阶段。
-- 关键决策写入 `docs/adr/`（见 architecture.md §7）。
+- 关键决策写入 `docs/adr/`（含决策、理由、反对方案、取舍）。
 - 每完成一阶段更新 `docs/plan/README.md` 进度看板。
 
 ---
@@ -80,7 +80,13 @@
 
 ## 📦 5. Git 提交
 
-- 规范见 `docs/architecture.md` §7：中文 message、`<类型>: <简述>`、单次聚焦。
+- **commit message 必须中文**，格式：`<类型>: <简述>`。
+  - 类型：`feat` / `fix` / `refactor` / `docs` / `chore` / `test` / `perf`
+  - 简述：一句话概括改了什么，不含句号，≤72 字符
+  - 如有 scope，格式：`feat(auth):` / `fix(plugin):`
+- **单次 commit 聚焦一件事**，不要混合重构和新功能
+- 提交前运行 `bun run check`（biome）+ `bun run tsc`（类型检查）；涉及 hook / lifecycle 等运行时行为时额外跑 `bun run check:dev`
+- 关键决策同步写入 `docs/adr/`（含决策、理由、反对方案、取舍）
 
 ---
 

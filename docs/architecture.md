@@ -405,7 +405,4 @@ const list = await db.select().from(users).where(where).limit(20);
 
 ## 7. Git 工作流
 
-- **commit message 必须中文**，格式：`<类型>: <简述>`。
-- **类型**：`feat` / `fix` / `refactor` / `docs` / `chore` / `test` / `perf`。
-- **单次 commit 聚焦一件事**，不要混合重构和新功能。
-- **关键决策同步写入 `docs/adr/`**（含决策、理由、反对方案、取舍）。
+- 规范见 [`AGENTS.md`](../AGENTS.md) §5。
