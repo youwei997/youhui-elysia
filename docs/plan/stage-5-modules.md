@@ -265,12 +265,17 @@ handler 注册：
 
 ## 学习重点
 
-- **`onAfterHandle` vs `onAfterResponse`**：前者改响应、后者纯观察（日志用后者）
-- **缓存防击穿三件套**：双重检查 / 分布式锁 / 超时重试
-- **存储抽象的工厂模式**：函数式版本 = 闭包创建实例 + 返回符合接口的对象
-- **预签名上传 vs 后端代传**：前者更省服务器带宽，企业级首选
-- **pg-boss 与自定义任务表的协作**：pg-boss 管调度，sys_job 管元数据和 UI
-- **Redis 限流的几种算法**：固定窗口 / 滑动窗口 / 令牌桶（这阶段用最简单的固定窗口即可）
+### 🔍 值得认真学（架构师亲自看）
+
+- **操作日志**：`onAfterHandle` 的 `WeakMap` 生命周期、`onError` 与 `errorHandler` 的执行顺序、`setImmediate` 的异步落库时序——**这三个决定日志系统是否可靠**
+- **缓存防击穿**：`withCache` 的双重检查锁 + 分布式锁（`SET NX EX`）、写入后 **主动失效** 的时序——**这是通用知识，不只是阶段5**
+- **pg-boss 调度**：`schedule` / `unschedule` 的**先 unschedule 再 schedule** 顺序、`publish` 只触发一次——**这是设计耦合**
+
+### ⚡ 直接给 AI 做（你只看结果）
+
+- **登录日志 + 在线用户**：标准 CRUD，`/online` 列表 + `DELETE /:userId` 强制下线，无设计决策
+- **文件存储抽象**：`Storage` 接口 `{ put, get, delete, presignedPutUrl, presignedGetUrl }`，`local-fs` / `s3` driver 实现——**标准工厂模式**
+- **限流 + IP 黑名单**：`rateLimit: '60:100'` macro（`INCR + EXPIRE`），**标准实现**
 
 ## 避雷
 
