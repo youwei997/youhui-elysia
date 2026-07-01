@@ -119,9 +119,9 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			const existing = await findDictById(params.id, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
 			const dict = await updateDict(params.id, body, db);
-				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-				await invalidateDictCache(existing.type);
-				return parseDict(dict);
+			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+			await invalidateDictCache(existing.type);
+			return parseDict(dict);
 		},
 		{
 			auth: true,
@@ -142,8 +142,8 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			const existing = await findDictById(params.id, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
 			await softDeleteDict(params.id, db);
-				await invalidateDictCache(existing.type);
-				return true;
+			await invalidateDictCache(existing.type);
+			return true;
 		},
 		{
 			auth: true,
@@ -201,8 +201,8 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			}
 
 			const item = await createDictItem(params.id, body, db);
-				await invalidateDictCache(dict.type);
-				return parseDictItem(item);
+			await invalidateDictCache(dict.type);
+			return parseDictItem(item);
 		},
 		{
 			auth: true,
@@ -245,10 +245,10 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			}
 
 			const item = await updateDictItem(params.itemId, body, db);
-				if (!item) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
-				const dict = await findDictById(existing.dictId, db);
-				if (dict) await invalidateDictCache(dict.type);
-				return parseDictItem(item);
+			if (!item) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
+			const dict = await findDictById(existing.dictId, db);
+			if (dict) await invalidateDictCache(dict.type);
+			return parseDictItem(item);
 		},
 		{
 			auth: true,
@@ -268,9 +268,9 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			const existing = await findDictItemById(params.itemId, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
 			await softDeleteDictItem(params.itemId, db);
-				const dict = await findDictById(existing.dictId, db);
-				if (dict) await invalidateDictCache(dict.type);
-				return true;
+			const dict = await findDictById(existing.dictId, db);
+			if (dict) await invalidateDictCache(dict.type);
+			return true;
 		},
 		{
 			auth: true,
@@ -284,16 +284,16 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 	)
 	// ── 字典项：按 type 查询（前端高频，无需权限，仅返回启用项） ──
-		.get(
-			"/:type/items",
-			async ({ params }) => {
-				return withCache(redisKeys.dictCache(params.type), 600, async () => {
-					const dict = await findDictByType(params.type, db);
-					if (!dict) return [];
-					const items = await findDictItems(dict.id, { status: 1 }, db);
-					return items.map((item) => parseDictItem(item));
-				});
-			},
+	.get(
+		"/:type/items",
+		async ({ params }) => {
+			return withCache(redisKeys.dictCache(params.type), 600, async () => {
+				const dict = await findDictByType(params.type, db);
+				if (!dict) return [];
+				const items = await findDictItems(dict.id, { status: 1 }, db);
+				return items.map((item) => parseDictItem(item));
+			});
+		},
 		{
 			detail: {
 				tags: ["Dict"],

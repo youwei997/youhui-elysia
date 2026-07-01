@@ -50,14 +50,14 @@ export const redisKeys = {
 	 * 登出 / 强制下线时删除，TTL 与 access token 有效期一致（15min）
 	 */
 	onlineUser: (userId: string | number): string => {
-			return `online:user:${userId}`;
-		},
+		return `online:user:${userId}`;
+	},
 
-		/**
-		 * 字典项缓存
-		 * withCache 写入，字典写操作（增改删）时主动失效
-		 */
-		dictCache: (type: string): string => {
-			return `dict:${type}`;
-		},
-	} as const;
+	/**
+	 * 字典项缓存
+	 * withCache 写入，字典写操作（增改删）时主动失效
+	 */
+	dictCache: (type: string): string => {
+		return `dict:${type}`;
+	},
+} as const;
