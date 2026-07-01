@@ -53,9 +53,15 @@ export const ERR_CODE = {
 	DEPT_NOT_FOUND: "A0430", // 部门不存在
 	DEPT_PARENT_CYCLE: "A0431", // 不能将部门移动到自己或子部门下
 	DEPT_HAS_USERS: "A0432", // 部门下存在用户，无法删除
-	/** A044x OperLog 模块业务错误 */
-	OPER_LOG_NOT_FOUND: "A0440", // 操作日志不存在
-	/** A0506 重复提交 */
+		/** A044x OperLog 模块业务错误 */
+		OPER_LOG_NOT_FOUND: "A0440", // 操作日志不存在
+		/** A045x Dict 模块业务错误 */
+		DICT_NOT_FOUND: "A0450", // 字典类型不存在
+		DICT_TYPE_DUPLICATE: "A0451", // 字典类型标识已存在
+		DICT_ITEM_NOT_FOUND: "A0452", // 字典项不存在
+		DICT_ITEM_LABEL_DUPLICATE: "A0453", // 字典项标签已存在
+		DICT_ITEM_VALUE_DUPLICATE: "A0454", // 字典项值已存在
+		/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
 
 	// B 系统端错误
@@ -102,6 +108,11 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.DEPT_PARENT_CYCLE]: "不能将部门移动到自己或子部门下",
 	[ERR_CODE.DEPT_HAS_USERS]: "部门下存在用户，无法删除",
 	[ERR_CODE.OPER_LOG_NOT_FOUND]: "操作日志不存在",
+	[ERR_CODE.DICT_NOT_FOUND]: "字典类型不存在",
+	[ERR_CODE.DICT_TYPE_DUPLICATE]: "字典类型标识已存在",
+	[ERR_CODE.DICT_ITEM_NOT_FOUND]: "字典项不存在",
+	[ERR_CODE.DICT_ITEM_LABEL_DUPLICATE]: "字典项标签已存在",
+	[ERR_CODE.DICT_ITEM_VALUE_DUPLICATE]: "字典项值已存在",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.SYSTEM_ERROR]: "系统执行出错",
 	[ERR_CODE.THIRD_PARTY_SERVICE_ERROR]: "调用第三方服务出错",

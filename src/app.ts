@@ -2,6 +2,7 @@ import { openapi } from "@elysia/openapi";
 import { Elysia } from "elysia";
 import { authRoutes } from "@/modules/auth/routes";
 import { deptRoutes } from "@/modules/dept/routes";
+import { dictRoutes } from "@/modules/dict/routes";
 import { loginLogRoutes } from "@/modules/login-log/routes";
 import { menuRoutes } from "@/modules/menu/routes";
 import { onlineRoutes } from "@/modules/online/routes";
@@ -36,8 +37,9 @@ export const app = new Elysia()
 					{ name: "Dept", description: "部门管理" },
 					{ name: "Auth", description: "认证管理" },
 					{ name: "OperLog", description: "操作日志" },
-						{ name: "LoginLog", description: "登录日志" },
-						{ name: "Online", description: "在线用户" },
+					{ name: "LoginLog", description: "登录日志" },
+					{ name: "Online", description: "在线用户" },
+					{ name: "Dict", description: "字典管理" },
 				],
 				components: {
 					securitySchemes: {
@@ -62,6 +64,7 @@ export const app = new Elysia()
 	.use(menuRoutes)
 	.use(deptRoutes)
 	.use(operLogRoutes)
-		.use(loginLogRoutes)
-		.use(onlineRoutes)
+	.use(loginLogRoutes)
+	.use(onlineRoutes)
+	.use(dictRoutes)
 	.get("/", () => "Hello Elysia");

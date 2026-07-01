@@ -1,0 +1,240 @@
+import { and, asc, count, eq, isNull, like } from "drizzle-orm";
+import type { DB } from "@/db/client";
+import { sysDict } from "@/db/schema/system/dict";
+import { sysDictItem } from "@/db/schema/system/dict-item";
+import type { PageResult } from "@/lib/pagination";
+
+// ── 字典类型 ──
+
+/**
+ * 字典类型列表查询（分页，软删过滤）
+ */
+export const findDicts = async (
+	query: {
+		pageNum: number;
+		pageSize: number;
+		type?: string;
+		name?: string;
+		status?: number;
+	},
+	db: DB,
+): Promise<PageResult<typeof sysDict.$inferSelect>> => {
+	const where = [isNull(sysDict.deleteTime)];
+
+	if (query.type) {
+		where.push(like(sysDict.type, `%${query.type}%`));
+	}
+	if (query.name) {
+		where.push(like(sysDict.name, `%${query.name}%`));
+	}
+	if (query.status !== undefined) {
+		where.push(eq(sysDict.status, query.status));
+	}
+
+	const whereClause = where.length > 0 ? and(...where) : undefined;
+
+	const list = await db
+		.select()
+		.from(sysDict)
+		.where(whereClause)
+		.orderBy(asc(sysDict.id))
+		.limit(query.pageSize)
+		.offset((query.pageNum - 1) * query.pageSize);
+
+	const [{ total = 0 } = {}] = await db
+		.select({ total: count() })
+		.from(sysDict)
+		.where(whereClause);
+
+	return { list, total };
+};
+
+/** 按 ID 查字典类型 */
+export const findDictById = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysDict.$inferSelect | undefined> => {
+	const [dict] = await db
+		.select()
+		.from(sysDict)
+		.where(and(eq(sysDict.id, id), isNull(sysDict.deleteTime)));
+	return dict;
+};
+
+/** 按 type 查字典类型 */
+export const findDictByType = async (
+	type: string,
+	db: DB,
+): Promise<typeof sysDict.$inferSelect | undefined> => {
+	const [dict] = await db
+		.select()
+		.from(sysDict)
+		.where(and(eq(sysDict.type, type), isNull(sysDict.deleteTime)));
+	return dict;
+};
+
+/** 新增字典类型 */
+export const createDict = async (
+	data: { type: string; name: string; status: number },
+	db: DB,
+): Promise<typeof sysDict.$inferSelect | undefined> => {
+	const [dict] = await db.insert(sysDict).values(data).returning();
+	return dict;
+};
+
+/** 更新字典类型 */
+export const updateDict = async (
+	id: number,
+	data: { name?: string; status?: number },
+	db: DB,
+): Promise<typeof sysDict.$inferSelect | undefined> => {
+	const [dict] = await db
+		.update(sysDict)
+		.set(data)
+		.where(and(eq(sysDict.id, id), isNull(sysDict.deleteTime)))
+		.returning();
+	return dict;
+};
+
+/** 软删字典类型（级联软删关联的字典项） */
+export const softDeleteDict = async (id: number, db: DB): Promise<boolean> => {
+	await db.transaction(async (tx) => {
+		const now = new Date().toISOString();
+		await tx
+			.update(sysDictItem)
+			.set({ deleteTime: now })
+			.where(and(eq(sysDictItem.dictId, id), isNull(sysDictItem.deleteTime)));
+		await tx
+			.update(sysDict)
+			.set({ deleteTime: now })
+			.where(and(eq(sysDict.id, id), isNull(sysDict.deleteTime)));
+	});
+	return true;
+};
+
+// ── 字典项 ──
+
+/** 字典项列表查询（软删过滤） */
+export const findDictItems = async (
+	dictId: number,
+	query: { label?: string; status?: number },
+	db: DB,
+): Promise<(typeof sysDictItem.$inferSelect)[]> => {
+	const where = [
+		eq(sysDictItem.dictId, dictId),
+		isNull(sysDictItem.deleteTime),
+	];
+
+	if (query.label) {
+		where.push(like(sysDictItem.label, `%${query.label}%`));
+	}
+	if (query.status !== undefined) {
+		where.push(eq(sysDictItem.status, query.status));
+	}
+
+	return db
+		.select()
+		.from(sysDictItem)
+		.where(and(...where))
+		.orderBy(asc(sysDictItem.sort), asc(sysDictItem.id));
+};
+
+/** 按 type 查字典项（供前端 /dicts/:type/items 高频查询） */
+export const findDictItemsByType = async (
+	type: string,
+	db: DB,
+): Promise<(typeof sysDictItem.$inferSelect)[]> => {
+	const dict = await findDictByType(type, db);
+	if (!dict) return [];
+	return findDictItems(dict.id, {}, db);
+};
+
+/** 按 ID 查字典项 */
+export const findDictItemById = async (
+	id: number,
+	db: DB,
+): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+	const [item] = await db
+		.select()
+		.from(sysDictItem)
+		.where(and(eq(sysDictItem.id, id), isNull(sysDictItem.deleteTime)));
+	return item;
+};
+
+/** 新增字典项 */
+export const createDictItem = async (
+	dictId: number,
+	data: { label: string; value: string; sort: number; status: number },
+	db: DB,
+): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+	const [item] = await db
+		.insert(sysDictItem)
+		.values({ ...data, dictId })
+		.returning();
+	return item;
+};
+
+/** 更新字典项 */
+export const updateDictItem = async (
+	id: number,
+	data: { label?: string; value?: string; sort?: number; status?: number },
+	db: DB,
+): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+	const [item] = await db
+		.update(sysDictItem)
+		.set(data)
+		.where(and(eq(sysDictItem.id, id), isNull(sysDictItem.deleteTime)))
+		.returning();
+	return item;
+};
+
+/** 软删字典项 */
+export const softDeleteDictItem = async (
+	id: number,
+	db: DB,
+): Promise<boolean> => {
+	const result = await db
+		.update(sysDictItem)
+		.set({ deleteTime: new Date().toISOString() })
+		.where(and(eq(sysDictItem.id, id), isNull(sysDictItem.deleteTime)))
+		.returning({ id: sysDictItem.id });
+	return result.length > 0;
+};
+
+/** 按 dictId + label 查字典项（用于校验重复） */
+export const findDictItemByDictIdAndLabel = async (
+	dictId: number,
+	label: string,
+	db: DB,
+): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+	const [item] = await db
+		.select()
+		.from(sysDictItem)
+		.where(
+			and(
+				eq(sysDictItem.dictId, dictId),
+				eq(sysDictItem.label, label),
+				isNull(sysDictItem.deleteTime),
+			),
+		);
+	return item;
+};
+
+/** 按 dictId + value 查字典项（用于校验重复） */
+export const findDictItemByDictIdAndValue = async (
+	dictId: number,
+	value: string,
+	db: DB,
+): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+	const [item] = await db
+		.select()
+		.from(sysDictItem)
+		.where(
+			and(
+				eq(sysDictItem.dictId, dictId),
+				eq(sysDictItem.value, value),
+				isNull(sysDictItem.deleteTime),
+			),
+		);
+	return item;
+};

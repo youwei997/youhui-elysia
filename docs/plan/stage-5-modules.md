@@ -172,21 +172,23 @@
 
 **接入点**：auth/routes.ts 登录成功/失败记录 loginLog + 成功时写入 online；登出/踢全端时清除 online；refresh-token 延长 online TTL
 
-### 5.3 字典管理 + WithCache 缓存防击穿 (1d)
+### 5.3a 字典管理 (0.5d)✅ 已完成
 
 `db/schema/system/dict.ts` + `dict-item.ts`：
 - sys_dict：id / type（如 'gender'）/ name / status
 - sys_dict_item：id / dictId / label / value / sort / status
 
+`modules/dict/`：
+- 字典 + 字典项 CRUD（10 个接口）
+- `GET /dicts/:type/items` 取字典项（仅返回启用项，供前端下拉框）
+
+### 5.3b WithCache 缓存防击穿 (0.5d)
+
 `src/lib/cache.ts`：
 - `withCache(key, ttl, fetcher)` 高阶函数
 - **防击穿**：双重检查 + 分布式锁（`SET NX EX`）+ 超时重试
-- 实现参考 elysia-admin 的 `WithCache`
 
-`modules/dict/`：
-- 字典 + 字典项 CRUD
-- `GET /dicts/:type/items` 取字典项（被前端高频调用，**走 withCache**）
-- 写操作后**主动失效缓存**
+接入：`GET /dicts/:type/items` 走 withCache，写操作后主动失效缓存
 
 ### 5.4 文件存储抽象 (1d)
 
