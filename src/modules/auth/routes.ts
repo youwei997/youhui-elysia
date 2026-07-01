@@ -14,7 +14,9 @@ import {
 import { verifyPassword } from "@/lib/password";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
+import { addIpToBlacklist } from "@/modules/ip-blacklist/queries";
 import { authPlugin } from "@/plugins/auth";
+import { rateLimitPlugin } from "@/plugins/rate-limit";
 import {
 	findActiveUserByUsername,
 	findUserPerms,
@@ -113,14 +115,40 @@ const recordLoginFail = async (
 	});
 };
 
+/** IP 登录失败次数上限，达到后自动封禁 24h */
+const MAX_IP_FAIL_COUNT = 10;
+const IP_BAN_DURATION_HOURS = 24;
+
+/** 记录 IP 登录失败，超限时自动加入黑名单 */
+const recordIpFail = async (headers: Headers): Promise<void> => {
+	const ip = getIp(headers);
+	if (!ip) return;
+
+	const key = `blacklist:fail:ip:${ip}`;
+	const count = await redis.incr(key);
+	if (count === 1) {
+		await redis.expire(key, 15 * 60); // 15 分钟窗口
+	}
+
+	if (count >= MAX_IP_FAIL_COUNT) {
+		const expireAt = new Date(
+			Date.now() + IP_BAN_DURATION_HOURS * 60 * 60 * 1000,
+		).toISOString();
+		await addIpToBlacklist(ip, "登录失败超限自动封禁", expireAt, db);
+		await redis.del(key); // 重置计数
+	}
+};
+
 export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 	.use(authPlugin)
+	.use(rateLimitPlugin)
 	.get(
 		"/captcha",
 		async () => {
 			return generateCaptcha();
 		},
 		{
+			rateLimit: "60:10",
 			detail: {
 				tags: ["Auth"],
 				summary: "获取图形验证码",
@@ -158,6 +186,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 						request.headers,
 						"账户已被锁定，请稍后重试",
 					);
+					await recordIpFail(request.headers);
 					throw new BizError(ERR_CODE.ACCOUNT_FROZEN, undefined, 403);
 				}
 
@@ -165,6 +194,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				const user = await findActiveUserByUsername(username, db);
 				if (!user) {
 					await recordLoginFail(username, request.headers, "用户名或密码错误");
+					await recordIpFail(request.headers);
 					// 不暴露"用户不存在"，统一提示密码错误（防止枚举用户名）
 					throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 				}
@@ -174,6 +204,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				if (!isPasswordCorrect) {
 					await incrementLoginFailCount(username);
 					await recordLoginFail(username, request.headers, "用户名或密码错误");
+					await recordIpFail(request.headers);
 					throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 				}
 
@@ -237,6 +268,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 		},
 		{
 			body: LoginBody,
+			rateLimit: "60:5",
 			detail: {
 				tags: ["Auth"],
 				summary: "用户登录",
@@ -251,6 +283,8 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 		"/refresh-token",
 		async ({ query }) => {
 			const { refreshToken } = query;
+			if (!refreshToken)
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 
 			// 1. 验证 refresh token
 			const oldPayload = await verifyToken(refreshToken);
@@ -305,6 +339,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 		},
 		{
 			query: RefreshTokenQuery,
+			rateLimit: "60:10",
 			detail: {
 				tags: ["Auth"],
 				summary: "刷新 token",

@@ -60,4 +60,20 @@ export const redisKeys = {
 	dictCache: (type: string): string => {
 		return `dict:${type}`;
 	},
+
+	/**
+	 * 限流计数器：按 IP + 路由隔离
+	 * 每次请求 +1，超限返回 429
+	 */
+	rateLimit: (ip: string, path: string): string => {
+		return `ratelimit:${ip}:${path}`;
+	},
+
+	/**
+	 * IP 黑名单缓存
+	 * 登录失败超限 / 手动添加时写入，TTL 与封禁时长一致
+	 */
+	ipBlacklist: (ip: string): string => {
+		return `blacklist:ip:${ip}`;
+	},
 } as const;

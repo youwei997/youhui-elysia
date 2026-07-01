@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { authRoutes } from "@/modules/auth/routes";
 import { deptRoutes } from "@/modules/dept/routes";
 import { dictRoutes } from "@/modules/dict/routes";
+import { ipBlacklistRoutes } from "@/modules/ip-blacklist/routes";
 import { loginLogRoutes } from "@/modules/login-log/routes";
 import { menuRoutes } from "@/modules/menu/routes";
 import { onlineRoutes } from "@/modules/online/routes";
@@ -13,6 +14,7 @@ import { auditLogPlugin } from "@/plugins/audit-log";
 import { authPlugin } from "@/plugins/auth";
 import { errorHandler } from "@/plugins/error-handler";
 import { permissionPlugin } from "@/plugins/permission";
+import { rateLimitPlugin } from "@/plugins/rate-limit";
 import { requestContext } from "@/plugins/request-context";
 import { responseWrap } from "@/plugins/response-wrap";
 
@@ -25,6 +27,7 @@ export const app = new Elysia()
 	.use(authPlugin)
 	.use(permissionPlugin)
 	.use(auditLogPlugin)
+	.use(rateLimitPlugin)
 	.use(
 		openapi({
 			scalar: { showDeveloperTools: "never" },
@@ -40,6 +43,7 @@ export const app = new Elysia()
 					{ name: "LoginLog", description: "登录日志" },
 					{ name: "Online", description: "在线用户" },
 					{ name: "Dict", description: "字典管理" },
+					{ name: "IpBlacklist", description: "IP 黑名单" },
 				],
 				components: {
 					securitySchemes: {
@@ -67,4 +71,5 @@ export const app = new Elysia()
 	.use(loginLogRoutes)
 	.use(onlineRoutes)
 	.use(dictRoutes)
+	.use(ipBlacklistRoutes)
 	.get("/", () => "Hello Elysia");
