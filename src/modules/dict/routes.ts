@@ -98,7 +98,6 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 				throw new BizError(ERR_CODE.DICT_TYPE_DUPLICATE);
 			}
 			const dict = await createDict(body, db);
-			await invalidateDictCache(body.type);
 			return parseDict(dict);
 		},
 		{
@@ -120,7 +119,6 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
 			const dict = await updateDict(params.id, body, db);
 			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			await invalidateDictCache(existing.type);
 			return parseDict(dict);
 		},
 		{
