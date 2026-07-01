@@ -14,6 +14,7 @@ import { verifyPassword } from "@/lib/password";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
 import { authPlugin } from "@/plugins/auth";
+import { sysLoginLog } from "@/db/schema/system/login-log";
 import {
 	findActiveUserByUsername,
 	findUserPerms,
@@ -62,6 +63,56 @@ const revokeJti = async (jti: string, exp?: number): Promise<void> => {
 	}
 };
 
+/** 从请求头提取客户端 IP */
+const getIp = (headers: Headers): string =>
+	headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+		headers.get("x-real-ip") ??
+		"";
+
+/** 登录日志 + online 数据写入（登录成功时调用） */
+const recordLoginSuccess = async (
+	user: { id: number; username: string },
+	headers: Headers,
+): Promise<void> => {
+	const ip = getIp(headers);
+	const userAgent = headers.get("user-agent")?.slice(0, 512) ?? "";
+
+	await db.insert(sysLoginLog).values({
+		userId: user.id,
+		username: user.username,
+		ip,
+		userAgent,
+		status: "success",
+	});
+
+	await redis.set(
+		redisKeys.onlineUser(user.id),
+		JSON.stringify({
+			username: user.username,
+			loginAt: new Date().toISOString(),
+			ip,
+			userAgent,
+		}),
+		"EX",
+		15 * 60,
+	);
+};
+
+/** 登录日志写入（登录失败时调用） */
+const recordLoginFail = async (
+	username: string,
+	headers: Headers,
+	errorMsg: string,
+): Promise<void> => {
+	await db.insert(sysLoginLog).values({
+		username,
+		ip: getIp(headers),
+		userAgent: headers.get("user-agent")?.slice(0, 512) ?? "",
+		status: "fail",
+		errorMsg,
+	});
+};
+
 export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 	.use(authPlugin)
 	.get(
@@ -79,80 +130,101 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			},
 		},
 	)
-	.post(
-		"/login",
-		async ({ body }) => {
-			const { username, password, captchaId, captchaCode } = body;
-
-			// 业务规则：前端传了其中一个验证码字段，就必须两个都传，否则不完整
-			if (captchaId || captchaCode) {
-				// 验证码必须成对传入：传了其中一个就必须传另一个，不能只传 id 或只传 code
-				if (!captchaId || !captchaCode) {
-					throw new BizError(
-						ERR_CODE.CAPTCHA_REQUIRED,
-						"验证码 ID 和验证码必须同时提供",
+.post(
+			"/login",
+			async ({ body, request }) => {
+				try {
+					const { username, password, captchaId, captchaCode } = body;
+	
+					// 业务规则：前端传了其中一个验证码字段，就必须两个都传，否则不完整
+					if (captchaId || captchaCode) {
+						// 验证码必须成对传入：传了其中一个就必须传另一个，不能只传 id 或只传 code
+						if (!captchaId || !captchaCode) {
+							throw new BizError(
+								ERR_CODE.CAPTCHA_REQUIRED,
+								"验证码 ID 和验证码必须同时提供",
+							);
+						}
+						const captchaValid = await verifyCaptcha(captchaId, captchaCode);
+						if (!captchaValid) {
+							throw new BizError(ERR_CODE.CAPTCHA_INVALID, "验证码错误或已过期");
+						}
+					}
+	
+					// 2. 检查账户是否因连续失败被锁定
+					if (await isAccountLocked(username)) {
+						await recordLoginFail(username, request.headers, "账户已被锁定，请稍后重试");
+						throw new BizError(ERR_CODE.ACCOUNT_FROZEN, undefined, 403);
+					}
+	
+					// 3. 查找有效用户（软删过滤 + 状态正常）
+					const user = await findActiveUserByUsername(username, db);
+					if (!user) {
+						await recordLoginFail(username, request.headers, "用户名或密码错误");
+						// 不暴露"用户不存在"，统一提示密码错误（防止枚举用户名）
+						throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
+					}
+	
+					// 4. 校验密码
+					const isPasswordCorrect = await verifyPassword(password, user.password);
+					if (!isPasswordCorrect) {
+						await incrementLoginFailCount(username);
+						await recordLoginFail(username, request.headers, "用户名或密码错误");
+						throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
+					}
+	
+					// 5. 登录成功：清除失败计数，查角色/权限，签发双 token
+					await clearLoginFailCount(username);
+	
+					// 并发查角色 + 权限（互不依赖，一起跑更快）
+					const [userRoles, userPerms] = await Promise.all([
+						findUserRoles(user.id, db),
+						findUserPerms(user.id, db),
+					]);
+	
+					const tokenVersion = Number(
+						(await redis.get(redisKeys.userTokenVersion(user.id))) ?? "0",
 					);
+					const payload = buildJwtPayload(user, tokenVersion, userRoles, userPerms);
+	
+					// access 和 refresh 用不同的 jti，refresh 的 jti 不在这里黑名单
+					const [accessToken, refreshToken] = await Promise.all([
+						signAccessToken({ ...payload, jti: generateJti() }),
+						signRefreshToken(payload),
+					]);
+	
+					// perms 写入 Redis 缓存，TTL 与 access token 有效期一致（15min）
+					await redis.set(
+						redisKeys.userPerms(user.id),
+						JSON.stringify(userPerms),
+						"EX",
+						15 * 60,
+					);
+	
+					// 登录日志 + 在线状态
+					await recordLoginSuccess(user, request.headers);
+	
+					// 直接返回原始数据，由 response-wrap 自动包壳
+					return {
+						tokenType: "Bearer",
+						accessToken,
+						refreshToken,
+						expiresIn: 900,
+					};
+				} catch (err) {
+					// 非 BizError 的未知异常也记录登录失败（如数据库连接异常等）
+					if (err instanceof BizError && err.code !== ERR_CODE.ACCOUNT_FROZEN) {
+						// 已在上层各分支记录过 loginLog，不重复记录
+						// ACCOUNT_FROZEN / USER_PASSWORD_ERROR 已在抛出前记录
+						throw err;
+					}
+					if (!(err instanceof BizError)) {
+						// 未知错误也记录登录日志
+						const username = (body as { username?: string })?.username ?? "";
+						await recordLoginFail(username, request.headers, "系统内部错误");
+					}
+					throw err;
 				}
-				const captchaValid = await verifyCaptcha(captchaId, captchaCode);
-				if (!captchaValid) {
-					throw new BizError(ERR_CODE.CAPTCHA_INVALID, "验证码错误或已过期");
-				}
-			}
-
-			// 2. 检查账户是否因连续失败被锁定
-			if (await isAccountLocked(username)) {
-				throw new BizError(ERR_CODE.ACCOUNT_FROZEN, undefined, 403);
-			}
-
-			// 3. 查找有效用户（软删过滤 + 状态正常）
-			const user = await findActiveUserByUsername(username, db);
-			if (!user) {
-				// 不暴露"用户不存在"，统一提示密码错误（防止枚举用户名）
-				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
-			}
-
-			// 4. 校验密码
-			const isPasswordCorrect = await verifyPassword(password, user.password);
-			if (!isPasswordCorrect) {
-				await incrementLoginFailCount(username);
-				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
-			}
-
-			// 5. 登录成功：清除失败计数，查角色/权限，签发双 token
-			await clearLoginFailCount(username);
-
-			// 并发查角色 + 权限（互不依赖，一起跑更快）
-			const [userRoles, userPerms] = await Promise.all([
-				findUserRoles(user.id, db),
-				findUserPerms(user.id, db),
-			]);
-
-			const tokenVersion = Number(
-				(await redis.get(redisKeys.userTokenVersion(user.id))) ?? "0",
-			);
-			const payload = buildJwtPayload(user, tokenVersion, userRoles, userPerms);
-
-			// access 和 refresh 用不同的 jti，refresh 的 jti 不在这里黑名单
-			const [accessToken, refreshToken] = await Promise.all([
-				signAccessToken({ ...payload, jti: generateJti() }),
-				signRefreshToken(payload),
-			]);
-
-			// perms 写入 Redis 缓存，TTL 与 access token 有效期一致（15min）
-			await redis.set(
-				redisKeys.userPerms(user.id),
-				JSON.stringify(userPerms),
-				"EX",
-				15 * 60,
-			);
-
-			// 直接返回原始数据，由 response-wrap 自动包壳
-			return {
-				tokenType: "Bearer",
-				accessToken,
-				refreshToken,
-				expiresIn: 900,
-			};
 		},
 		{
 			body: LoginBody,
@@ -166,9 +238,9 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			},
 		},
 	)
-	.post(
-		"/refresh-token",
-		async ({ query }) => {
+.post(
+			"/refresh-token",
+			async ({ query }) => {
 			const { refreshToken } = query;
 
 			// 1. 验证 refresh token
@@ -200,13 +272,20 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				signRefreshToken(newPayload),
 			]);
 
-			// 5. 同步更新 Redis 权限缓存
-			await redis.set(
-				redisKeys.userPerms(userId),
-				JSON.stringify(userPerms),
-				"EX",
-				15 * 60,
-			);
+// 5. 同步更新 Redis 权限缓存 + 延长在线状态 TTL
+				await redis.set(
+					redisKeys.userPerms(userId),
+					JSON.stringify(userPerms),
+					"EX",
+					15 * 60,
+				);
+
+				// 延长在线状态 TTL（用户活跃中）
+				const onlineKey = redisKeys.onlineUser(userId);
+				const onlineData = await redis.get(onlineKey);
+				if (onlineData) {
+					await redis.expire(onlineKey, 15 * 60);
+				}
 
 			return {
 				tokenType: "Bearer",
@@ -227,16 +306,17 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			},
 		},
 	)
-	.delete(
-		"/logout",
-		async ({ user }) => {
-			// macro auth: true 运行时已拦截 null，类型层手动收窄（同 auth.test.ts 写法）
-			if (!user) {
-				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
-			}
-			await revokeJti(user.jti, user.exp);
-			return true;
-		},
+.delete(
+			"/logout",
+			async ({ user }) => {
+				// macro auth: true 运行时已拦截 null，类型层手动收窄（同 auth.test.ts 写法）
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				await revokeJti(user.jti, user.exp);
+				await redis.del(redisKeys.onlineUser(Number(user.sub)));
+				return true;
+			},
 		{
 			auth: true,
 			detail: {
@@ -246,19 +326,21 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			},
 		},
 	)
-	.post(
-		"/logout-all",
-		async ({ user }) => {
-			// macro auth: true 运行时已拦截 null，类型层手动收窄
-			if (!user) {
-				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
-			}
-			// 踢全端：递增 tokenVersion 使所有旧 token 失效
-			await incrementTokenVersion(Number(user.sub));
-			// 同时注销当前 token，防止版本号还没校验就被误用
-			await revokeJti(user.jti, user.exp);
-			return true;
-		},
+.post(
+			"/logout-all",
+			async ({ user }) => {
+				// macro auth: true 运行时已拦截 null，类型层手动收窄
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				// 踢全端：递增 tokenVersion 使所有旧 token 失效
+				await incrementTokenVersion(Number(user.sub));
+				// 同时注销当前 token，防止版本号还没校验就被误用
+				await revokeJti(user.jti, user.exp);
+				// 清除在线状态
+				await redis.del(redisKeys.onlineUser(Number(user.sub)));
+				return true;
+			},
 		{
 			auth: true,
 			detail: {

@@ -158,7 +158,7 @@
 - [x] 5.1 全部验收清单过完(对照原计划文档末尾的"验收清单"段)
 
 ---
-### 5.2 登录日志 + 在线用户 (0.5d)
+### 5.2 登录日志 + 在线用户 (0.5d)✅ 已完成
 
 `db/schema/system/login-log.ts`：
 - 字段：userId / username / ip / ipRegion / userAgent / browser / os / status（'success' | 'fail'）/ errorMsg / created_at
@@ -166,9 +166,11 @@
 `modules/login-log/`：列表查询。
 
 `modules/online/`：
-- 登录成功时往 Redis `online:user:{id}` 存：token / loginAt / ip / userAgent，TTL = access token 过期时间
+- 登录成功时往 Redis `online:user:{id}` 存：username / loginAt / ip / userAgent，TTL = access token 过期时间
 - `GET /online` 列出在线用户（admin 权限）
-- `DELETE /online/:userId` 强制下线（=tokenVersion +1 + 删 online:user:{id} + 删 refresh tokens）
+- `DELETE /online/:userId` 强制下线（=tokenVersion +1 + 删 online:user:{id}）
+
+**接入点**：auth/routes.ts 登录成功/失败记录 loginLog + 成功时写入 online；登出/踢全端时清除 online；refresh-token 延长 online TTL
 
 ### 5.3 字典管理 + WithCache 缓存防击穿 (1d)
 
@@ -300,10 +302,10 @@ handler 注册：
 - [ ] 失败请求也被记录（onError 路径）
 
 ### 登录日志 + 在线用户
-- [ ] sys_login_log 表已建，登录成功/失败都记录
-- [ ] online:user:{id} Redis key 在登录时设置、TTL 正确
-- [ ] `/online` 接口列出在线用户
-- [ ] 强制下线后旧 token 立即失效
+- [x] sys_login_log 表已建，登录成功/失败都记录
+- [x] online:user:{id} Redis key 在登录时设置、TTL 正确
+- [x] `/online` 接口列出在线用户
+- [x] 强制下线后旧 token 立即失效
 
 ### 字典 + 缓存
 - [ ] sys_dict / sys_dict_item 双表
