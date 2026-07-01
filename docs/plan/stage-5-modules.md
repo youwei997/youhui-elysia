@@ -123,15 +123,16 @@
 - `src/modules/oper-log/routes.ts`(新)
 
 **接口**:
-- `GET /oper-logs`(权限 `sys:oper-log:query`):query page / pageSize / username / module / startTime / endTime,排序 `createTime DESC`
+- `GET /oper-logs`(权限 `sys:oper-log:query`):query page / pageSize / username / module / status / startTime / endTime,排序 `createTime DESC`
 - `DELETE /oper-logs/:id`(权限 `sys:oper-log:delete`)
-- `DELETE /oper-logs`(权限 `sys:oper-log:delete`,批量按 `createTime < ?`)
+- `POST /oper-logs/batch-delete`(权限 `sys:oper-log:delete`,body.beforeTime 批量按 `createTime < beforeTime` 清理)
 
 **验收**:
-- [ ] 列表支持多条件搜索
-- [ ] DELETE 单条生效(硬删)
-- [ ] DELETE 批量按时间清理
-- [ ] 权限 macro 生效(无权限 → 403)
+- [x] 列表支持多条件搜索(username 模糊 / module 精确 / status / 时间范围)
+- [x] DELETE 单条生效(硬删)
+- [x] `POST /batch-delete` 批量按时间清理
+- [x] 权限 macro 生效(无 token → 401；403 待权限种子/普通用户补测)
+- [x] 按 `createTime DESC` 返回
 
 ---
 

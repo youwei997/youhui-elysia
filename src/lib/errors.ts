@@ -53,6 +53,8 @@ export const ERR_CODE = {
 	DEPT_NOT_FOUND: "A0430", // 部门不存在
 	DEPT_PARENT_CYCLE: "A0431", // 不能将部门移动到自己或子部门下
 	DEPT_HAS_USERS: "A0432", // 部门下存在用户，无法删除
+	/** A044x OperLog 模块业务错误 */
+	OPER_LOG_NOT_FOUND: "A0440", // 操作日志不存在
 	/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
 
@@ -99,6 +101,7 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.DEPT_NOT_FOUND]: "部门不存在",
 	[ERR_CODE.DEPT_PARENT_CYCLE]: "不能将部门移动到自己或子部门下",
 	[ERR_CODE.DEPT_HAS_USERS]: "部门下存在用户，无法删除",
+	[ERR_CODE.OPER_LOG_NOT_FOUND]: "操作日志不存在",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.SYSTEM_ERROR]: "系统执行出错",
 	[ERR_CODE.THIRD_PARTY_SERVICE_ERROR]: "调用第三方服务出错",

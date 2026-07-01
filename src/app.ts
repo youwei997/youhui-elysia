@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { authRoutes } from "@/modules/auth/routes";
 import { deptRoutes } from "@/modules/dept/routes";
 import { menuRoutes } from "@/modules/menu/routes";
+import { operLogRoutes } from "@/modules/oper-log/routes";
 import { roleRoutes } from "@/modules/role/routes";
 import { userRoutes } from "@/modules/user/routes";
 import { authPlugin } from "@/plugins/auth";
@@ -30,6 +31,7 @@ export const app = new Elysia()
 					{ name: "Menu", description: "菜单管理" },
 					{ name: "Dept", description: "部门管理" },
 					{ name: "Auth", description: "认证管理" },
+					{ name: "OperLog", description: "操作日志" },
 				],
 				components: {
 					securitySchemes: {
@@ -53,4 +55,5 @@ export const app = new Elysia()
 	.use(roleRoutes)
 	.use(menuRoutes)
 	.use(deptRoutes)
+	.use(operLogRoutes)
 	.get("/", () => "Hello Elysia");

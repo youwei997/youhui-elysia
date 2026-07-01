@@ -80,10 +80,12 @@
 
 ## 📦 5. Git 提交
 
-- **commit message 必须中文**，格式：`<类型>: <简述>`。
+- **commit message 必须中文**，推荐使用“第一行简述 + 空行 + 正文说明”的格式：
+  - 第一行格式：`<类型>(可选 scope): <一句话简述>`
   - 类型：`feat` / `fix` / `refactor` / `docs` / `chore` / `test` / `perf`
-  - 简述：一句话概括改了什么，不含句号，≤72 字符
+  - 第一行简述：一句话概括改了什么，不含句号，≤72 字符
   - 如有 scope，格式：`feat(auth):` / `fix(plugin):`
+  - 正文按需补充：`新增:` / `更新:` / `验证:` / `注意:`，简单改动可省略正文
 - **单次 commit 聚焦一件事**，不要混合重构和新功能
 - 提交前运行 `bun run check`（biome）+ `bun run tsc`（类型检查）；涉及 hook / lifecycle 等运行时行为时额外跑 `bun run check:dev`
 - 关键决策同步写入 `docs/adr/`（含决策、理由、反对方案、取舍）
