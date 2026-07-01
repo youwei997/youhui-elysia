@@ -182,7 +182,7 @@
 - 字典 + 字典项 CRUD（10 个接口）
 - `GET /dicts/:type/items` 取字典项（仅返回启用项，供前端下拉框）
 
-### 5.3b WithCache 缓存防击穿 (0.5d)
+### 5.3b WithCache 缓存防击穿 (0.5d)✅ 已完成
 
 `src/lib/cache.ts`：
 - `withCache(key, ttl, fetcher)` 高阶函数
