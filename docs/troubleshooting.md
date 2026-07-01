@@ -369,6 +369,122 @@ try {
 
 ---
 
+### Elysia macro 显式返回类型注解导致 `Context` 类型冲突
+
+**错误**：
+
+```
+Type '(context: { body: unknown; ... })' is not assignable to type '(context: { body: unknown; ... })'.
+Two different types with this name exist, but they are unrelated.
+```
+
+**原因**：`.macro()` 内部手写返回类型 `{ beforeHandle: (ctx: Context) => void | Promise<void> }` 时，TypeScript 把**宏函数参数的类型**和**宏函数内部 Elysia 推导的 Context** 视为两个不同的 `Context` 类型（即使都是从 `elysia` 导入的同一个 `Context`）。两个 Context 的泛型参数（`body`、`query`、`params` 等）不完全对齐，TS 认为是两个不同的类型。
+
+**修复**：不要给 macro 写显式返回类型注解，让 Elysia 自己推导：
+
+```ts
+// ❌ 显式标注 → Context 类型冲突
+rateLimit: (opts: string): { beforeHandle: (ctx: Context) => void | Promise<void> } => { ... }
+
+// ✅ 不写返回类型，让 Elysia 推导
+rateLimit: (opts: string) => { ... }
+```
+
+**配套**：macro 内部的 `beforeHandle` 参数用 `context: Context`（从 `elysia` 导入），不要用 `any`。
+
+---
+
+### beforeHandle 返回对象不会阻断请求，必须 `return new Response()`
+
+**错误**：限流触发后设置 `set.status = 429` + ` return { code, msg, data }`，但请求继续走到了路由 handler。
+
+**原因**：Elysia 的 `beforeHandle` 只有 `return new Response()` 或 `throw` 才会被识别为"阻断信号"。返回普通对象（`{ code, msg, data }`）不会被 Elysia 当作响应拦截——它只是把对象放在那，仍然继续往下执行路由 handler。
+
+```ts
+// ❌ 对象不阻断，请求会继续
+if (current > max) {
+  set.status = 429;
+  return { code: "A0001", msg: "请求过于频繁", data: null };
+}
+
+// ✅ new Response() 才是阻断信号
+if (current > max) {
+  set.status = 429;
+  set.headers = { "Retry-After": String(window) };
+  return new Response("Too Many Requests", { status: 429 });
+}
+```
+
+**配套**：`async` 函数的 `beforeHandle` 末尾要加 `return;`（显式返回 void），否则 TS 推断出 `Promise<Response | undefined>`，与 Elysia 预期的 `Promise<void>` 不兼容。
+
+---
+
+### 路由顺序冲突：先注册的路由会拦截后注册的同模式路由
+
+**现象**：`GET /:type/items` 和 `GET /:id/items` 两条路由 URL 模式完全相同。`:type` 是 `string`，`:id` 是 `z.coerce.number()`。先注册 `/:type/items` 会拦截所有请求，`:id/items` 永远到不了。
+
+**原因**：Elysia 按注册顺序匹配路由，**先注册的先匹配**。`:type`（string）接受任何值，包括数字。`:id/items`（number）在后注册，根本没有机会被匹配。
+
+**修复**：让 `:id/items`（带参数类型约束的）先注册，`:type/items`（兜底的）后注册：
+
+```ts
+// ✅ `:id` 先注册，数字优先匹配
+.get("/:id/items", ...)
+.post("/:id/items", ...)
+// ...
+// ✅ `:type` 后注册，非数字 fallback
+.get("/:type/items", ...)
+```
+
+---
+
+### `exactOptionalPropertyTypes` 模式下 Zod 可选字段不能直接传函数
+
+**现象**：`z.object({ name: z.string().optional() })` 推导出 `{ name?: string | undefined }`，但函数参数 `data: { name?: string }` 在 `exactOptionalPropertyTypes` 下期望的是 `name` 不存在（`undefined` 不可赋值），导致 `as` 击穿。
+
+**错误**：
+
+```
+Argument of type '{ name?: string | undefined }' is not assignable to parameter of type '{ name?: string; }' with 'exactOptionalPropertyTypes: true'.
+```
+
+**原因**：`exactOptionalPropertyTypes` 模式下，`name?: string` 和 `name?: string | undefined` 是两种不同的类型。前者表示"key 存在时值必须是 string"，后者表示"key 存在时值可以是 string 或 undefined"。Zod 的 `.optional()` 生成的是 `string | undefined`，函数参数期望的是 `string`。
+
+**修复**：不要在外层加 `as`，而是改函数签名为 `name?: string | undefined`：
+
+```ts
+// ❌ 外层 as 击穿类型
+const dict = await updateDict(params.id, body as { name?: string }, db);
+
+// ✅ 改函数签名，接受 `| undefined`
+async function updateDict(id: number, data: { name?: string | undefined }, db: DB) { ... }
+//                                                       ^^^^^^^^^^
+```
+
+---
+
+### `redis.set(key, value, "EX", ttl)` 的 ttl 参数类型要求 `string`
+
+**现象**：
+
+```
+Argument of type 'number' is not assignable to parameter of type 'string'.
+```
+
+**原因**：Bun 内置 Redis 客户端的 `set` 方法签名中，`EX`/`PX` 后的值参数类型是 `string` 而非 `number`。直接传 `10`（number）会报类型错误。
+
+**修复**：用 `String(ttl)` 转换：
+
+```ts
+// ❌ number 类型不匹配
+await redis.set(key, "1", "NX", "EX", 10);
+
+// ✅ String() 转换
+await redis.set(key, "1", "NX", "EX", String(10));
+```
+
+---
+
 ---
 
 ## 种子数据
