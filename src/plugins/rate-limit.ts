@@ -1,9 +1,8 @@
-import { Elysia } from "elysia";
+import { type Context, Elysia } from "elysia";
 import { ERR_CODE, forbidden } from "@/lib/errors";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
 
-/** 从请求头提取客户端 IP */
 const getIp = (headers: Headers): string =>
 	headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
 	headers.get("x-real-ip") ??
@@ -16,49 +15,48 @@ const getIp = (headers: Headers): string =>
  * 1. IP 黑名单检查（全局）—— 每次请求都跑，命中直接 403
  * 2. rateLimit macro（路由级）—— 声明式限流
  *    用法: rateLimit: "60:5"（60 秒窗口内最多 5 次）
- *    触发: 返回 429 + Retry-After header
+ *    触发返回 429 + Retry-After header
+ *
+ * 参考 elysiajs.com/integrations/better-auth.html#macro
  */
 export const rateLimitPlugin = new Elysia({ name: "rate-limit" })
-	// 全局黑名单检查（独立于 macro，始终生效）
 	.onBeforeHandle({ as: "global" }, async ({ request }) => {
 		const ip = getIp(request.headers);
 		if (!ip) return;
-
 		const blocked = await redis.get(redisKeys.ipBlacklist(ip));
 		if (blocked !== null) {
 			throw forbidden(ERR_CODE.ACCESS_UNAUTHORIZED);
 		}
 	})
 	.macro({
-		// ponytail: Elysia 的 macro 类型推导要求返回完整的路由配置类型（含 body/headers/query 等），
-		// 但我们的 macro 只返回 beforeHandle 钩子。用 any 绕开类型检查，运行时行为不受影响。
-		// 若未来 Elysia 版本修复了此类型约束，可移除 any 改用 `opts: string` 推导。
-		rateLimit: (opts: any): any => {
+		// macro 不写显式返回类型，让 Elysia 自己推导 beforeHandle 的类型签名。
+		// 如果手写 `(opts: string): { beforeHandle: (ctx: Context) => ... }`，
+		// Elysia 内部 Context 和外部导入的 Context 被视为"两个不同类型"，TS 报错。
+		rateLimit: (opts: string) => {
 			const [windowStr, maxStr] = opts.split(":");
 			const window = Number(windowStr);
 			const max = Number(maxStr);
-
 			return {
-				async beforeHandle(context: any) {
+				async beforeHandle(context: Context) {
 					const ip = getIp(context.request.headers);
 					if (!ip) return;
-
 					const key = redisKeys.rateLimit(ip, context.path);
 					const current = await redis.incr(key);
-
 					if (current === 1) {
 						await redis.expire(key, window);
 					}
-
 					if (current > max) {
 						context.set.status = 429;
-						context.set.headers = { "Retry-After": String(window) };
-						return {
-							code: ERR_CODE.USER_ERROR,
-							msg: "请求过于频繁，请稍后重试",
-							data: null,
+						context.set.headers = {
+							"Retry-After": String(window),
 						};
+						// return Response 给 Elysia，Elysia 将其作为响应返回给客户端。
+						// 不要 return 对象（如 { code, msg, data }），
+						// 对象不会被 Elysia 识别为"阻断信号"，请求会继续走到路由 handler。
+						return new Response("Too Many Requests", { status: 429 });
 					}
+					// 显式 return void，避免 TS 推断为 Promise<Response | undefined>
+					// 导致 beforeHandle 类型签名与 Elysia 预期不匹配。
 					return;
 				},
 			};
