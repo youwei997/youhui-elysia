@@ -291,6 +291,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		{
 			auth: true,
 			perm: ["sys:menu:create"],
+			audit: { module: "menu", action: "create" },
 			body: MenuCreateBody,
 			detail: {
 				tags: ["Menu"],
@@ -336,6 +337,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		{
 			auth: true,
 			perm: ["sys:menu:update"],
+			audit: { module: "menu", action: "update" },
 			body: MenuUpdateBody,
 			params: MenuParamsWithId,
 			detail: {
@@ -359,6 +361,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		{
 			auth: true,
 			perm: ["sys:menu:delete"],
+			audit: { module: "menu", action: "delete" },
 			params: MenuParamsWithId,
 			detail: {
 				tags: ["Menu"],
