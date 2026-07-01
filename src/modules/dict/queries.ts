@@ -85,7 +85,7 @@ export const createDict = async (
 /** 更新字典类型 */
 export const updateDict = async (
 	id: number,
-	data: { name?: string; status?: number },
+	data: { name?: string | undefined; status?: number | undefined },
 	db: DB,
 ): Promise<typeof sysDict.$inferSelect | undefined> => {
 	const [dict] = await db
@@ -117,7 +117,7 @@ export const softDeleteDict = async (id: number, db: DB): Promise<boolean> => {
 /** 字典项列表查询（软删过滤） */
 export const findDictItems = async (
 	dictId: number,
-	query: { label?: string; status?: number },
+	query: { label?: string | undefined; status?: number | undefined },
 	db: DB,
 ): Promise<(typeof sysDictItem.$inferSelect)[]> => {
 	const where = [
@@ -177,7 +177,12 @@ export const createDictItem = async (
 /** 更新字典项 */
 export const updateDictItem = async (
 	id: number,
-	data: { label?: string; value?: string; sort?: number; status?: number },
+	data: {
+		label?: string | undefined;
+		value?: string | undefined;
+		sort?: number | undefined;
+		status?: number | undefined;
+	},
 	db: DB,
 ): Promise<typeof sysDictItem.$inferSelect | undefined> => {
 	const [item] = await db

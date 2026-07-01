@@ -1,7 +1,7 @@
 import { Elysia } from "elysia";
+import { db } from "@/db/client";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
-import { db } from "@/db/client";
 import {
 	createDict,
 	createDictItem,
@@ -109,11 +109,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		async ({ params, body }) => {
 			const existing = await findDictById(params.id, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			const dict = await updateDict(
-				params.id,
-				body as { name?: string; status?: number },
-				db,
-			);
+			const dict = await updateDict(params.id, body, db);
 			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
 			return parseDict(dict);
 		},
@@ -149,36 +145,13 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			},
 		},
 	)
-	// ── 字典项：按 type 查询（前端高频，无需权限，仅返回启用项） ──
-	.get(
-		"/:type/items",
-		async ({ params }) => {
-			const dict = await findDictByType(params.type, db);
-			if (!dict) return [];
-			return findDictItems(dict.id, { status: 1 }, db);
-		},
-		{
-			detail: {
-				tags: ["Dict"],
-				summary: "按字典类型获取字典项",
-				description:
-					"供前端下拉框/级联选择器使用，无需权限，仅返回启用项",
-				security: [],
-			},
-			params: DictTypeParam,
-		},
-	)
-	// ── 字典项 CRUD（嵌套在 dictId 下） ──
+	// ── 字典项 CRUD（嵌套在 dictId 下，需要先注册以拦截数字 id） ──
 	.get(
 		"/:id/items",
 		async ({ params, query }) => {
 			const dict = await findDictById(params.id, db);
 			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			const list = await findDictItems(
-				params.id,
-				query as { label?: string; status?: number },
-				db,
-			);
+			const list = await findDictItems(params.id, query, db);
 			return list.map((item) => parseDictItem(item));
 		},
 		{
@@ -237,16 +210,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		async ({ params, body }) => {
 			const existing = await findDictItemById(params.itemId, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
-			const item = await updateDictItem(
-				params.itemId,
-				body as {
-					label?: string;
-					value?: string;
-					sort?: number;
-					status?: number;
-				},
-				db,
-			);
+			const item = await updateDictItem(params.itemId, body, db);
 			if (!item) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
 			return parseDictItem(item);
 		},
@@ -279,5 +243,23 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 				tags: ["Dict"],
 				summary: "删除字典项（软删）",
 			},
+		},
+	)
+	// ── 字典项：按 type 查询（前端高频，无需权限，仅返回启用项） ──
+	.get(
+		"/:type/items",
+		async ({ params }) => {
+			const dict = await findDictByType(params.type, db);
+			if (!dict) return [];
+			return findDictItems(dict.id, { status: 1 }, db);
+		},
+		{
+			detail: {
+				tags: ["Dict"],
+				summary: "按字典类型获取字典项",
+				description: "供前端下拉框/级联选择器使用，无需权限，仅返回启用项",
+				security: [],
+			},
+			params: DictTypeParam,
 		},
 	);
