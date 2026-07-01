@@ -6,6 +6,7 @@ import { menuRoutes } from "@/modules/menu/routes";
 import { operLogRoutes } from "@/modules/oper-log/routes";
 import { roleRoutes } from "@/modules/role/routes";
 import { userRoutes } from "@/modules/user/routes";
+import { auditLogPlugin } from "@/plugins/audit-log";
 import { authPlugin } from "@/plugins/auth";
 import { errorHandler } from "@/plugins/error-handler";
 import { permissionPlugin } from "@/plugins/permission";
@@ -20,6 +21,7 @@ export const app = new Elysia()
 	.use(errorHandler)
 	.use(authPlugin)
 	.use(permissionPlugin)
+	.use(auditLogPlugin)
 	.use(
 		openapi({
 			scalar: { showDeveloperTools: "never" },
