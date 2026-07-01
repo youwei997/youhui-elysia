@@ -165,7 +165,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		{
 			auth: true,
 			perm: ["sys:dept:create"],
-			audit: { module: "dept", action: "create" },
+			audit: "dept:create",
 			body: DeptCreateBody,
 			detail: {
 				tags: ["Dept"],
@@ -209,7 +209,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		{
 			auth: true,
 			perm: ["sys:dept:update"],
-			audit: { module: "dept", action: "update" },
+			audit: "dept:update",
 			params: DeptParamsWithId,
 			body: DeptUpdateBody,
 			detail: {
@@ -266,7 +266,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		{
 			auth: true,
 			perm: ["sys:dept:delete"],
-			audit: { module: "dept", action: "delete" },
+			audit: "dept:delete",
 			params: DeptParamsWithCommaIds,
 			detail: {
 				tags: ["Dept"],

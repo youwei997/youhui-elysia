@@ -34,7 +34,7 @@ const makeApp = () =>
 		.use(auditLogPlugin)
 		// 声明 audit 的成功路由
 		.post("/test-audit-ok", () => ({ ok: true }), {
-			audit: { module: "test", action: "create" },
+			audit: "test:create",
 		})
 		// 声明 audit 的失败路由（抛 BizError）
 		.get(
@@ -43,7 +43,7 @@ const makeApp = () =>
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			},
 			{
-				audit: { module: "test", action: "read" },
+				audit: "test:read",
 			},
 		)
 		// 未声明 audit 的路由（不产生日志）
@@ -54,7 +54,7 @@ const makeApp = () =>
 		})
 		// 真 VALIDATION 触发：声明 name 必填，不传触发 Elysia zod 校验
 		.post("/test-validation", () => ({ ok: true }), {
-			audit: { module: "test", action: "validate" },
+			audit: "test:validate",
 			body: t.Object({ name: t.String() }),
 		});
 

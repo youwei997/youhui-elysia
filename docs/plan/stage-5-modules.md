@@ -73,10 +73,7 @@
 1. **macro 声明合并到 OpenAPI detail**:
    ```ts
    .macro({
-     audit: {
-       module: (t) => t.String(),
-       action: (t) => t.String(),
-     },
+     audit: (t) => t.String(),
    })
    ```
 
@@ -84,7 +81,7 @@
    ```ts
    .post('/users', handler, {
      detail: { tags: ['用户'], summary: '创建用户' },
-     audit: { module: 'user', action: 'create' },
+     audit: 'user:create',
    })
    ```
 
@@ -296,7 +293,7 @@ handler 注册：
 
 ### 操作日志
 - [ ] sys_oper_log 表已建，字段完整
-- [ ] 路由 `audit: { module, action }` 声明后才记录
+- [ ] 路由 `audit: "模块:动作"` 声明后才记录
 - [ ] 异步落库不阻塞响应
 - [ ] password / token 字段脱敏
 - [ ] 大 body 截断

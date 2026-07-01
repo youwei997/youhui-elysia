@@ -29,7 +29,7 @@ const getUser = (ctx: Record<string, unknown>) =>
  * 提供 `audit` macro 给路由声明审计能力：
  * ```ts
  * .post('/users', handler, {
- *   audit: { module: 'user', action: 'create' },
+ *   audit: 'user:create',
  * })
  * ```
  *
@@ -43,23 +43,26 @@ const getUser = (ctx: Record<string, unknown>) =>
  */
 export const auditLogPlugin = new Elysia({ name: "audit-log" })
 	.macro({
-		audit: (opts: { module: string; action: string }) => ({
-			// beforeHandle 在 parse 之后、handler 之前执行，此时 body 是解析好的请求体
-			beforeHandle({
-				request,
-				body,
-			}: {
-				request: { method: string; url: string; headers: Headers };
-				body: unknown;
-			}) {
-				metaMap.set(request, {
-					module: opts.module,
-					action: opts.action,
+		audit: (opts: string) => {
+			const [module = "", action = ""] = opts.split(":");
+			return {
+				// beforeHandle 在 parse 之后、handler 之前执行，此时 body 是解析好的请求体
+				beforeHandle({
+					request,
 					body,
-					t0: Date.now(),
-				});
-			},
-		}),
+				}: {
+					request: { method: string; url: string; headers: Headers };
+					body: unknown;
+				}) {
+					metaMap.set(request, {
+						module,
+						action,
+						body,
+						t0: Date.now(),
+					});
+				},
+			};
+		},
 	})
 	// 全局 onAfterResponse：成功路径，总是会触发且不修改响应，彻底解决短路问题
 	.onAfterResponse({ as: "global" }, (ctx) => {
