@@ -44,7 +44,7 @@ export const redisKeys = {
 	captchaAnswer: (captchaId: string): string => {
 		return `auth:captcha:${captchaId}`;
 	},
-/**
+	/**
 	 * 在线用户状态
 	 * 登录成功时写入 JSON（含 username / loginAt / ip / userAgent），
 	 * 登出 / 强制下线时删除，TTL 与 access token 有效期一致（15min）
