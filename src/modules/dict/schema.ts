@@ -17,9 +17,7 @@ export const DictListQuery = createListQuery(sysDict, {
 export const DictResponse = createSelectSchema(sysDict)
 	.omit({
 		createdBy: true,
-		createTime: true,
 		updatedBy: true,
-		updateTime: true,
 		deleteTime: true,
 	})
 	.describe("字典类型信息");
@@ -55,9 +53,7 @@ export const DictItemListQuery = z
 export const DictItemResponse = createSelectSchema(sysDictItem)
 	.omit({
 		createdBy: true,
-		createTime: true,
 		updatedBy: true,
-		updateTime: true,
 		deleteTime: true,
 	})
 	.describe("字典项信息");
@@ -96,5 +92,5 @@ export const DictItemParamsWithId = z
 
 /** 字典类型标识路径参数（供 /dicts/:type/items 查询） */
 export const DictTypeParam = z
-	.object({ type: z.string() })
+	.object({ type: z.string().max(64) })
 	.describe("字典类型标识");

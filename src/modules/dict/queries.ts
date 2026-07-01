@@ -96,7 +96,15 @@ export const updateDict = async (
 	return dict;
 };
 
-/** 软删字典类型（级联软删关联的字典项） */
+/**
+ * 软删字典类型（级联软删关联的字典项）
+ *
+ * ponytail: 当前直接级联软删所有字典项，不检查是否有字典项被前端引用。
+ * 如果前端下拉框/级联选择器在大缓存 + 延时刷新的场景下读取已被软删的字典项，
+ * 可能因引用丢失而渲染异常。后续升级方向：
+ *   - 软删前检查字典项是否被业务数据引用（如用户表的 gender 字段）
+ *   - 或改用"标记禁用 + 异步清理"策略
+ */
 export const softDeleteDict = async (id: number, db: DB): Promise<boolean> => {
 	await db.transaction(async (tx) => {
 		const now = new Date().toISOString();
@@ -137,16 +145,6 @@ export const findDictItems = async (
 		.from(sysDictItem)
 		.where(and(...where))
 		.orderBy(asc(sysDictItem.sort), asc(sysDictItem.id));
-};
-
-/** 按 type 查字典项（供前端 /dicts/:type/items 高频查询） */
-export const findDictItemsByType = async (
-	type: string,
-	db: DB,
-): Promise<(typeof sysDictItem.$inferSelect)[]> => {
-	const dict = await findDictByType(type, db);
-	if (!dict) return [];
-	return findDictItems(dict.id, {}, db);
 };
 
 /** 按 ID 查字典项 */

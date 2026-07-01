@@ -210,6 +210,28 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		async ({ params, body }) => {
 			const existing = await findDictItemById(params.itemId, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
+
+			if (body.label) {
+				const dupLabel = await findDictItemByDictIdAndLabel(
+					existing.dictId,
+					body.label,
+					db,
+				);
+				if (dupLabel && dupLabel.id !== params.itemId) {
+					throw new BizError(ERR_CODE.DICT_ITEM_LABEL_DUPLICATE);
+				}
+			}
+			if (body.value) {
+				const dupValue = await findDictItemByDictIdAndValue(
+					existing.dictId,
+					body.value,
+					db,
+				);
+				if (dupValue && dupValue.id !== params.itemId) {
+					throw new BizError(ERR_CODE.DICT_ITEM_VALUE_DUPLICATE);
+				}
+			}
+
 			const item = await updateDictItem(params.itemId, body, db);
 			if (!item) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
 			return parseDictItem(item);
@@ -251,7 +273,8 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		async ({ params }) => {
 			const dict = await findDictByType(params.type, db);
 			if (!dict) return [];
-			return findDictItems(dict.id, { status: 1 }, db);
+			const items = await findDictItems(dict.id, { status: 1 }, db);
+			return items.map((item) => parseDictItem(item));
 		},
 		{
 			detail: {
