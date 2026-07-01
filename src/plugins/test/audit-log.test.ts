@@ -140,14 +140,14 @@ describe("buildErrorShell（真触发验证）", () => {
 
 describe("buildEntry 直接调用验证", () => {
 	test("成功 POST：脱敏 requestParams，无 responseResult，status=1", () => {
-		const entry = buildEntry({
-			meta: {
+		const entry = buildEntry(
+			{
 				module: "user",
 				action: "create",
-				requestBody: { username: "test", password: "secret123" },
-				startTime: 1000,
+				body: { username: "test", password: "secret123" },
+				t0: 1000,
 			},
-			request: {
+			{
 				method: "POST",
 				url: "http://localhost/api/v1/users",
 				headers: fakeHeaders({
@@ -155,9 +155,9 @@ describe("buildEntry 直接调用验证", () => {
 					"x-forwarded-for": "1.2.3.4",
 				}),
 			},
-			user: { sub: "7", username: "admin" },
-			isSuccess: true,
-		});
+			{ sub: "7", username: "admin" },
+			true,
+		);
 
 		expect(entry.module).toBe("user");
 		expect(entry.action).toBe("create");
@@ -179,21 +179,21 @@ describe("buildEntry 直接调用验证", () => {
 	});
 
 	test("成功 GET：无 requestParams，costMs 已计算", () => {
-		const entry = buildEntry({
-			meta: {
+		const entry = buildEntry(
+			{
 				module: "menu",
 				action: "list",
-				requestBody: undefined,
-				startTime: 5000,
+				body: undefined,
+				t0: 5000,
 			},
-			request: {
+			{
 				method: "GET",
 				url: "http://localhost/api/v1/menus",
 				headers: fakeHeaders({}),
 			},
-			user: null,
-			isSuccess: true,
-		});
+			null,
+			true,
+		);
 
 		expect(entry.method).toBe("GET");
 		expect(entry.requestParams).toBeUndefined(); // GET 不写 body
@@ -203,23 +203,23 @@ describe("buildEntry 直接调用验证", () => {
 
 	test("失败 BizError：responseResult 含 code/msg，errorMsg 为异常原文", () => {
 		const e = new BizError(ERR_CODE.ROLE_NOT_FOUND, undefined, 404);
-		const entry = buildEntry({
-			meta: {
+		const entry = buildEntry(
+			{
 				module: "role",
 				action: "delete",
-				requestBody: undefined,
-				startTime: 3000,
+				body: undefined,
+				t0: 3000,
 			},
-			request: {
+			{
 				method: "DELETE",
 				url: "http://localhost/api/v1/roles/99",
 				headers: fakeHeaders({}),
 			},
-			user: null,
-			isSuccess: false,
-			error: e,
-			errorShell: { code: e.code, msg: e.message, data: null },
-		});
+			null,
+			false,
+			e,
+			{ code: e.code, msg: e.message, data: null },
+		);
 
 		expect(entry.status).toBe(0);
 		expect(entry.errorMsg).toBe("角色不存在");
