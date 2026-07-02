@@ -1,4 +1,5 @@
 import { openapi } from "@elysia/openapi";
+import { staticPlugin } from "@elysia/static";
 import { Elysia } from "elysia";
 import { authRoutes } from "@/modules/auth/routes";
 import { deptRoutes } from "@/modules/dept/routes";
@@ -62,6 +63,12 @@ export const app = new Elysia()
 				// 公开接口（如 /auth/login）在 route detail 里写 security: [] 显式覆盖
 				security: [{ bearerAuth: [] }],
 			},
+		}),
+	)
+	.use(
+		staticPlugin({
+			assets: "./uploads",
+			prefix: "/uploads",
 		}),
 	)
 	.use(authRoutes)

@@ -243,8 +243,8 @@ src/
 
 ##### 5.4.4 静态服务挂载 (0.1d)
 
-- [ ] `src/app.ts`：`.use(storageRoutes)` + `@elysia/static` 挂 `./uploads/` → `/uploads/*`
-- [ ] `.gitignore`：追加 `uploads/`
+- [x] `src/app.ts`：`.use(storageRoutes)` + `@elysia/static` 挂 `./uploads/` → `/uploads/*`
+- [x] `.gitignore`：追加 `uploads/`
 
 ##### 5.4.5 s3 driver：最小可工作（独立子任务，可推迟）(0.1d)
 
