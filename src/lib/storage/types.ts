@@ -1,21 +1,11 @@
-/**
- * 存储抽象接口
- *
- * 设计原则：
- * - 接口最小化，只保留前端契约需要的方法
- * - 不包含预签名方法（前端用 axios multipart 流，不直传 OSS）
- * - 不包含 get（前端直接访问 url，不经过后端下载）
- * - put 返回永久可访问的 url（不是临时签名）
- *
- * 详见 docs/plan/stage-5.4-file-storage.md §4.1
- */
+/** Storage 接口：put（上传返回永久 url）/ delete（物理删除，幂等） */
 export type Storage = {
 	/**
-	 * 写入存储对象
-	 * @param key 存储键，格式 `{date}/{uuid}.{ext}`
-	 * @param data 文件流（Buffer 或 ReadableStream）
-	 * @param opts.contentType MIME 类型
-	 * @returns { url } 永久可访问的 URL
+	 * 上传文件到存储后端
+	 * @param key 存储键，格式 {date}/{uuid}.{ext}
+	 * @param data 文件数据流
+	 * @param opts.contentType 文件 MIME 类型
+	 * @returns 永久可访问的文件 URL
 	 */
 	put: (
 		key: string,
@@ -24,21 +14,34 @@ export type Storage = {
 	) => Promise<{ url: string }>;
 
 	/**
-	 * 删除存储对象（物理删除，不可恢复）
+	 * 从存储后端删除文件
 	 * @param key 存储键
 	 */
 	delete: (key: string) => Promise<void>;
 };
 
-/** driver 配置联合类型 */
+/** driver 配置联合 */
 export type StorageConfig =
-	| { driver: "local-fs"; rootDir: string; publicBaseUrl: string }
+	| {
+			/** local-fs / s3 */
+			driver: "local-fs";
+			/** 文件存储根目录 */
+			rootDir: string;
+			/** 文件可访问的基础 URL */
+			publicBaseUrl: string;
+	  }
 	| {
 			driver: "s3";
+			/** S3 兼容 API 地址（MinIO / 七牛 / R2 / OSS） */
 			endpoint: string;
+			/** 区域 */
 			region: string;
+			/** 桶名 */
 			bucket: string;
+			/** 访问密钥 ID */
 			accessKeyId: string;
+			/** 访问密钥 */
 			secretAccessKey: string;
-			publicBaseUrl?: string; // 自定义域名（CDN），不传则用 bucket.endpoint
+			/** CDN 自定义域名（不传则用 bucket.endpoint） */
+			publicBaseUrl?: string;
 	  };
