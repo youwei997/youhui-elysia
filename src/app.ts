@@ -66,7 +66,7 @@ export const app = new Elysia()
 		}),
 	)
 	.use(
-		staticPlugin({
+		await staticPlugin({
 			assets: "./uploads",
 			prefix: "/uploads",
 		}),
