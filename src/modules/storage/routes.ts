@@ -4,7 +4,11 @@ import { BizError, ERR_CODE } from "@/lib/errors";
 import { storage } from "@/lib/storage";
 import { authPlugin } from "@/plugins/auth";
 import { createFile, findFileByUrl, softDeleteFile } from "./queries";
-import { buildStorageKey } from "./schema";
+import { buildStorageKey, FileDeleteQuery, FileInfoResponse } from "./schema";
+
+/** 响应转换：parse 对齐前端 FileInfo 契约 */
+const parseFileInfo = (info: Parameters<typeof FileInfoResponse.parse>[0]) =>
+	FileInfoResponse.parse(info);
 
 export const storageRoutes = new Elysia({ prefix: "/api/v1/files" })
 	.use(authPlugin)
@@ -41,7 +45,7 @@ export const storageRoutes = new Elysia({ prefix: "/api/v1/files" })
 				},
 				db,
 			);
-			return { name: file.name, url };
+			return parseFileInfo({ name: file.name, url });
 		},
 		{
 			auth: true,
@@ -67,7 +71,7 @@ export const storageRoutes = new Elysia({ prefix: "/api/v1/files" })
 			auth: true,
 			requirePerm: ["sys:file:delete"],
 			audit: "file:delete",
-			query: t.Object({ filePath: t.String() }),
+			query: FileDeleteQuery,
 			detail: { tags: ["File"], summary: "删除文件" },
 		},
 	);
