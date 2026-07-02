@@ -32,7 +32,7 @@ import {
 	DATA_SCOPE,
 	type DataScopeContext,
 	dataScopeFilter,
-} from "./data-scope";
+} from "../data-scope";
 
 /**
  * 类型守卫助手：收窄 T | undefined 为 T，违反项目 biome noNonNullAssertion 规则
