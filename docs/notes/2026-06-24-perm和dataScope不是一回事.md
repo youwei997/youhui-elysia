@@ -39,7 +39,7 @@ curl /users -H "Authorization: Bearer $STAFF_TOKEN"
 
 ```ts
 // perm 在接口层面：没权限的直接 403
-{ perm: 'sys:user:list' }
+{ requirePerm: ['sysuser:list' }
 // 没这个 perm 的人 → 403（按钮灰了，接口也调不了）
 
 // dataScope 在查询层面：有权限的人，根据角色级别决定 SQL 的 WHERE 条件
@@ -70,7 +70,7 @@ const where = and(
 export const userRoutes = new Elysia({ prefix: '/users' })
   .get('/', findUsersHandler, {
     auth: true,
-    perm: 'sys:user:list',  // ← 保安：没通行证就 403
+    requirePerm: ['sysuser:list',  // ← 保安：没通行证就 403
   })
 
 // 4.6 阶段：dataScope 在 queries 层面，控制 SQL 过滤

@@ -10,7 +10,7 @@
 
 ```ts
 // 接口1：权限点控制
-{ auth: true, perm: 'sys:user:create' }
+{ auth: true, requirePerm: ['sys:user:create' }
 
 // 接口2：角色控制
 { auth: true, requireRole: ['ADMIN', 'ROOT'] }
@@ -62,7 +62,7 @@ ROOT 角色查全部菜单，其他角色按关联过滤。这实际上就是 `r
 
 理论上是 AND：
 ```ts
-{ auth: true, perm: 'sys:audit:list', requireRole: ['ADMIN'] }
+{ auth: true, requirePerm: ['sys:audit:list', requireRole: ['ADMIN'] }
 // 语义：既是 ADMIN 又有 audit:list 权限
 ```
 
