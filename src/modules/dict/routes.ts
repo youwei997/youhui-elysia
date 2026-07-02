@@ -64,7 +64,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:list"],
+			requirePerm: ["sys:dict:list"],
 			query: DictListQuery,
 			detail: {
 				tags: ["Dict"],
@@ -82,7 +82,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:list"],
+			requirePerm: ["sys:dict:list"],
 			params: DictParamsWithId,
 			detail: {
 				tags: ["Dict"],
@@ -102,7 +102,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:create"],
+			requirePerm: ["sys:dict:create"],
 			audit: "dict:create",
 			body: DictCreateBody,
 			detail: {
@@ -123,7 +123,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:update"],
+			requirePerm: ["sys:dict:update"],
 			audit: "dict:update",
 			params: DictParamsWithId,
 			body: DictUpdateBody,
@@ -145,7 +145,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:delete"],
+			requirePerm: ["sys:dict:delete"],
 			audit: "dict:delete",
 			params: DictParamsWithId,
 			detail: {
@@ -165,7 +165,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:list"],
+			requirePerm: ["sys:dict:list"],
 			params: DictParamsWithId,
 			query: DictItemListQuery,
 			detail: {
@@ -204,7 +204,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:create"],
+			requirePerm: ["sys:dict:create"],
 			audit: "dict:create-item",
 			params: DictParamsWithId,
 			body: DictItemCreateBody,
@@ -250,7 +250,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:update"],
+			requirePerm: ["sys:dict:update"],
 			audit: "dict:update-item",
 			params: DictItemParamsWithId,
 			body: DictItemUpdateBody,
@@ -272,7 +272,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dict:delete"],
+			requirePerm: ["sys:dict:delete"],
 			audit: "dict:delete-item",
 			params: DictItemParamsWithId,
 			detail: {

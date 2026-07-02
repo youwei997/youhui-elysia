@@ -7,7 +7,7 @@
  * - 重点验证 ROOT 短路与 *:*:* 通配符短路（与前端 v-hasPerm 语义对齐）
  *
  * 覆盖场景：
- * 1. perm macro：有权限放行 / 无权限 403
+ * 1. requirePerm：有权限放行 / 无权限 403
  * 2. ROOT 角色短路（perms 为空也能通过）—— 关键修复点
  * 3. *:*:* 通配符短路
  * 4. requireRole macro：有角色放行 / 无角色 403
@@ -37,13 +37,13 @@ const makePayload = (over: Partial<JwtPayload> = {}): JwtPayload => ({
 	...over,
 });
 
-/** 带 perm 路由的测试 app（请求 /users 需要 sys:user:list） */
+/** 带 requirePerm 路由的测试 app（请求 /users 需要 sys:user:list） */
 const permApp = () =>
 	new Elysia()
 		.use(errorHandler)
 		.use(authPlugin)
 		.use(permissionPlugin)
-		.get("/users", () => "ok", { auth: true, perm: ["sys:user:list"] });
+		.get("/users", () => "ok", { auth: true, requirePerm: ["sys:user:list"] });
 
 /** 带 requireRole 路由的测试 app（请求 /admin-only 需要 ROOT 角色） */
 const roleApp = () =>
@@ -53,14 +53,14 @@ const roleApp = () =>
 		.use(permissionPlugin)
 		.get("/admin-only", () => "ok", { auth: true, requireRole: ["ROOT"] });
 
-/** 多 perm 路由的测试 app（验证 ROOT 在不同 perm 下都短路） */
+/** 多 requirePerm 路由的测试 app（验证 ROOT 在不同 perm 下都短路） */
 const multiPermApp = () =>
 	new Elysia()
 		.use(errorHandler)
 		.use(authPlugin)
 		.use(permissionPlugin)
-		.get("/a", () => "ok", { auth: true, perm: ["sys:user:create"] })
-		.get("/b", () => "ok", { auth: true, perm: ["sys:role:delete"] });
+		.get("/a", () => "ok", { auth: true, requirePerm: ["sys:user:create"] })
+		.get("/b", () => "ok", { auth: true, requirePerm: ["sys:role:delete"] });
 
 /**
  * 用 token 请求某路径
@@ -89,7 +89,7 @@ afterEach(async () => {
 	await redis.del(redisKeys.revokedToken("test-jti-perm-1"));
 });
 
-describe("perm macro · 基础权限校验", () => {
+describe("requirePerm · 基础权限校验", () => {
 	test("用户有该 perm → 200", async () => {
 		const token = await signAccessToken(
 			makePayload({ perms: ["sys:user:list"] }),
@@ -107,7 +107,7 @@ describe("perm macro · 基础权限校验", () => {
 	});
 });
 
-describe("perm macro · ROOT 角色短路（关键修复点）", () => {
+describe("requirePerm · ROOT 角色短路（关键修复点）", () => {
 	test("ROOT 角色 + perms 为空 → 仍 200（不依赖 perms）", async () => {
 		// 模拟 seed 真实情况：ROOT 角色不绑定菜单，perms 是空数组
 		const token = await signAccessToken(
@@ -127,7 +127,7 @@ describe("perm macro · ROOT 角色短路（关键修复点）", () => {
 	});
 });
 
-describe("perm macro · 通配符短路", () => {
+describe("requirePerm · 通配符短路", () => {
 	test("perms 含 *:*:* → 200（非 ROOT 超管）", async () => {
 		const token = await signAccessToken(
 			makePayload({ roles: ["ADMIN"], perms: ["*:*:*"] }),

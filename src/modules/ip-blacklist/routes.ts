@@ -27,7 +27,7 @@ export const ipBlacklistRoutes = new Elysia({ prefix: "/api/v1/ip-blacklist" })
 		},
 		{
 			auth: true,
-			perm: ["sys:ip-blacklist:list"],
+			requirePerm: ["sys:ip-blacklist:list"],
 			query: IpBlacklistListQuery,
 			detail: {
 				tags: ["IpBlacklist"],
@@ -45,7 +45,7 @@ export const ipBlacklistRoutes = new Elysia({ prefix: "/api/v1/ip-blacklist" })
 		},
 		{
 			auth: true,
-			perm: ["sys:ip-blacklist:delete"],
+			requirePerm: ["sys:ip-blacklist:delete"],
 			params: IpBlacklistParamsWithId,
 			detail: {
 				tags: ["IpBlacklist"],

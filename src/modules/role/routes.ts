@@ -87,7 +87,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:list"],
+			requirePerm: ["sys:role:list"],
 			query: RoleListQuery,
 			detail: {
 				tags: ["Role"],
@@ -103,7 +103,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:list"],
+			requirePerm: ["sys:role:list"],
 			detail: {
 				tags: ["Role"],
 				summary: "角色下拉选项",
@@ -122,7 +122,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:list"],
+			requirePerm: ["sys:role:list"],
 			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
@@ -144,7 +144,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:list"],
+			requirePerm: ["sys:role:list"],
 			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
@@ -164,7 +164,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:create"],
+			requirePerm: ["sys:role:create"],
 			audit: "role:create",
 			body: RoleCreateBody,
 			detail: {
@@ -194,7 +194,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:update"],
+			requirePerm: ["sys:role:update"],
 			audit: "role:update",
 			body: RoleUpdateBody,
 			params: RoleParamsWithId,
@@ -263,7 +263,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:delete"],
+			requirePerm: ["sys:role:delete"],
 			audit: "role:delete",
 			params: RoleParamsWithCommaIds,
 			detail: {
@@ -285,7 +285,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:assign"],
+			requirePerm: ["sys:role:assign"],
 			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
@@ -304,7 +304,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:assign"],
+			requirePerm: ["sys:role:assign"],
 			params: RoleParamsWithId,
 			detail: {
 				tags: ["Role"],
@@ -336,7 +336,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:assign"],
+			requirePerm: ["sys:role:assign"],
 			audit: "role:assign-menu",
 			body: RoleAssignMenusBody,
 			params: RoleParamsWithId,
@@ -378,7 +378,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		},
 		{
 			auth: true,
-			perm: ["sys:role:assign"],
+			requirePerm: ["sys:role:assign"],
 			audit: "role:assign-dept",
 			body: RoleAssignDeptsBody,
 			params: RoleParamsWithId,

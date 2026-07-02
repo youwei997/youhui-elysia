@@ -21,7 +21,7 @@ export const onlineRoutes = new Elysia({ prefix: "/api/v1/online" })
 		},
 		{
 			auth: true,
-			perm: ["sys:online:list"],
+			requirePerm: ["sys:online:list"],
 			detail: {
 				tags: ["Online"],
 				summary: "在线用户列表",
@@ -38,7 +38,7 @@ export const onlineRoutes = new Elysia({ prefix: "/api/v1/online" })
 		},
 		{
 			auth: true,
-			perm: ["sys:online:kick"],
+			requirePerm: ["sys:online:kick"],
 			params: t.Object({ userId: t.Numeric() }),
 			detail: {
 				tags: ["Online"],

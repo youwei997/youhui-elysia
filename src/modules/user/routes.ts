@@ -88,7 +88,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			perm: ["sys:user:list"],
+			requirePerm: ["sys:user:list"],
 			query: UserListQuery,
 			detail: {
 				tags: ["User"],
@@ -105,7 +105,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			perm: ["sys:user:list"],
+			requirePerm: ["sys:user:list"],
 			detail: {
 				tags: ["User"],
 				summary: "用户下拉选项",
@@ -126,7 +126,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			perm: ["sys:user:list"],
+			requirePerm: ["sys:user:list"],
 			params: UserParamsWithId,
 			detail: {
 				tags: ["User"],
@@ -146,7 +146,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			perm: ["sys:user:list"],
+			requirePerm: ["sys:user:list"],
 			params: UserParamsWithId,
 			detail: {
 				tags: ["User"],
@@ -163,7 +163,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			perm: ["sys:user:create"],
+			requirePerm: ["sys:user:create"],
 			audit: "user:create",
 			body: UserCreateBody,
 			detail: {
@@ -185,7 +185,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			perm: ["sys:user:reset-password"],
+			requirePerm: ["sys:user:reset-password"],
 			audit: "user:reset-password",
 			params: UserParamsWithId,
 			query: UserResetPasswordQuery,
@@ -207,7 +207,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			perm: ["sys:user:update"],
+			requirePerm: ["sys:user:update"],
 			audit: "user:update",
 			body: UserUpdateBody,
 			params: UserParamsWithId,
@@ -243,7 +243,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		},
 		{
 			auth: true,
-			perm: ["sys:user:delete"],
+			requirePerm: ["sys:user:delete"],
 			audit: "user:delete",
 			params: UserParamsWithCommaIds,
 			detail: {

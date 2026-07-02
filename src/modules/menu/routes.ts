@@ -198,7 +198,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
-			perm: ["sys:menu:list"],
+			requirePerm: ["sys:menu:list"],
 			query: MenuListQuery,
 			detail: {
 				tags: ["Menu"],
@@ -242,7 +242,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
-			perm: ["sys:menu:list"],
+			requirePerm: ["sys:menu:list"],
 			query: MenuOptionsQuery,
 			detail: {
 				tags: ["Menu"],
@@ -262,7 +262,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
-			perm: ["sys:menu:list"],
+			requirePerm: ["sys:menu:list"],
 			params: MenuParamsWithId,
 			detail: {
 				tags: ["Menu"],
@@ -290,7 +290,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
-			perm: ["sys:menu:create"],
+			requirePerm: ["sys:menu:create"],
 			audit: "menu:create",
 			body: MenuCreateBody,
 			detail: {
@@ -336,7 +336,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
-			perm: ["sys:menu:update"],
+			requirePerm: ["sys:menu:update"],
 			audit: "menu:update",
 			body: MenuUpdateBody,
 			params: MenuParamsWithId,
@@ -360,7 +360,7 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 		},
 		{
 			auth: true,
-			perm: ["sys:menu:delete"],
+			requirePerm: ["sys:menu:delete"],
 			audit: "menu:delete",
 			params: MenuParamsWithId,
 			detail: {

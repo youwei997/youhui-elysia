@@ -26,11 +26,11 @@ const isSuperUser = (user: AuthContext["user"]): boolean => {
  * 权限校验 plugin
  *
  * 两个 macro：
- * - perm: string[]        → 用户 perms 包含数组中任一即放行
+ *  - requirePerm: string[]        → 用户 perms 包含数组中任一即放行
  * - requireRole: string[] → 用户 roles 包含数组中任一即放行
  *
- * 注：perm/requireRole 统一用 string[] 不用 string | string[]，
- * 调用处全传数组（如 perm: ["sys:user:list"]），内部直接 .some()，
+ * 注：requirePerm/requireRole 统一用 string[] 不用 string | string[]，
+ * 调用处全传数组（如 requirePerm: ["sys:user:list"]），内部直接 .some()，
  * 少一个类型分支判断，保持统一。
  *
  * 短路放行：roles 含 "ROOT" 或 perms 含 "*:*:*" 跳过校验
@@ -43,7 +43,7 @@ const isSuperUser = (user: AuthContext["user"]): boolean => {
 export const permissionPlugin = new Elysia({ name: "permission" })
 	.use(authPlugin)
 	.macro({
-		perm: (perms: string[]) => ({
+		requirePerm: (perms: string[]) => ({
 			beforeHandle: ({ user }: AuthContext) => {
 				// 未登录不应通过权限校验
 				if (!user) throw unauthorized();

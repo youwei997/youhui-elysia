@@ -26,7 +26,7 @@ export const loginLogRoutes = new Elysia({ prefix: "/api/v1/login-logs" })
 		},
 		{
 			auth: true,
-			perm: ["sys:login-log:query"],
+			requirePerm: ["sys:login-log:query"],
 			query: LoginLogListQuery,
 			detail: {
 				tags: ["LoginLog"],

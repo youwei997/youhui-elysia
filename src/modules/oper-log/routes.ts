@@ -36,7 +36,7 @@ export const operLogRoutes = new Elysia({ prefix: "/api/v1/oper-logs" })
 		},
 		{
 			auth: true,
-			perm: ["sys:oper-log:query"],
+			requirePerm: ["sys:oper-log:query"],
 			query: OperLogListQuery,
 			detail: {
 				tags: ["OperLog"],
@@ -57,7 +57,7 @@ export const operLogRoutes = new Elysia({ prefix: "/api/v1/oper-logs" })
 		},
 		{
 			auth: true,
-			perm: ["sys:oper-log:delete"],
+			requirePerm: ["sys:oper-log:delete"],
 			params: OperLogParamsWithId,
 			detail: {
 				tags: ["OperLog"],
@@ -74,7 +74,7 @@ export const operLogRoutes = new Elysia({ prefix: "/api/v1/oper-logs" })
 		},
 		{
 			auth: true,
-			perm: ["sys:oper-log:delete"],
+			requirePerm: ["sys:oper-log:delete"],
 			body: OperLogBatchDeleteBody,
 			detail: {
 				tags: ["OperLog"],

@@ -130,7 +130,7 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 - **路由 detail 必填**：每个路由必须写 `detail: { tags: [...], summary: '...' }`，保证 OpenAPI 文档可读。
 - **优先用 `derive` / `resolve` / `macro`** 注入横切逻辑，而不是手动在 `onBeforeHandle` 串多个 guard。
 - **响应壳用 `onAfterHandle`**，不要在每个 handler 里手动包 `{ code, msg, data }`（`mapResponse` 要求返回 `Response` 对象，不适合此场景）。
-- **路由声明权限用 macro**：`perm: ['sys:user:create']`，不要写装饰器风格。
+- **路由声明权限用 macro**：`requirePerm: ['sys:user:create']`，不要写装饰器风格。
 - **禁止装饰器、DI 容器等魔法机制**，详见 §4.14 项目红线。
 
 ### 4.2.1 请求追踪（reqId）与日志体系
@@ -201,7 +201,7 @@ db.select().from(t).where(where);
 | 层级        | 触发点                                           | 不通过时表现               | 代码位置                   |
 | ----------- | ------------------------------------------------ | -------------------------- | -------------------------- |
 | 1. 认证     | `auth: true` macro                               | 401 未登录                 | `plugins/auth.ts`          |
-| 2. 接口权限 | `perm: [...]` macro                              | 403 权限不足               | `plugins/permission.ts`    |
+| 2. 接口权限 | `requirePerm: [...]` macro                              | 403 权限不足               | `plugins/permission.ts`    |
 | 3. 数据权限 | `dataScopeFilter(ctx, tables)` 在 queries 层调用 | 返回过滤后数据（不是错误） | `db/helpers/data-scope.ts` |
 
 perm 管门，dataScope 管桌。多数列表查询两层都有；创建/更新类接口只用 perm。

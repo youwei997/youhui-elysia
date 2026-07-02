@@ -7,7 +7,7 @@
 
 完整实现**菜单 + 按钮 + 接口 + 数据**四级权限闭环：
 - 用户登录后能拿到自己的菜单树（按角色裁剪）
-- 路由声明 `perm: ['sys:user:create']` 自动校验
+- 路由声明 `requirePerm: ['sys:user:create']` 自动校验
 - 列表查询自动按数据权限（5 档枚举）过滤
 - admin / dept-manager / staff 三角色调用相同 API 返回不同数据
 
@@ -78,7 +78,7 @@
 `src/plugins/permission.ts`：
 
 实现两个 macro：
-- `perm: string | string[]` —— 用户 perms 包含其中之一即放行
+- `requirePerm: string | string[]` —— 用户 perms 包含其中之一即放行
 - `requireRole: string | string[]` —— 用户 roles 包含其中之一即放行
 
 用户 perms 来源：
@@ -90,7 +90,7 @@
 ```ts
 .post('/users', handler, {
   auth: true,
-  perm: 'sys:user:create',
+  requirePerm: ["sys:user:create"],
   detail: { tags: ['User'] }
 })
 ```
@@ -208,7 +208,7 @@ const where = and(
 - [x] 子树查询 helper 可工作（descendantsByTreePath）
 
 ### Permission macro
-- [x] 路由可声明 `perm: 'sys:user:create'`
+- [x] 路由可声明 `requirePerm: 'sys:user:create'`
 - [x] 用户无该 perm 返回 403
 - [x] 用户有该 perm（来自任一角色）放行
 - [x] 超管短路：`roles.includes("ROOT")` 或 `perms.includes("*:*:*")` 跳过权限校验（详见 `architecture.md` §4.5）

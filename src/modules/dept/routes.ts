@@ -63,7 +63,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dept:list"],
+			requirePerm: ["sys:dept:list"],
 			query: DeptListQuery,
 			detail: {
 				tags: ["Dept"],
@@ -102,7 +102,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dept:list"],
+			requirePerm: ["sys:dept:list"],
 			detail: {
 				tags: ["Dept"],
 				summary: "部门下拉选项",
@@ -122,7 +122,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dept:list"],
+			requirePerm: ["sys:dept:list"],
 			params: DeptParamsWithId,
 			detail: {
 				tags: ["Dept"],
@@ -141,7 +141,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dept:list"],
+			requirePerm: ["sys:dept:list"],
 			params: DeptParamsWithId,
 			detail: {
 				tags: ["Dept"],
@@ -164,7 +164,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dept:create"],
+			requirePerm: ["sys:dept:create"],
 			audit: "dept:create",
 			body: DeptCreateBody,
 			detail: {
@@ -208,7 +208,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dept:update"],
+			requirePerm: ["sys:dept:update"],
 			audit: "dept:update",
 			params: DeptParamsWithId,
 			body: DeptUpdateBody,
@@ -265,7 +265,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 		},
 		{
 			auth: true,
-			perm: ["sys:dept:delete"],
+			requirePerm: ["sys:dept:delete"],
 			audit: "dept:delete",
 			params: DeptParamsWithCommaIds,
 			detail: {
