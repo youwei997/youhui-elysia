@@ -1,4 +1,4 @@
-﻿# 阶段 5 · 进阶辅助模块（企业级广度）
+# 阶段 5 · 进阶辅助模块（企业级广度）
 
 > 难度 ⭐⭐⭐ · 工时 4-5 天 · 学到：onAfterHandle、缓存防击穿、存储抽象、队列、限流
 > 节奏：每个模块 0.5-1 天，完成一个就有一个完整能力。**难度回落，是巩固期**
@@ -192,37 +192,72 @@
 
 ### 5.4 文件存储抽象 (1d)
 
-`src/lib/storage/`：
+> **设计文档**：[`docs/design/2026-07-02-文件存储抽象-前端不改版本.md`](../../docs/design/2026-07-02-文件存储抽象-前端不改版本.md)（v2.4）
+> **核心决策**：前端 `vue3-element-admin-v4.6.0` 不改动 → 后端代理上传（不用预签名）、url 永久可访问、删除按 url 反查
+
+**与原 plan 差异**：Storage 接口 5→2 方法（`put` / `delete`），路由 4→2 个，砍掉预签名逻辑。
+
+**模块结构**：
 
 ```
-storage/
-├── types.ts          # interface Storage { put, get, delete, presignedPutUrl, presignedGetUrl }
-├── index.ts          # createStorage(config) 工厂
-├── local-fs.ts       # 本地文件系统 driver（dev 默认）
-├── s3.ts             # S3 兼容 driver（连 MinIO / R2 / 七牛 / OSS）
-└── qiniu.ts          # 七牛云 driver（如需独立，否则归 s3）
+src/
+├── lib/storage/
+│   ├── types.ts          # Storage 接口（2 方法：put / delete）
+│   ├── index.ts          # createStorage(config) 工厂 + 单例
+│   ├── local-fs.ts       # 本地文件系统 driver（dev 默认）
+│   └── s3.ts             # S3 兼容 driver（最小可工作，连 MinIO 接通即可）
+├── db/schema/system/
+│   └── file.ts           # sys_file 元数据表（含 url 字段 + auditColumns 软删）
+└── modules/storage/
+    ├── schema.ts         # Zod DTO（FileInfo 响应、删除查询参数）
+    ├── queries.ts        # 纯函数：createFile / findFileByUrl / softDeleteFile
+    └── routes.ts         # Elysia plugin：POST /files + DELETE /files?filePath=url
 ```
 
-接口：
-```ts
-type Storage = {
-  put: (key: string, data: Buffer | ReadableStream, opts?: { contentType?: string }) => Promise<{ url: string }>
-  get: (key: string) => Promise<ReadableStream>
-  delete: (key: string) => Promise<void>
-  presignedPutUrl: (key: string, opts?: { expires?: number, contentType?: string }) => Promise<string>
-  presignedGetUrl: (key: string, opts?: { expires?: number }) => Promise<string>
-}
-```
+**路由**：`POST /api/v1/files`（multipart 字段名 `file`）、`DELETE /api/v1/files?filePath={url}`，鉴权 `auth: true` + `perm: ["sys:file:upload"]` / `["sys:file:delete"]`。
 
-`db/schema/system/file.ts`：
-- id / key / filename / size / mimeType / uploaderId + auditColumns
-- 不存文件本身，只存元数据
+#### 子任务拆解
 
-`modules/storage/`：
-- `POST /files/presigned-upload` 拿前端直传预签名 URL
-- `POST /files` 前端直传后回调登记元数据
-- `GET /files/:id` 拿下载预签名 URL（短期）
-- `DELETE /files/:id` 删除（同时删存储侧）
+##### 5.4.1 基础设施：依赖 + 配置 + 建表 (0.2d)
+
+- [x] `bun add @aws-sdk/client-s3 @elysia/static`
+- [x] `src/config/index.ts`：env schema 追加 `STORAGE_DRIVER` / `LOCAL_FS_ROOT` / `LOCAL_FS_PUBLIC_BASE_URL` / s3 相关字段
+- [x] `.env.example`：追加文件存储配置
+- [x] `src/db/schema/system/file.ts`：`sys_file` 表，字段 id / key / filename / size / mimeType / url / uploaderId + auditColumns，索引 `idx_sys_file_url`
+- [x] `bun run db:generate` + `bun run db:push`
+
+##### 5.4.2 Storage 抽象层：local-fs 先行 (0.3d)
+
+- [ ] `src/lib/storage/types.ts`：`Storage` 接口（`put` / `delete`）+ `StorageConfig` 联合类型
+- [ ] `src/lib/storage/local-fs.ts`：`Bun.write` 写文件 → `new URL()` 构造 url；`fs.unlink` 删文件（幂等）
+- [ ] `src/lib/storage/index.ts`：`createStorage(config)` 工厂 + `storage` 全局单例
+
+##### 5.4.3 模块三件套：schema + queries + routes (0.25d)
+
+- [ ] `src/modules/storage/schema.ts`：`FileInfoResponse`（`{ name, url }` 对齐前端契约）
+- [ ] `src/modules/storage/queries.ts`：`createFile` / `findFileByUrl`（只查未软删）/ `softDeleteFile`
+- [ ] `src/modules/storage/routes.ts`：
+  - `POST /api/v1/files`：`t.Object({ file: t.File() })`，handler 校验 `file.size` ≤ 50MB，`file.stream()` 写存储 → 落元数据 → 返回 `{ name, url }`
+  - `DELETE /api/v1/files`：`query.filePath` → `findFileByUrl` 反查 → `storage.delete` → `softDeleteFile`
+  - 两个路由挂 `auth: true` + `perm` + `audit` 声明
+
+##### 5.4.4 静态服务挂载 (0.1d)
+
+- [ ] `src/app.ts`：`.use(storageRoutes)` + `@elysia/static` 挂 `./uploads/` → `/uploads/*`
+- [ ] `.gitignore`：追加 `uploads/`
+
+##### 5.4.5 s3 driver：最小可工作（独立子任务，可推迟）(0.1d)
+
+- [ ] `src/lib/storage/s3.ts`：`PutObjectCommand` / `DeleteObjectCommand`（不写重试/分片/进度）
+- [ ] `docker run --rm minio/minio` 临时起 MinIO 验证接通
+
+##### 5.4.6 权限 seed + 错误码 + 验收 (0.05d)
+
+- [ ] `src/lib/errors.ts`：追加 `FILE_NOT_FOUND: "A0470"` / `FILE_UPLOAD_FAILED: "A0471"`
+- [ ] `scripts/seed.ts`：sys_menu 追加 `sys:file:upload` / `sys:file:delete` 两条按钮权限，管理员角色勾选
+- [ ] 启动服务 → 前端上传/预览/删除走通
+- [ ] 边界：空文件 → A0400、超 50MB → A0400、不存在的 url → A0470 (404)
+- [ ] `bun run check` + `bun run tsc` 通过
 
 ### 5.5 定时任务（pg-boss）(1d)
 
