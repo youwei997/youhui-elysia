@@ -14,6 +14,16 @@
 | 6 · 代码生成器 | ⭐⭐⭐⭐ | 5-6d | ⬜ 未开始 | [stage-6-codegen.md](./stage-6-codegen.md) |
 | 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
 
+> ## 已识别但未列入阶段计划的模块
+> (来自 youlai-boot 的 `sql/youlai-admin.sql`，项目初期未注册)
+> 
+> - **`sys_config`** — 系统配置(键值对)。1 个表 + CRUD。`vue3-element-admin-v4.6.0` 前端有 `src/api/system/config`。**如不急可跳过**，前端不依赖此接口开菜单。
+> - **`sys_notice`** — 通知公告。2 个表(`sys_notice` + `sys_user_notice`)。`vue3-element-admin-v4.6.0` 前端有完整 CRUD + 发布/撤回/已读。**侧边菜单有入口，点进去就报 C0113(接口不存在)**。
+> - **`sys_user_notice`** — 用户-通知关联(已读状态)。依赖 `sys_notice`。
+> 
+> 社交(`sys_user_social`)、第三方登录 — 不做ocial`)、第三方登录 — 不做。"]
+| 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
+
 > 状态标记：⬜ 未开始 · 🟡 进行中 · ✅ 已完成 · ⚠️ 受阻
 
 ## 核心节奏
