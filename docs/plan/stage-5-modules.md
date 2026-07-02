@@ -253,11 +253,11 @@ src/
 
 ##### 5.4.6 权限 seed + 错误码 + 验收 (0.05d)
 
-- [ ] `src/lib/errors.ts`：追加 `FILE_NOT_FOUND: "A0470"` / `FILE_UPLOAD_FAILED: "A0471"`
-- [ ] `scripts/seed.ts`：sys_menu 追加 `sys:file:upload` / `sys:file:delete` 两条按钮权限，管理员角色勾选
-- [ ] 启动服务 → 前端上传/预览/删除走通
-- [ ] 边界：空文件 → A0400、超 50MB → A0400、不存在的 url → A0470 (404)
-- [ ] `bun run check` + `bun run tsc` 通过
+- [x] `src/lib/errors.ts`：追加 `FILE_NOT_FOUND: "A0470"` / `FILE_UPLOAD_FAILED: "A0471"`
+- [x] `scripts/seed.ts`：sys_menu 追加 `sys:file:upload` / `sys:file:delete` 两条按钮权限，管理员角色勾选
+- [x] 启动服务 → 前端上传/预览/删除走通
+- [x] 边界：空文件 → A0400、超 50MB → A0400、不存在的 url → A0470 (404)
+- [x] `bun run check` + `bun run tsc` 通过
 
 ### 5.5 定时任务（pg-boss）(1d)
 

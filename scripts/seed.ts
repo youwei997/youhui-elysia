@@ -435,8 +435,35 @@ const main = async () => {
 			updatedBy: 1,
 			updateTime: NOW,
 		},
+		// ── 文件存储按钮权限 ──
+		{
+			id: 50,
+			parentId: 1,
+			treePath: "0,1",
+			type: "B",
+			name: "文件上传",
+			perm: "sys:file:upload",
+			sort: 50,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 51,
+			parentId: 1,
+			treePath: "0,1",
+			type: "B",
+			name: "文件删除",
+			perm: "sys:file:delete",
+			sort: 51,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
 	]);
-	console.log("  ✅ 菜单表：25 条（1 目录 + 4 菜单 + 20 按钮）");
+	console.log("  ✅ 菜单表：27 条（1 目录 + 4 菜单 + 20 按钮 + 2 文件存储按钮）");
 
 	// ==========================================
 	// 3. 角色表（sys_role）—— dataScope：1=全部 2=部门及子部门 3=本部门 4=本人 5=自定义
@@ -680,6 +707,7 @@ const main = async () => {
 		20, 201, 202, 203, 204, 205, // 角色管理
 		30, 301, 302, 303, 304, // 菜单管理
 		40, 401, 402, 403, 404, // 部门管理
+		50, 51, // 文件存储按钮
 	];
 	await db.insert(sysRoleMenu).values(
 		adminMenuIds.map((menuId) => ({ roleId: 2, menuId })),
