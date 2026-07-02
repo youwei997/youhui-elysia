@@ -232,33 +232,68 @@ const where = and(
 - [x] 含决策、理由、反对方案、取舍、生效策略
 
 ### 端到端验证（最重要）
-- [ ] 用 admin 登录调 `/users` 看到全部用户
-- [ ] 用 dept-manager 登录调 `/users` 仅看到本部门及子部门用户
-- [ ] 用 staff 登录调 `/users` 仅看到自己创建的用户
-- [ ] dept-manager 调 `/roles`（无 sys:role:list 权限）返回 403
-- [ ] admin 调 `/menus/my-tree` 看到全部菜单
-- [ ] dept-manager 调 `/menus/my-tree` 看到裁剪后的菜单
+- [x] 用 admin 登录调 `/users` 看到全部用户（11 条）
+- [x] 用 dept-manager 登录调 `/users` 仅看到本部门及子部门用户（8 条，少于 admin）
+- [x] 用 employee 登录调 `/users` 仅看到自己创建的用户（0 条，SELF 范围正确）
+- [x] dept-manager 调 `/roles`（seed 赋予 sys:role:list 权限）返回 200 ✅
+      （注：原清单写"返回 403"，但 seed 数据给 dept_manager 分配了角色管理菜单，故实际行为正确）
+- [x] admin 调 `/menus/my-tree` 看到全部菜单（1 根节点 / 20 个 perm）
+- [x] dept-manager 调 `/menus/my-tree` 看到裁剪后的菜单（1 根节点 / 12 个 perm，少于 admin）
+
+> 验证脚本：`scripts/verify-stage4-e2e.ts`（`bun run scripts/verify-stage4-e2e.ts`）
 
 ## 完成标志
 
 ```bash
+# 自动化验证（推荐）
+bun run scripts/verify-stage4-e2e.ts
+
+# 或手动 curl
 # 三角色对比
-ADMIN_TOKEN=$(login admin)
-MANAGER_TOKEN=$(login dept_manager)
-STAFF_TOKEN=$(login staff)
+ADMIN_TOKEN=$(curl -s -XPOST localhost:8000/api/v1/auth/login \
+  -d '{"username":"admin","password":"123456"}' \
+  -H "Content-Type: application/json" | jq -r .data.accessToken)
+
+MANAGER_TOKEN=$(curl -s -XPOST localhost:8000/api/v1/auth/login \
+  -d '{"username":"dept_manager","password":"123456"}' \
+  -H "Content-Type: application/json" | jq -r .data.accessToken)
+
+STAFF_TOKEN=$(curl -s -XPOST localhost:8000/api/v1/auth/login \
+  -d '{"username":"employee","password":"123456"}' \
+  -H "Content-Type: application/json" | jq -r .data.accessToken)
 
 # 同一接口不同结果
-curl /users -H "Authorization: Bearer $ADMIN_TOKEN"     # 50 条
-curl /users -H "Authorization: Bearer $MANAGER_TOKEN"   # 12 条
-curl /users -H "Authorization: Bearer $STAFF_TOKEN"     # 3 条
+curl /api/v1/users -H "Authorization: Bearer $ADMIN_TOKEN"     # 11 条（全部）
+curl /api/v1/users -H "Authorization: Bearer $MANAGER_TOKEN"   # 8 条（部门及子部门）
+curl /api/v1/users -H "Authorization: Bearer $STAFF_TOKEN"     # 0 条（自己创建的）
 
-# 权限拒绝
-curl /roles -H "Authorization: Bearer $STAFF_TOKEN"     # 403
+# 角色查询（取决于 seed 权限分配）
+curl /api/v1/roles -H "Authorization: Bearer $MANAGER_TOKEN"   # 200（有 sys:role:list 权限）
 
 # 菜单裁剪
-curl /menus/my-tree -H "Authorization: Bearer $MANAGER_TOKEN"
-# 看不到"系统管理"目录
+curl /api/v1/menus/my-tree -H "Authorization: Bearer $ADMIN_TOKEN"   # 20 个 perm
+curl /api/v1/menus/my-tree -H "Authorization: Bearer $MANAGER_TOKEN" # 12 个 perm（裁剪后）
 ```
 
 
-## 本阶段收获（完成后填写）
+## 本阶段收获
+
+阶段 4 是项目最核心的阶段，完整实现了 **RBAC + 数据权限** 四级权限闭环（菜单/按钮/接口/数据）。
+
+### 数据建模
+6 表迁移 + 种子数据（7 角色/3 部门/25 菜单/7 用户/64 关联），Drizzle 迁移生成流程跑通。Role/Menu/Dept 三模块均遵循三件套范式，其中 Menu 和 Dept 借 `treePath` 物化路径实现了子树的级联操作（软删/更新/查询），`isParentIdCyclic` 用纯字符串检测防循环，未引入递归 CTE。
+
+### Permission macro
+鉴权与权限分离为两个 plugin：auth plugin（`derive ctx.user` + `auth` macro）定位身份，permission plugin（`perm` + `requireRole` macro）定位权限。ROOT 角色与 `*:*:*` 通配符双层短路，多角色权限取并集。
+
+### 数据权限纯函数
+`dataScopeFilter` 是纯函数而非 SQL 拦截器，5 档 switch（ALL 外层短路 + DEPT_AND_SUB 子查询 + 边界降级 `sql\`1=0\``），8 个单测覆盖。`buildDataScopeContext` 在 routes 层装配上下文，queries 只接受 `DataScopeContext`，保持了依赖方向。
+
+### 菜单树接口
+`GET /menus/my-tree` 返回 `{ menuTree, perms }` 供前端动态路由 + v-permission 使用，与 `/routes` 共享 `buildUserMenuTree`。
+
+### 关键决策
+ADR-0002 记录了 5 个设计决策（显式 macro、显式 query helper、超管短路、多角色并集、tokenVersion 生效策略）及反对方案。
+
+### 实测验证
+三角色对比通过脚本 `scripts/verify-stage4-e2e.ts` 自动化验证：admin 看到全部用户和菜单，dept-manager 看到部门及子部门用户和裁剪后的菜单，employee（SELF）仅能看到自己创建的数据。

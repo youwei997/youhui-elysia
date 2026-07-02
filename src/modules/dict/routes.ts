@@ -283,9 +283,9 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	)
 	// ── 字典项：按 type 查询（前端高频，无需权限，仅返回启用项） ──
 	.get(
-		"/:type/items",
+		"/:id/items",
 		async ({ params }) => {
-			return withCache(redisKeys.dictCache(params.type), 600, async () => {
+			return withCache(redisKeys.dictCache(params.id), 600, async () => {
 				const dict = await findDictByType(params.type, db);
 				if (!dict) return [];
 				const items = await findDictItems(dict.id, { status: 1 }, db);
