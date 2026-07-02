@@ -174,5 +174,5 @@ SQL 片段 / reducer / selector → 用 `toContain` 关键片段，不用 `toEqu
 - [x] 8 个单测 case 代码完成（全绿需 `bun test` 验证）
 - [x] `GET /users` 接入 `dataScopeFilter` 代码完成（50/12/3 需 curl 三角色验证）
 - [x] `bun run check` / `tsc` / `check:dev` 全 exit 0（已验证通过）
-- [ ] `plan/README.md` 进度日志追加 4.6 行（独立任务）
+- [x] `plan/README.md` 进度日志追加 4.6 行（独立任务）
 - [x] 父文档验收清单"数据权限"5 项 `[ ]` → `[x]`

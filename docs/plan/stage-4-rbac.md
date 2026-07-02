@@ -7,7 +7,7 @@
 
 完整实现**菜单 + 按钮 + 接口 + 数据**四级权限闭环：
 - 用户登录后能拿到自己的菜单树（按角色裁剪）
-- 路由声明 `requirePerm('sys:user:create')` 自动校验
+- 路由声明 `perm: ['sys:user:create']` 自动校验
 - 列表查询自动按数据权限（5 档枚举）过滤
 - admin / dept-manager / staff 三角色调用相同 API 返回不同数据
 
@@ -24,7 +24,7 @@
 按 youlai-boot 简化版：
 
 `src/db/schema/system/role.ts`：
-- 字段：id / code / name / sort / status / dataScope（'ALL' | 'DEPT' | 'DEPT_AND_SUB' | 'SELF' | 'CUSTOM'）+ auditColumns
+- 字段：id / code / name / sort / status / dataScope（1=所有数据 2=部门及子部门 3=本部门 4=本人 5=自定义）+ auditColumns
 - code 唯一索引
 
 `src/db/schema/system/menu.ts`：
@@ -78,7 +78,7 @@
 `src/plugins/permission.ts`：
 
 实现两个 macro：
-- `requirePerm: string | string[]` —— 用户 perms 包含其中之一即放行
+- `perm: string | string[]` —— 用户 perms 包含其中之一即放行
 - `requireRole: string | string[]` —— 用户 roles 包含其中之一即放行
 
 用户 perms 来源：

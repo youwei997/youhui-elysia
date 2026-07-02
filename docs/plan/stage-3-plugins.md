@@ -11,9 +11,9 @@
 
 ## 前置检查
 
-- [ ] 阶段 2 验收全 ✅
-- [ ] user 模块三件套已跑通
-- [ ] OpenAPI 文档可看
+- [x] 阶段 2 验收全 ✅
+- [x] user 模块三件套已跑通
+- [x] OpenAPI 文档可看
 
 ## 子任务清单
 
@@ -27,7 +27,7 @@
   type BizError = { kind: 'biz', code: ErrCode, message: string, status: number }
   const bizError = (code, message, status = 400): BizError => ({ kind: 'biz', code, message, status })
   ```
-- 也可保留 class 风格 `class BizError extends Error`（throw 友好），权衡后决定，写 ADR
+- 也可保留 class 风格 `class BizError extends Error`（throw 友好）。实际采用了 class 风格，见 `src/lib/errors.ts`，未另写 ADR。
 
 `src/plugins/error-handler.ts`：
 - `onError` 全局处理：分支 VALIDATION / NOT_FOUND / Postgres 唯一冲突（23505）/ BizError / 未知错
@@ -37,7 +37,7 @@
 ### 3.2 响应壳（plugin/response-wrap）(0.5d)
 
 `src/plugins/response-wrap.ts`：
-- 用 `mapResponse` 把 handler 返回值包成 `{ code: 0, msg: 'ok', data }`
+- 用 `mapResponse` 把 handler 返回值包成 `{ code: "00000", msg: "成功", data }`
 - 跳过白名单：OpenAPI 文档路径（`/openapi`、`/openapi/json`）、健康检查（`/health`）
 - 按类型放行：`string`（纯文本）和 `undefined`（Elysia 内部用）直接透传，其余（boolean/number/object/null）统一包壳
 
@@ -93,7 +93,7 @@
 
 `src/modules/auth/schema.ts` + `routes.ts` + `queries.ts`：
 - `POST /auth/login`：username + password → access + refresh
-  - 密码用 **argon2** 或 **bcrypt** 哈希（推荐 argon2，bcrypt 也行）
+  - 密码用 `Bun.password.hash()`（默认 argon2id，零依赖），见 `src/lib/password.ts`
   - 登录失败计数：Redis `auth:fail:{username}`，N 次后锁定 M 分钟
   - 成功后清失败计数
 - `POST /auth/refresh`：refresh token → 新 access token（同时签发新 refresh token，旧的入黑名单）
@@ -143,7 +143,6 @@
 - ❌ **不要**把 `password` 字段返回到响应里（schema.ts 里就 `t.Omit` 掉）
 - ⚠️ JWT secret 不准 hardcode，必须走 env
 - ⚠️ refresh token 一定要"一次性"——用过即入黑名单 + 签新的
-- ⚠️ argon2 在 Bun 上的 native binding 注意，可能要 `bun add argon2` 后 rebuild
 - ⚠️ Redis key 命名要约定：`auth:user:{id}:version` / `auth:revoked:{jti}` / `auth:fail:{username}`，建立 `lib/redis-keys.ts` 集中管理
 
 ## 验收清单
