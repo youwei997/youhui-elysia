@@ -26,13 +26,24 @@ export const createStorage = (cfg: StorageConfig): Storage => {
  */
 const buildStorageConfigFromEnv = (cfg: typeof config): StorageConfig => {
 	if (cfg.STORAGE_DRIVER === "s3") {
+		const endpoint = cfg.S3_ENDPOINT;
+		const bucket = cfg.S3_BUCKET;
+		const accessKeyId = cfg.S3_ACCESS_KEY_ID;
+		const secretAccessKey = cfg.S3_SECRET_ACCESS_KEY;
+
+		if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
+			throw new Error(
+				"S3 driver requires S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY",
+			);
+		}
+
 		return {
 			driver: "s3",
-			endpoint: cfg.S3_ENDPOINT as string,
+			endpoint,
 			region: cfg.S3_REGION,
-			bucket: cfg.S3_BUCKET as string,
-			accessKeyId: cfg.S3_ACCESS_KEY_ID as string,
-			secretAccessKey: cfg.S3_SECRET_ACCESS_KEY as string,
+			bucket,
+			accessKeyId,
+			secretAccessKey,
 			...(cfg.S3_PUBLIC_BASE_URL && { publicBaseUrl: cfg.S3_PUBLIC_BASE_URL }),
 		};
 	}
