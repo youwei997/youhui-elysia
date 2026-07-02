@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { success } from "@/lib/errors";
 
 /** 白名单：这些路径的响应不包壳（文档页、健康检查等） */
-const WHITELIST = ["/openapi", "/favicon.ico", "/health"];
+const WHITELIST = ["/openapi", "/favicon.ico", "/health", "/uploads"];
 
 /**
  * 响应壳 plugin：onAfterHandle 拦截成功响应，统一包成 { code, msg, data }
