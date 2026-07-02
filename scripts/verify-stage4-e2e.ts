@@ -16,12 +16,6 @@ const PREFIX = "/api/v1";
 const BASE = process.env.BASE ?? "http://localhost:8000";
 const PASS = "123456";
 
-const api = (path: string, token?: string) => {
-	const headers: Record<string, string> = { "Content-Type": "application/json" };
-	if (token) headers["Authorization"] = `Bearer ${token}`;
-	return `${BASE}${path}`;
-};
-
 const login = async (username: string): Promise<string> => {
 	const res = await fetch(`${BASE}${PREFIX}/auth/login`, {
 		method: "POST",
