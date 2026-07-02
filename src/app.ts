@@ -9,6 +9,7 @@ import { menuRoutes } from "@/modules/menu/routes";
 import { onlineRoutes } from "@/modules/online/routes";
 import { operLogRoutes } from "@/modules/oper-log/routes";
 import { roleRoutes } from "@/modules/role/routes";
+import { storageRoutes } from "@/modules/storage/routes";
 import { userRoutes } from "@/modules/user/routes";
 import { auditLogPlugin } from "@/plugins/audit-log";
 import { authPlugin } from "@/plugins/auth";
@@ -43,6 +44,7 @@ export const app = new Elysia()
 					{ name: "LoginLog", description: "登录日志" },
 					{ name: "Online", description: "在线用户" },
 					{ name: "Dict", description: "字典管理" },
+					{ name: "File", description: "文件存储" },
 					{ name: "IpBlacklist", description: "IP 黑名单" },
 				],
 				components: {
@@ -72,4 +74,5 @@ export const app = new Elysia()
 	.use(onlineRoutes)
 	.use(dictRoutes)
 	.use(ipBlacklistRoutes)
+	.use(storageRoutes)
 	.get("/", () => "Hello Elysia");

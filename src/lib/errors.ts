@@ -63,6 +63,8 @@ export const ERR_CODE = {
 	DICT_ITEM_VALUE_DUPLICATE: "A0454", // 字典项值已存在
 	/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
+	/** A047x File 模块业务错误 */
+	FILE_NOT_FOUND: "A0470", // 文件不存在
 
 	// B 系统端错误
 	SYSTEM_ERROR: "B0001", // 系统执行出错
@@ -114,6 +116,7 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.DICT_ITEM_LABEL_DUPLICATE]: "字典项标签已存在",
 	[ERR_CODE.DICT_ITEM_VALUE_DUPLICATE]: "字典项值已存在",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
+	[ERR_CODE.FILE_NOT_FOUND]: "文件不存在",
 	[ERR_CODE.SYSTEM_ERROR]: "系统执行出错",
 	[ERR_CODE.THIRD_PARTY_SERVICE_ERROR]: "调用第三方服务出错",
 	[ERR_CODE.INTERFACE_NOT_EXIST]: "接口不存在",
