@@ -228,9 +228,9 @@ src/
 
 ##### 5.4.2 Storage 抽象层：local-fs 先行 (0.3d)
 
-- [ ] `src/lib/storage/types.ts`：`Storage` 接口（`put` / `delete`）+ `StorageConfig` 联合类型
-- [ ] `src/lib/storage/local-fs.ts`：`Bun.write` 写文件 → `new URL()` 构造 url；`fs.unlink` 删文件（幂等）
-- [ ] `src/lib/storage/index.ts`：`createStorage(config)` 工厂 + `storage` 全局单例
+- [x] `src/lib/storage/types.ts`：`Storage` 接口（`put` / `delete`）+ `StorageConfig` 联合类型
+- [x] `src/lib/storage/local-fs.ts`：`Bun.write` 写文件 → `new URL()` 构造 url；`fs.unlink` 删文件（幂等）
+- [x] `src/lib/storage/index.ts`：`createStorage(config)` 工厂 + `storage` 全局单例
 
 ##### 5.4.3 模块三件套：schema + queries + routes (0.25d)
 
