@@ -232,7 +232,7 @@ src/
 - [x] `src/lib/storage/local-fs.ts`：`Bun.write` 写文件 → `new URL()` 构造 url；`fs.unlink` 删文件（幂等）
 - [x] `src/lib/storage/index.ts`：`createStorage(config)` 工厂 + `storage` 全局单例
 
-##### 5.4.3 模块三件套：schema + queries + routes (0.25d)✅ 已完成
+##### 5.4.3 模块三件套：schema + queries + routes (0.25d)
 
 - [x] `src/modules/storage/schema.ts`：`FileInfoResponse`（`{ name, url }` 对齐前端契约）
 - [x] `src/modules/storage/queries.ts`：`createFile` / `findFileByUrl`（只查未软删）/ `softDeleteFile`
