@@ -232,11 +232,11 @@ src/
 - [x] `src/lib/storage/local-fs.ts`：`Bun.write` 写文件 → `new URL()` 构造 url；`fs.unlink` 删文件（幂等）
 - [x] `src/lib/storage/index.ts`：`createStorage(config)` 工厂 + `storage` 全局单例
 
-##### 5.4.3 模块三件套：schema + queries + routes (0.25d)
+##### 5.4.3 模块三件套：schema + queries + routes (0.25d)✅ 已完成
 
-- [ ] `src/modules/storage/schema.ts`：`FileInfoResponse`（`{ name, url }` 对齐前端契约）
-- [ ] `src/modules/storage/queries.ts`：`createFile` / `findFileByUrl`（只查未软删）/ `softDeleteFile`
-- [ ] `src/modules/storage/routes.ts`：
+- [x] `src/modules/storage/schema.ts`：`FileInfoResponse`（`{ name, url }` 对齐前端契约）
+- [x] `src/modules/storage/queries.ts`：`createFile` / `findFileByUrl`（只查未软删）/ `softDeleteFile`
+- [x] `src/modules/storage/routes.ts`：
   - `POST /api/v1/files`：`t.Object({ file: t.File() })`，handler 校验 `file.size` ≤ 50MB，`file.stream()` 写存储 → 落元数据 → 返回 `{ name, url }`
   - `DELETE /api/v1/files`：`query.filePath` → `findFileByUrl` 反查 → `storage.delete` → `softDeleteFile`
   - 两个路由挂 `auth: true` + `perm` + `audit` 声明
