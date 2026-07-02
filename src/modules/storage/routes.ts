@@ -22,9 +22,14 @@ export const storageRoutes = new Elysia({ prefix: "/api/v1/files" })
 				);
 			}
 			const key = buildStorageKey(file.name);
-			const { url } = await storage.put(key, file.stream(), {
-				contentType: file.type,
-			});
+			let url: string;
+			try {
+				({ url } = await storage.put(key, file.stream(), {
+					contentType: file.type,
+				}));
+			} catch {
+				throw new BizError(ERR_CODE.FILE_UPLOAD_FAILED, "文件上传失败");
+			}
 			await createFile(
 				{
 					key,
