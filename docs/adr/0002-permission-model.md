@@ -12,13 +12,13 @@
 
 ### 1. 接口权限：显式 Elysia macro，不使用 SQL 拦截器
 
-路由通过 `perm` macro 声明所需权限编码（如 `perm: 'sys:user:create'`），permission plugin 在 `beforeHandle` 阶段校验 JWT 中的 `perms` 数组是否包含所需权限。
+路由通过 `requirePerm` macro 声明所需权限编码（如 `requirePerm: ['sys:user:create']`），permission plugin 在 `beforeHandle` 阶段校验 JWT 中的 `perms` 数组是否包含所需权限。
 
 **实现位置**: `src/plugins/permission.ts`
 
 ```ts
 // 路由声明
-.post('/users', handler, { perm: ['sys:user:create'] })
+.post('/users', handler, { requirePerm: ['sys:user:create'] })
 
 // plugin 校验（beforeHandle）
 const hasPerm = requiredPerms.some((p) => user.perms.includes(p));
@@ -79,7 +79,7 @@ if (ctx.scopes.some((s) => s.scope === DATA_SCOPE.ALL)) return undefined;
 
 ### 显式 > 隐式
 
-1. **可调试**：每个路由的权限需求一目了然（`perm: 'sys:user:create'`），出问题时能快速定位
+1. **可调试**：每个路由的权限需求一目了然（`requirePerm: ['sys:user:create']`），出问题时能快速定位
 2. **类型友好**：macro 参数有明确类型，IDE 自动补全和检查
 3. **无魔法**：SQL 拦截器在运行时静默改写 SQL，调试时看不到"谁改了什么条件"
 4. **可测试**：纯函数 + 宏组合，单元测试直接验证，不需要启动完整请求链路
@@ -118,7 +118,7 @@ if (ctx.scopes.some((s) => s.scope === DATA_SCOPE.ALL)) return undefined;
 
 ## 后果
 
-- **每个需要权限校验的路由**必须显式声明 `perm` macro，遗漏时接口无权限保护（靠 code review 兜底）
+- **每个需要权限校验的路由**必须显式声明 `requirePerm` macro，遗漏时接口无权限保护（靠 code review 兜底）
 - **每个需要数据权限的列表查询**必须主动调用 `dataScopeFilter`，遗漏时返回全量数据（靠约定 + code review）
 - **角色变更后用户需重新登录**才能看到新权限，tokenVersion+1 机制保证旧 token 失效
 - **前端 v-permission 指令**依赖 `/menus/my-tree` 返回的 perms 列表，与后端 perm macro 使用同一套权限编码（`sys:xxx:yyy` 格式）

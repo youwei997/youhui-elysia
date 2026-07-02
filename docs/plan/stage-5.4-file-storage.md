@@ -352,8 +352,8 @@ export const sysFile = pgTable(
 
 | 方法 | 路径 | 用途 | 鉴权 |
 |---|---|---|---|
-| POST | `/api/v1/files` | 上传文件（multipart） | `auth: true` + `perm: ["sys:file:upload"]` |
-| DELETE | `/api/v1/files` | 删除文件（query 传 url） | `auth: true` + `perm: ["sys:file:delete"]` |
+| POST | `/api/v1/files` | 上传文件（multipart） | `auth: true` + `requirePerm: ["sys:file:upload"]` |
+| DELETE | `/api/v1/files` | 删除文件（query 传 url） | `auth: true` + `requirePerm: ["sys:file:delete"]` |
 
 **对齐前端契约**：前端 `FileAPI.upload` POST `/api/v1/files`，`FileAPI.delete` DELETE `/api/v1/files?filePath=url`。
 
@@ -390,7 +390,7 @@ export const sysFile = pgTable(
   },
   {
     auth: true,
-    perm: ["sys:file:upload"],
+    requirePerm: ["sys:file:upload"],
     body: t.Object({ file: t.File() }),  // t.Object 包裹，t.File() 无参数=允许任意类型
     detail: { tags: ["File"], summary: "上传文件" },
   },
@@ -433,7 +433,7 @@ export const sysFile = pgTable(
   },
   {
     auth: true,
-    perm: ["sys:file:delete"],
+    requirePerm: ["sys:file:delete"],
     query: t.Object({ filePath: t.String() }),
     detail: { tags: ["File"], summary: "删除文件" },
   },
@@ -480,7 +480,7 @@ OpenAPI tags 增加 `{ name: "File", description: "文件存储" }`。
 - 普通用户按需分配
 
 **为什么必须做**：
-- 后端 `perm: ["sys:file:upload"]` macro 会查 ctx.perms，没 seed 就过不了
+- 后端 `requirePerm: ["sys:file:upload"]` macro 会查 ctx.perms，没 seed 就过不了
 - 前端 `v-hasPerm="'sys:file:upload'"` 控制按钮显隐，没 seed 按钮不显示
 
 ---

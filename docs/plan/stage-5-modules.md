@@ -214,7 +214,7 @@ src/
     └── routes.ts         # Elysia plugin：POST /files + DELETE /files?filePath=url
 ```
 
-**路由**：`POST /api/v1/files`（multipart 字段名 `file`）、`DELETE /api/v1/files?filePath={url}`，鉴权 `auth: true` + `perm: ["sys:file:upload"]` / `["sys:file:delete"]`。
+**路由**：`POST /api/v1/files`（multipart 字段名 `file`）、`DELETE /api/v1/files?filePath={url}`，鉴权 `auth: true` + `requirePerm: ["sys:file:upload"]` / `["sys:file:delete"]`。
 
 #### 子任务拆解
 
