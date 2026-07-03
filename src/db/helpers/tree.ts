@@ -13,7 +13,7 @@
  *   节点的 parentId 在 lookup 表中不存在 → 也视为根（兜底，防止数据有悬空引用的脏数据时丢节点）
  */
 
-import { like, type SQL } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
 /**
@@ -69,7 +69,11 @@ export const buildTree = <
  *
  * @param treePathColumn Drizzle 表的 treePath 列
  * @param rootTreePath 根节点的 treePath 值（如 "0,1,3"）
- * @returns SQL fragment：匹配 treePath LIKE 'rootTreePath%' 的所有节点（含根自身）
+ * @returns SQL fragment：匹配 treePath = rootTreePath（自身）或 treePath LIKE 'rootTreePath,%'（子孙）
+ *
+ * 为什么不直接用 LIKE 'rootTreePath%'：
+ *   "0,1,3%" 会误匹配 "0,1,30"（id=30 不是 id=3 的子孙）。
+ *   用 "treePath = rootTreePath OR treePath LIKE rootTreePath,%" 避免此边界。
  *
  * 使用示例：
  * ```ts
@@ -84,5 +88,5 @@ export const descendantsByTreePath = (
 	treePathColumn: PgColumn,
 	rootTreePath: string,
 ): SQL => {
-	return like(treePathColumn, `${rootTreePath}%`);
+	return sql`${treePathColumn} = ${rootTreePath} OR ${treePathColumn} LIKE ${`${rootTreePath},%`}`;
 };

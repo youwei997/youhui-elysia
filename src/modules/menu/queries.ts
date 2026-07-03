@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, like, ne, or, sql } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
 import { sysMenu } from "@/db/schema/system/menu";
@@ -203,9 +203,49 @@ export const updateMenu = async (
 	db: DB,
 ): Promise<MenuRecord | undefined> => {
 	const updateData: Record<string, unknown> = { ...data };
-	if (data.parentId !== undefined) {
-		updateData.treePath = await calcTreePath(data.parentId, db);
+
+	// parentId 变更时重新计算 treePath，事务内级联更新子树
+	if (data.parentId !== undefined && data.parentId !== null) {
+		const newTreePath = await calcTreePath(data.parentId, db);
+
+		return await db.transaction(async (tx) => {
+			// 查出旧的 treePath（更新前），用于级联替换
+			const before = await tx
+				.select({ treePath: sysMenu.treePath })
+				.from(sysMenu)
+				.where(and(eq(sysMenu.id, id), isNull(sysMenu.deleteTime)))
+				.limit(1);
+			if (!before[0]) {
+				return undefined;
+			}
+			const oldTreePath = before[0].treePath;
+
+			// 更新目标节点
+			const [menu] = await tx
+				.update(sysMenu)
+				.set({ ...updateData, treePath: newTreePath })
+				.where(and(eq(sysMenu.id, id), isNull(sysMenu.deleteTime)))
+				.returning();
+
+			// 级联更新子树的 treePath：替换前缀
+			if (oldTreePath) {
+				await tx
+					.update(sysMenu)
+					.set({
+						treePath: sql`REPLACE(${sysMenu.treePath}, ${oldTreePath}, ${newTreePath})`,
+					})
+					.where(
+						and(
+							isNull(sysMenu.deleteTime),
+							like(sysMenu.treePath, `${oldTreePath},%`),
+						),
+					);
+			}
+
+			return menu;
+		});
 	}
+
 	const [menu] = await db
 		.update(sysMenu)
 		.set(updateData)

@@ -617,7 +617,7 @@ const main = async () => {
 			nickname: "部门主管",
 			gender: 1,
 			password: DEFAULT_PASSWORD,
-			deptId: 1,
+			deptId: 2,
 			avatar:
 				"https://foruda.gitee.com/images/1723603502796844527/03cdca2a_716974.gif",
 			mobile: "18812345680",
