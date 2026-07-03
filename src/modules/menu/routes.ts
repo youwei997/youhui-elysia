@@ -12,7 +12,6 @@ import {
 	findMenuOptions,
 	findMenusByRoleCodes,
 	isParentIdCyclic,
-	type MenuRoute,
 	softDeleteMenu,
 	updateMenu,
 } from "./queries";
@@ -25,7 +24,13 @@ import {
 	MenuResponse,
 	MenuUpdateBody,
 } from "./schema";
-import type { RouteItem, RouteMeta } from "./types";
+import type {
+	MenuDetailResponseInput,
+	MenuResponseInput,
+	MenuRoute,
+	RouteItem,
+	RouteMeta,
+} from "./types";
 
 /** 将单条菜单映射为 RouteItem */
 const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {
@@ -61,7 +66,7 @@ const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {
 };
 
 /** 列表响应转换：parse 后 id / parentId 转 string */
-const parseMenu = (menu: Parameters<typeof MenuResponse.parse>[0]) => {
+const parseMenu = (menu: MenuResponseInput) => {
 	const parsed = MenuResponse.parse(menu);
 	return {
 		...parsed,
@@ -71,9 +76,7 @@ const parseMenu = (menu: Parameters<typeof MenuResponse.parse>[0]) => {
 };
 
 /** 详情响应转换：保留 alwaysShow / keepAlive */
-const parseMenuDetail = (
-	menu: Parameters<typeof MenuDetailResponse.parse>[0],
-) => {
+const parseMenuDetail = (menu: MenuDetailResponseInput) => {
 	const parsed = MenuDetailResponse.parse(menu);
 	return {
 		...parsed,
@@ -286,6 +289,9 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 				}
 			}
 			const menu = await createMenu(body, db);
+			if (!menu) {
+				throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
+			}
 			return parseMenuDetail(menu);
 		},
 		{

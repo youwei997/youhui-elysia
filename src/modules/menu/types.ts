@@ -1,3 +1,38 @@
+import type { z } from "zod";
+import type { sysMenu } from "@/db/schema/system/menu";
+import type { MenuDetailResponse, MenuResponse } from "./schema";
+
+/** sys_menu 表原始记录类型 */
+export type MenuRecord = typeof sysMenu.$inferSelect;
+
+/**
+ * 菜单路由查询结果类型（仅路由接口所需字段，不含审计列）
+ */
+export type MenuRoute = {
+	id: number;
+	parentId: number;
+	treePath: string | null;
+	type: string;
+	name: string;
+	routeName: string | null;
+	routePath: string | null;
+	component: string | null;
+	perm: string | null;
+	alwaysShow: number | null;
+	keepAlive: number | null;
+	visible: number | null;
+	sort: number | null;
+	icon: string | null;
+	redirect: string | null;
+	params: unknown;
+};
+
+/** MenuResponse.parse 的输入类型 */
+export type MenuResponseInput = z.input<typeof MenuResponse>;
+
+/** MenuDetailResponse.parse 的输入类型 */
+export type MenuDetailResponseInput = z.input<typeof MenuDetailResponse>;
+
 /**
  * 菜单模块 — 路由映射类型
  *

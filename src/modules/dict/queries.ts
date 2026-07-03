@@ -3,6 +3,7 @@ import type { DB } from "@/db/client";
 import { sysDict } from "@/db/schema/system/dict";
 import { sysDictItem } from "@/db/schema/system/dict-item";
 import type { PageResult } from "@/lib/pagination";
+import type { DictItemRecord, DictRecord } from "./types";
 
 // ── 字典类型 ──
 
@@ -18,7 +19,7 @@ export const findDicts = async (
 		status?: number;
 	},
 	db: DB,
-): Promise<PageResult<typeof sysDict.$inferSelect>> => {
+): Promise<PageResult<DictRecord>> => {
 	const where = [isNull(sysDict.deleteTime)];
 
 	if (query.type) {
@@ -53,7 +54,7 @@ export const findDicts = async (
 export const findDictById = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysDict.$inferSelect | undefined> => {
+): Promise<DictRecord | undefined> => {
 	const [dict] = await db
 		.select()
 		.from(sysDict)
@@ -65,7 +66,7 @@ export const findDictById = async (
 export const findDictByType = async (
 	type: string,
 	db: DB,
-): Promise<typeof sysDict.$inferSelect | undefined> => {
+): Promise<DictRecord | undefined> => {
 	const [dict] = await db
 		.select()
 		.from(sysDict)
@@ -77,7 +78,7 @@ export const findDictByType = async (
 export const createDict = async (
 	data: { type: string; name: string; status: number },
 	db: DB,
-): Promise<typeof sysDict.$inferSelect | undefined> => {
+): Promise<DictRecord | undefined> => {
 	const [dict] = await db.insert(sysDict).values(data).returning();
 	return dict;
 };
@@ -87,7 +88,7 @@ export const updateDict = async (
 	id: number,
 	data: { name?: string | undefined; status?: number | undefined },
 	db: DB,
-): Promise<typeof sysDict.$inferSelect | undefined> => {
+): Promise<DictRecord | undefined> => {
 	const [dict] = await db
 		.update(sysDict)
 		.set(data)
@@ -127,7 +128,7 @@ export const findDictItems = async (
 	dictId: number,
 	query: { label?: string | undefined; status?: number | undefined },
 	db: DB,
-): Promise<(typeof sysDictItem.$inferSelect)[]> => {
+): Promise<DictItemRecord[]> => {
 	const where = [
 		eq(sysDictItem.dictId, dictId),
 		isNull(sysDictItem.deleteTime),
@@ -151,7 +152,7 @@ export const findDictItems = async (
 export const findDictItemById = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+): Promise<DictItemRecord | undefined> => {
 	const [item] = await db
 		.select()
 		.from(sysDictItem)
@@ -164,7 +165,7 @@ export const createDictItem = async (
 	dictId: number,
 	data: { label: string; value: string; sort: number; status: number },
 	db: DB,
-): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+): Promise<DictItemRecord | undefined> => {
 	const [item] = await db
 		.insert(sysDictItem)
 		.values({ ...data, dictId })
@@ -182,7 +183,7 @@ export const updateDictItem = async (
 		status?: number | undefined;
 	},
 	db: DB,
-): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+): Promise<DictItemRecord | undefined> => {
 	const [item] = await db
 		.update(sysDictItem)
 		.set(data)
@@ -209,7 +210,7 @@ export const findDictItemByDictIdAndLabel = async (
 	dictId: number,
 	label: string,
 	db: DB,
-): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+): Promise<DictItemRecord | undefined> => {
 	const [item] = await db
 		.select()
 		.from(sysDictItem)
@@ -228,7 +229,7 @@ export const findDictItemByDictIdAndValue = async (
 	dictId: number,
 	value: string,
 	db: DB,
-): Promise<typeof sysDictItem.$inferSelect | undefined> => {
+): Promise<DictItemRecord | undefined> => {
 	const [item] = await db
 		.select()
 		.from(sysDictItem)

@@ -4,12 +4,13 @@ import { sysIpBlacklist } from "@/db/schema/system/ip-blacklist";
 import type { PageResult } from "@/lib/pagination";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
+import type { IpBlacklistRecord } from "./types";
 
 /** IP 黑名单列表（分页，软删过滤） */
 export const findIpBlacklists = async (
 	query: { pageNum: number; pageSize: number; ip?: string },
 	db: DB,
-): Promise<PageResult<typeof sysIpBlacklist.$inferSelect>> => {
+): Promise<PageResult<IpBlacklistRecord>> => {
 	const where = [isNull(sysIpBlacklist.deleteTime)];
 
 	if (query.ip) {
@@ -38,7 +39,7 @@ export const findIpBlacklists = async (
 export const findIpBlacklistByIp = async (
 	ip: string,
 	db: DB,
-): Promise<typeof sysIpBlacklist.$inferSelect | undefined> => {
+): Promise<IpBlacklistRecord | undefined> => {
 	const [item] = await db
 		.select()
 		.from(sysIpBlacklist)
@@ -76,7 +77,7 @@ export const addIpToBlacklist = async (
 export const removeIpFromBlacklist = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysIpBlacklist.$inferSelect | undefined> => {
+): Promise<IpBlacklistRecord | undefined> => {
 	const [item] = await db
 		.update(sysIpBlacklist)
 		.set({ deleteTime: new Date().toISOString() })

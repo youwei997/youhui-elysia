@@ -4,6 +4,7 @@ import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
+import type { UserRecord } from "@/modules/user/types";
 
 /**
  * 根据用户名查找有效用户（软删过滤 + 状态正常）
@@ -13,7 +14,7 @@ import { sysUser } from "@/db/schema/system/user";
 export const findActiveUserByUsername = async (
 	username: string,
 	db: DB,
-): Promise<typeof sysUser.$inferSelect | undefined> => {
+): Promise<UserRecord | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysUser)

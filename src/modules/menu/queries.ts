@@ -5,26 +5,7 @@ import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import type { MenuCreateBody, MenuUpdateBody } from "./schema";
-
-/** 菜单路由查询结果类型（仅路由接口所需字段，不含审计列） */
-export type MenuRoute = {
-	id: number;
-	parentId: number;
-	treePath: string | null;
-	type: string;
-	name: string;
-	routeName: string | null;
-	routePath: string | null;
-	component: string | null;
-	perm: string | null;
-	alwaysShow: number | null;
-	keepAlive: number | null;
-	visible: number | null;
-	sort: number | null;
-	icon: string | null;
-	redirect: string | null;
-	params: unknown;
-};
+import type { MenuRecord, MenuRoute } from "./types";
 
 /**
  * 获取所有非按钮菜单（供 ROOT 角色使用）
@@ -115,7 +96,7 @@ export const findMenusByRoleCodes = async (
 export const findMenuById = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysMenu.$inferSelect | undefined> => {
+): Promise<MenuRecord | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysMenu)
@@ -131,7 +112,7 @@ export const findMenuById = async (
 export const findAllMenusWithButtons = async (
 	keywords: string | undefined,
 	db: DB,
-): Promise<(typeof sysMenu.$inferSelect)[]> => {
+): Promise<MenuRecord[]> => {
 	const where = [isNull(sysMenu.deleteTime)];
 	if (keywords) {
 		// Postgres ILIKE：大小写不敏感的 LIKE，无需手动 lower()
@@ -203,7 +184,7 @@ const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 export const createMenu = async (
 	data: z.infer<typeof MenuCreateBody>,
 	db: DB,
-): Promise<typeof sysMenu.$inferSelect | undefined> => {
+): Promise<MenuRecord | undefined> => {
 	const treePath = await calcTreePath(data.parentId ?? 0, db);
 	const [menu] = await db
 		.insert(sysMenu)
@@ -220,7 +201,7 @@ export const updateMenu = async (
 	id: number,
 	data: z.infer<typeof MenuUpdateBody>,
 	db: DB,
-): Promise<typeof sysMenu.$inferSelect | undefined> => {
+): Promise<MenuRecord | undefined> => {
 	const updateData: Record<string, unknown> = { ...data };
 	if (data.parentId !== undefined) {
 		updateData.treePath = await calcTreePath(data.parentId, db);
@@ -243,7 +224,7 @@ export const updateMenu = async (
 export const softDeleteMenu = async (
 	id: number,
 	db: DB,
-): Promise<(typeof sysMenu.$inferSelect)[]> => {
+): Promise<MenuRecord[]> => {
 	const pattern = `(^|,)${id}(,|$)`;
 	return await db.transaction(async (tx) => {
 		// 先清理 sys_role_menu 中所有引用（被删节点及其子孙可能被角色绑定）

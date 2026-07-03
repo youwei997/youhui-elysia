@@ -17,6 +17,7 @@ import type {
 	RoleCreateBody,
 	RoleUpdateBody,
 } from "./schema";
+import type { RoleFormData, RoleRecord } from "./types";
 
 /** 角色列表查询（软删过滤 + 可选 keywords/status 过滤） */
 export const findRoles = async (
@@ -27,7 +28,7 @@ export const findRoles = async (
 		status?: number;
 	},
 	db: DB,
-): Promise<PageResult<typeof sysRole.$inferSelect>> => {
+): Promise<PageResult<RoleRecord>> => {
 	const where = [isNull(sysRole.deleteTime)];
 	if (query.keywords) {
 		where.push(like(sysRole.name, `%${query.keywords}%`));
@@ -55,7 +56,7 @@ export const findRoles = async (
 export const findRoleById = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysRole.$inferSelect | undefined> => {
+): Promise<RoleRecord | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysRole)
@@ -68,7 +69,7 @@ export const findRoleById = async (
 export const createRole = async (
 	data: z.infer<typeof RoleCreateBody>,
 	db: DB,
-): Promise<typeof sysRole.$inferSelect> => {
+): Promise<RoleRecord> => {
 	const { deptIds, ...roleData } = data;
 
 	return await db.transaction(async (tx) => {
@@ -92,7 +93,7 @@ export const updateRole = async (
 	id: number,
 	data: z.infer<typeof RoleUpdateBody>,
 	db: DB,
-): Promise<typeof sysRole.$inferSelect | undefined> => {
+): Promise<RoleRecord | undefined> => {
 	const { deptIds, ...roleData } = data;
 
 	return await db.transaction(async (tx) => {
@@ -134,7 +135,7 @@ export const updateRole = async (
 export const softDeleteRole = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysRole.$inferSelect | undefined> => {
+): Promise<RoleRecord | undefined> => {
 	return await db.transaction(async (tx) => {
 		await tx.delete(sysUserRole).where(eq(sysUserRole.roleId, id));
 		await tx.delete(sysRoleMenu).where(eq(sysRoleMenu.roleId, id));
@@ -274,9 +275,7 @@ export const findRoleOptions = async (
 export const findRoleFormData = async (
 	id: number,
 	db: DB,
-): Promise<
-	(typeof sysRole.$inferSelect & { deptIds: number[] }) | undefined
-> => {
+): Promise<RoleFormData | undefined> => {
 	const role = await findRoleById(id, db);
 	if (!role) {
 		return undefined;
@@ -321,7 +320,7 @@ export const isRoleAssignedToUsers = async (
 export const batchSoftDeleteRoles = async (
 	ids: number[],
 	db: DB,
-): Promise<(typeof sysRole.$inferSelect)[]> => {
+): Promise<RoleRecord[]> => {
 	if (ids.length === 0) {
 		return [];
 	}

@@ -5,6 +5,7 @@ import { sysDept } from "@/db/schema/system/dept";
 import { sysRoleDept } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
 import type { DeptCreateBody, DeptUpdateBody } from "./schema";
+import type { DeptRecord } from "./types";
 
 /**
  * 查询所有部门（软删过滤，按 sort 升序）
@@ -35,7 +36,7 @@ export const findAllDepts = async (
 export const findDeptById = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysDept.$inferSelect | undefined> => {
+): Promise<DeptRecord | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysDept)
@@ -103,7 +104,7 @@ export const isParentIdCyclic = async (
 export const createDept = async (
 	data: z.infer<typeof DeptCreateBody>,
 	db: DB,
-): Promise<typeof sysDept.$inferSelect | undefined> => {
+): Promise<DeptRecord | undefined> => {
 	const treePath = await calcTreePath(data.parentId ?? 0, db);
 	const [dept] = await db
 		.insert(sysDept)
@@ -119,7 +120,7 @@ export const updateDept = async (
 	id: number,
 	data: z.infer<typeof DeptUpdateBody>,
 	db: DB,
-): Promise<typeof sysDept.$inferSelect | undefined> => {
+): Promise<DeptRecord | undefined> => {
 	const updateData: Record<string, unknown> = { ...data };
 
 	// 只有 parentId 明确传值且非 null 时才重新计算 treePath
@@ -223,7 +224,7 @@ export const softDeleteDept = async (
 export const batchSoftDeleteDepts = async (
 	ids: number[],
 	db: DB,
-): Promise<(typeof sysDept.$inferSelect)[]> => {
+): Promise<DeptRecord[]> => {
 	if (ids.length === 0) {
 		return [];
 	}
