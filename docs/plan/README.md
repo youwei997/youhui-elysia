@@ -21,10 +21,43 @@
 > - **`sys_notice`** — 通知公告。2 个表(`sys_notice` + `sys_user_notice`)。`vue3-element-admin-v4.6.0` 前端有完整 CRUD + 发布/撤回/已读。**侧边菜单有入口，点进去就报 C0113(接口不存在)**。
 > - **`sys_user_notice`** — 用户-通知关联(已读状态)。依赖 `sys_notice`。
 > 
-> 社交(`sys_user_social`)、第三方登录 — 不做ocial`)、第三方登录 — 不做。"]
-| 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
+> 社交(`sys_user_social`)、第三方登录 — 不做。
 
 > 状态标记：⬜ 未开始 · 🟡 进行中 · ✅ 已完成 · ⚠️ 受阻
+
+## 补充清单：已识别的前后端差异
+
+> 来自 vue3-element-admin v4.6.0 与后端 API 的逐项对比，按优先级分组。
+> 前端不改，缺失全部后端补。
+
+### 阶段 4 遗留（应先修）
+
+| 问题 | 影响 | 复杂度 |
+|---|---|---|
+| `descendantsByTreePath` LIKE 边界 bug | `LIKE '0,1,3%'` 误匹配 `0,1,30`，数据量大时 DEPT_AND_SUB 数据权限出错 | 低 |
+| seed 数据与 E2E 预期矛盾 | DEPT_MANAGER 绑了角色管理菜单，E2E 预期 403 实际 200 | 低 |
+| Menu treePath 未级联更新 | 移动有子菜单的目录后子孙 treePath 变脏，影响级联软删 | 中 |
+
+### 阶段 5 应纳入的缺失模块
+
+| 缺失 | 前端影响 | API 数 | 复杂度 |
+|---|---|---|---|
+| **个人中心**（profile/password/mobile/email） | profile 整页不可用，按钮 404 | 9 | 中（手机/邮箱验证码需第三方服务，可先 stub） |
+| **用户导入导出**（template/import/export） | 用户管理页导出/导入按钮 404 | 3 | 中（xlsx 生成/解析） |
+| **系统配置**（sys_config） | 配置页不可用，但前端不依赖此接口开菜单 | 6 | 低 |
+| **通知公告**（sys_notice + sys_user_notice） | 侧边菜单有入口，点进去报错 | 10 | 中 |
+
+### 应尽快修的小项（不算新功能）
+
+| 问题 | 影响 |
+|---|---|
+| `findUsers` 缺 `deptName` / `roleNames` JOIN | 用户列表页两列为空 |
+
+### 不做
+
+- 社交登录（`sys_user_social`）、第三方登录
+- 短信登录（前端无入口）
+- 多租户切换（`switch-tenant`，前端无视图调用）
 
 ## 核心节奏
 
