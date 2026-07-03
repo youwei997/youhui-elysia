@@ -18,7 +18,7 @@
 
 ## 待办清单
 
-> 阶段 5 已完成 5/6 子任务（5.1-5.4、5.6），仅剩 5.5（pg-boss 定时任务）。
+> 阶段 5 已完成 6/7 子任务（5.1-5.4、5.6），仅剩 5.5（pg-boss 定时任务）。
 > 仅列大模块。详细分析见 `.analysis/`（不纳入版本管理，没有就说明还没做）。
 > 前端不改，缺失全部后端补。youlai-boot 仅作契约参考，技术栈以 ElysiaJS + Bun 为主。
 
@@ -27,7 +27,7 @@
 - seed 数据与 E2E 预期矛盾
 - Menu treePath 未级联更新
 
-### 阶段 5 新增模块（项目从未规划过）
+### 新增模块（项目从未规划过）
 - 个人中心（profile / password / mobile / email）
 - 用户导入导出（template / import / export）
 - 系统配置（sys_config）
