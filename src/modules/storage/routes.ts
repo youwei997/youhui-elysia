@@ -5,10 +5,10 @@ import { storage } from "@/lib/storage";
 import { authPlugin } from "@/plugins/auth";
 import { createFile, findFileByUrl, softDeleteFile } from "./queries";
 import { buildStorageKey, FileDeleteQuery, FileInfoResponse } from "./schema";
+import type { FileResponseInput } from "./types";
 
 /** 响应转换：parse 对齐前端 FileInfo 契约 */
-const parseFileInfo = (info: Parameters<typeof FileInfoResponse.parse>[0]) =>
-	FileInfoResponse.parse(info);
+const parseFileInfo = (info: FileResponseInput) => FileInfoResponse.parse(info);
 
 export const storageRoutes = new Elysia({ prefix: "/api/v1/files" })
 	.use(authPlugin)

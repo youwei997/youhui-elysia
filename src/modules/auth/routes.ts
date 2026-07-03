@@ -23,6 +23,7 @@ import {
 	findUserRoles,
 } from "./queries";
 import { LoginBody, RefreshTokenQuery } from "./schema";
+import type { UserRoleItem } from "./types";
 
 /** 生成唯一 jti */
 const generateJti = (): string => {
@@ -38,7 +39,7 @@ const generateJti = (): string => {
 const buildJwtPayload = (
 	user: { id: number; username: string },
 	tokenVersion: number,
-	roles: Array<{ code: string; dataScope: number | null }>,
+	roles: UserRoleItem[],
 	perms: string[],
 ): JwtPayload => {
 	return {

@@ -5,6 +5,7 @@ import { sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
 import type { UserRecord } from "@/modules/user/types";
+import type { UserRoleItem } from "./types";
 
 /**
  * 根据用户名查找有效用户（软删过滤 + 状态正常）
@@ -38,7 +39,7 @@ export const findActiveUserByUsername = async (
 export const findUserRoles = async (
 	userId: number,
 	db: DB,
-): Promise<Array<{ code: string; dataScope: number | null }>> => {
+): Promise<UserRoleItem[]> => {
 	const rows = await db
 		.select({
 			code: sysRole.code,

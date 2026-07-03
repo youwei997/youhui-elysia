@@ -3,6 +3,7 @@ import { incrementTokenVersion } from "@/lib/login-lock";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
 import { authPlugin } from "@/plugins/auth";
+import type { OnlineUserData } from "./types";
 
 export const onlineRoutes = new Elysia({ prefix: "/api/v1/online" })
 	.use(authPlugin)
@@ -17,7 +18,7 @@ export const onlineRoutes = new Elysia({ prefix: "/api/v1/online" })
 			const values = await Promise.all(keys.map((k) => redis.get(k)));
 			return values
 				.filter((v): v is string => v !== null)
-				.map((v) => JSON.parse(v));
+				.map((v) => JSON.parse(v) as OnlineUserData);
 		},
 		{
 			auth: true,

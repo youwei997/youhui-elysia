@@ -13,7 +13,7 @@
  *   节点的 parentId 在 lookup 表中不存在 → 也视为根（兜底，防止数据有悬空引用的脏数据时丢节点）
  */
 
-import { sql, type SQL } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
 /**

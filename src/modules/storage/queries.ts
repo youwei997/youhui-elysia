@@ -1,19 +1,10 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { sysFile } from "@/db/schema/system/file";
+import type { FileCreateData } from "./types";
 
 /** 新建文件元数据 */
-export const createFile = async (
-	data: {
-		key: string;
-		filename: string;
-		size: number;
-		mimeType: string | null;
-		url: string;
-		uploaderId: number | undefined;
-	},
-	db: DB,
-) => {
+export const createFile = async (data: FileCreateData, db: DB) => {
 	const [row] = await db.insert(sysFile).values(data).returning();
 	return row;
 };

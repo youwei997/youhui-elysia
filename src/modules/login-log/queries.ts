@@ -1,8 +1,8 @@
 import { and, count, desc, eq, gte, like, lte } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { sysLoginLog } from "@/db/schema/system/login-log";
-import type { LoginLogRecord } from "./types";
 import type { PageResult } from "@/lib/pagination";
+import type { LoginLogRecord } from "./types";
 
 /**
  * 登录日志列表查询
