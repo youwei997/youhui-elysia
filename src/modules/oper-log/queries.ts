@@ -1,6 +1,7 @@
 import { and, count, desc, eq, gte, like, lt, lte } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { sysOperLog } from "@/db/schema/system/oper-log";
+import type { OperLogRecord } from "./types";
 import type { PageResult } from "@/lib/pagination";
 
 /**
@@ -20,7 +21,7 @@ export const findOperLogs = async (
 		endTime?: string;
 	},
 	db: DB,
-): Promise<PageResult<typeof sysOperLog.$inferSelect>> => {
+): Promise<PageResult<OperLogRecord>> => {
 	const where = [];
 
 	if (query.username) {

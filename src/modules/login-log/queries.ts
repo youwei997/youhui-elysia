@@ -1,6 +1,7 @@
 import { and, count, desc, eq, gte, like, lte } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { sysLoginLog } from "@/db/schema/system/login-log";
+import type { LoginLogRecord } from "./types";
 import type { PageResult } from "@/lib/pagination";
 
 /**
@@ -18,7 +19,7 @@ export const findLoginLogs = async (
 		endTime?: string;
 	},
 	db: DB,
-): Promise<PageResult<typeof sysLoginLog.$inferSelect>> => {
+): Promise<PageResult<LoginLogRecord>> => {
 	const where = [];
 
 	if (query.username) {
