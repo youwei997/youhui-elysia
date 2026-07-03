@@ -80,10 +80,7 @@ export const createDict = async (
 	db: DB,
 ): Promise<DictRecord> => {
 	const [dict] = await db.insert(sysDict).values(data).returning();
-	if (!dict) {
-		throw new Error("字典类型创建失败：返回结果为空");
-	}
-	return dict;
+	return dict as DictRecord;
 };
 
 /** 更新字典类型 */
@@ -173,10 +170,7 @@ export const createDictItem = async (
 		.insert(sysDictItem)
 		.values({ ...data, dictId })
 		.returning();
-	if (!item) {
-		throw new Error("字典项创建失败：返回结果为空");
-	}
-	return item;
+	return item as DictItemRecord;
 };
 
 /** 更新字典项 */

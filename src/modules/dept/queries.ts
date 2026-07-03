@@ -110,10 +110,7 @@ export const createDept = async (
 		.insert(sysDept)
 		.values({ ...data, treePath })
 		.returning();
-	if (!dept) {
-		throw new Error("部门创建失败：返回结果为空");
-	}
-	return dept;
+	return dept as DeptRecord;
 };
 
 /**
