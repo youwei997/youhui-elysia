@@ -100,7 +100,6 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 				throw new BizError(ERR_CODE.DICT_TYPE_DUPLICATE);
 			}
 			const dict = await createDict(body, db);
-			if (!dict) throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
 			return parseDict(dict);
 		},
 		{
@@ -202,7 +201,6 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			}
 
 			const item = await createDictItem(params.id, body, db);
-			if (!item) throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
 			await invalidateDictCache(dict.type);
 			return parseDictItem(item);
 		},

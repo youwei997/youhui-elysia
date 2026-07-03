@@ -78,8 +78,11 @@ export const findDictByType = async (
 export const createDict = async (
 	data: { type: string; name: string; status: number },
 	db: DB,
-): Promise<DictRecord | undefined> => {
+): Promise<DictRecord> => {
 	const [dict] = await db.insert(sysDict).values(data).returning();
+	if (!dict) {
+		throw new Error("字典类型创建失败：返回结果为空");
+	}
 	return dict;
 };
 
@@ -165,11 +168,14 @@ export const createDictItem = async (
 	dictId: number,
 	data: { label: string; value: string; sort: number; status: number },
 	db: DB,
-): Promise<DictItemRecord | undefined> => {
+): Promise<DictItemRecord> => {
 	const [item] = await db
 		.insert(sysDictItem)
 		.values({ ...data, dictId })
 		.returning();
+	if (!item) {
+		throw new Error("字典项创建失败：返回结果为空");
+	}
 	return item;
 };
 

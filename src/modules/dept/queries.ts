@@ -104,12 +104,15 @@ export const isParentIdCyclic = async (
 export const createDept = async (
 	data: z.infer<typeof DeptCreateBody>,
 	db: DB,
-): Promise<DeptRecord | undefined> => {
+): Promise<DeptRecord> => {
 	const treePath = await calcTreePath(data.parentId ?? 0, db);
 	const [dept] = await db
 		.insert(sysDept)
 		.values({ ...data, treePath })
 		.returning();
+	if (!dept) {
+		throw new Error("部门创建失败：返回结果为空");
+	}
 	return dept;
 };
 

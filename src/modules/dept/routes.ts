@@ -161,7 +161,6 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 				}
 			}
 			const dept = await createDept(body, db);
-			if (!dept) throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
 			return parseDept(dept);
 		},
 		{
