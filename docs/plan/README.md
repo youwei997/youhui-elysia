@@ -27,19 +27,19 @@
 - seed 数据与 E2E 预期矛盾
 - Menu treePath 未级联更新
 
+### 已实现模块的契约差异
+- **dict**：路径参数 dictCode vs id + 缺多个接口
+- **log**：路径 `/logs` vs `/oper-logs`+`/login-logs` + 缺 analytics
+- **user**：缺 profile / 导入导出 / 手机邮箱；`findUsers` 缺 `deptName` / `roleNames` JOIN
+
+### 阶段 5 计划内未完成子任务
+- 定时任务（pg-boss，阶段 5.5）
+
 ### 新增模块（项目从未规划过）
 - 个人中心（profile / password / mobile / email）
 - 用户导入导出（template / import / export）
 - 系统配置（sys_config）
 - 通知公告（sys_notice + sys_user_notice）
-
-### 阶段 5 计划内未完成子任务
-- 定时任务（pg-boss，阶段 5.5）
-
-### 已实现模块的契约差异
-- **dict**：路径参数 dictCode vs id + 缺多个接口
-- **log**：路径 `/logs` vs `/oper-logs`+`/login-logs` + 缺 analytics
-- **user**：缺 profile / 导入导出 / 手机邮箱；`findUsers` 缺 `deptName` / `roleNames` JOIN
 
 ### 待确认
 - **tenant / tenant-plan**：前端有完整模块，受 `tenantEnabled` 开关控制。是否启用待定。
