@@ -24,9 +24,10 @@ import {
 	UserResponse,
 	UserUpdateBody,
 } from "./schema";
+import type { UserResponseInput } from "./types";
 
 /** 响应转换：parse 后 id 转 string */
-const parseUser = (user: Parameters<typeof UserResponse.parse>[0]) => {
+const parseUser = (user: UserResponseInput) => {
 	const parsed = UserResponse.parse(user);
 	return { ...parsed, id: String(parsed.id) };
 };
@@ -159,6 +160,9 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 		"/",
 		async ({ body }) => {
 			const user = await createUser(body, db);
+			if (!user) {
+				throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
+			}
 			return parseUser(user);
 		},
 		{

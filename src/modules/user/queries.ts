@@ -20,17 +20,7 @@ import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
 import type { PageResult } from "@/lib/pagination";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
-
-/**
- * 用户列表查询结果行类型
- *
- * 在 sys_user 全字段基础上，附加部门名和角色名聚合字段。
- * 单独抽出而不是内联在 findUsers 签名里，避免返回类型过长且便于复用。
- */
-export type UserListRecord = typeof sysUser.$inferSelect & {
-	deptName: string | null;
-	roleNames: string | null;
-};
+import type { UserFormData, UserListRecord, UserRecord } from "./types";
 
 /**
  * 批量查询用户角色名
@@ -155,7 +145,7 @@ export const findUsers = async (
 export const findUserById = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysUser.$inferSelect | undefined> => {
+): Promise<UserRecord | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysUser)
@@ -167,7 +157,7 @@ export const findUserById = async (
 export const createUser = async (
 	data: z.infer<typeof UserCreateBody>,
 	db: DB,
-): Promise<typeof sysUser.$inferSelect | undefined> => {
+): Promise<UserRecord | undefined> => {
 	const [user] = await db.insert(sysUser).values(data).returning();
 	return user;
 };
@@ -177,7 +167,7 @@ export const updateUser = async (
 	id: number,
 	data: z.infer<typeof UserUpdateBody>,
 	db: DB,
-): Promise<typeof sysUser.$inferSelect | undefined> => {
+): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set(data)
@@ -190,7 +180,7 @@ export const updateUser = async (
 export const softDeleteUser = async (
 	id: number,
 	db: DB,
-): Promise<typeof sysUser.$inferSelect | undefined> => {
+): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ deleteTime: new Date().toISOString() })
@@ -218,9 +208,7 @@ export const findUserRoleIds = async (
 export const findUserFormData = async (
 	id: number,
 	db: DB,
-): Promise<
-	(typeof sysUser.$inferSelect & { roleIds: number[] }) | undefined
-> => {
+): Promise<UserFormData | undefined> => {
 	const user = await findUserById(id, db);
 	if (!user) {
 		return undefined;
@@ -251,7 +239,7 @@ export const findUserOptions = async (
 export const batchSoftDeleteUsers = async (
 	ids: number[],
 	db: DB,
-): Promise<(typeof sysUser.$inferSelect)[]> => {
+): Promise<UserRecord[]> => {
 	if (ids.length === 0) {
 		return [];
 	}
@@ -268,7 +256,7 @@ export const resetUserPassword = async (
 	id: number,
 	password: string,
 	db: DB,
-): Promise<typeof sysUser.$inferSelect | undefined> => {
+): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ password })
