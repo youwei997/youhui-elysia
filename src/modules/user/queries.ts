@@ -7,6 +7,7 @@ import {
 	isNull,
 	like,
 	or,
+	sql,
 } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
@@ -16,6 +17,7 @@ import {
 } from "@/db/helpers/data-scope";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysUserRole } from "@/db/schema/system/relation";
+import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
 import type { PageResult } from "@/lib/pagination";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
@@ -43,7 +45,12 @@ export const findUsers = async (
 	ctx: DataScopeContext,
 	db: DB,
 ): Promise<
-	PageResult<typeof sysUser.$inferSelect & { deptName: string | null }>
+	PageResult<
+		typeof sysUser.$inferSelect & {
+			deptName: string | null;
+			roleNames: string | null;
+		}
+	>
 > => {
 	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选 + 数据权限
 	const where = [isNull(sysUser.deleteTime)];
@@ -74,6 +81,12 @@ export const findUsers = async (
 		.select({
 			...getColumns(sysUser),
 			deptName: sysDept.name,
+			roleNames: sql<string>`(
+				SELECT string_agg(${sysRole.name}, ',')
+				FROM ${sysUserRole}
+				LEFT JOIN ${sysRole} ON ${sysUserRole.roleId} = ${sysRole.id}
+				WHERE ${sysUserRole.userId} = ${sysUser.id}
+			)`,
 		})
 		.from(sysUser)
 		.leftJoin(sysDept, eq(sysUser.deptId, sysDept.id))

@@ -89,6 +89,11 @@ export const UserResponse = createSelectSchema(sysUser)
 	})
 	.extend({
 		deptName: z.string().nullable().optional().describe("部门名称"),
+		roleNames: z
+			.string()
+			.nullable()
+			.optional()
+			.describe("角色名称列表（逗号分隔）"),
 	})
 	.describe("用户信息（不含密码、软删标志）");
 
