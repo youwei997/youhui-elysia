@@ -22,15 +22,15 @@
 > 仅列大模块。详细分析见 `.analysis/`（不纳入版本管理，没有就说明还没做）。
 > 前端不改，缺失全部后端补。youlai-boot 仅作契约参考，技术栈以 ElysiaJS + Bun 为主。
 
-### 阶段 4 遗留 bug（截至 2026-07-03 未修）
-- `descendantsByTreePath` LIKE 边界 bug
-- seed 数据与 E2E 预期矛盾
-- Menu treePath 未级联更新
+### 阶段 4 遗留 bug（均已修复）
+
+> 详见 `14a1e6e`：descendantsByTreePath LIKE 边界、seed 数据 E2E 矛盾、Menu treePath 级联更新。
+
 
 ### 已实现模块的契约差异
 - **dict**：路径参数 dictCode vs id + 缺多个接口
 - **log**：路径 `/logs` vs `/oper-logs`+`/login-logs` + 缺 analytics
-- **user**：缺 profile / 导入导出 / 手机邮箱；`findUsers` 缺 `deptName` / `roleNames` JOIN
+- **user**：缺 profile / 导入导出 / 手机邮箱
 
 ### 阶段 5 计划内未完成子任务
 - 定时任务（pg-boss，阶段 5.5）
