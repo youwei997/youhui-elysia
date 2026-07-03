@@ -7,12 +7,12 @@ import {
 	deleteOperLogsBefore,
 	findOperLogs,
 } from "./queries";
-import type { OperLogResponseInput } from "./schema";
 import {
 	OperLogBatchDeleteBody,
 	OperLogListQuery,
 	OperLogParamsWithId,
 	OperLogResponse,
+	type OperLogResponseInput,
 } from "./schema";
 
 /** 响应转换：id 转 string，与其他模块保持一致 */

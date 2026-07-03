@@ -3,11 +3,11 @@ import { db } from "@/db/client";
 import { ERR_CODE, notFound } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import { findIpBlacklists, removeIpFromBlacklist } from "./queries";
-import type { IpBlacklistResponseInput } from "./schema";
 import {
 	IpBlacklistListQuery,
 	IpBlacklistParamsWithId,
 	IpBlacklistResponse,
+	type IpBlacklistResponseInput,
 } from "./schema";
 
 const parseItem = (item: IpBlacklistResponseInput) => {

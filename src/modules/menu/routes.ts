@@ -15,14 +15,15 @@ import {
 	softDeleteMenu,
 	updateMenu,
 } from "./queries";
-import type { MenuDetailResponseInput, MenuResponseInput } from "./schema";
 import {
 	MenuCreateBody,
 	MenuDetailResponse,
+	type MenuDetailResponseInput,
 	MenuListQuery,
 	MenuOptionsQuery,
 	MenuParamsWithId,
 	MenuResponse,
+	type MenuResponseInput,
 	MenuUpdateBody,
 } from "./schema";
 import type { MenuRoute, RouteItem, RouteMeta } from "./types";

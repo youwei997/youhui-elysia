@@ -13,13 +13,13 @@ import {
 	softDeleteDept,
 	updateDept,
 } from "./queries";
-import type { DeptResponseInput } from "./schema";
 import {
 	DeptCreateBody,
 	DeptListQuery,
 	DeptParamsWithCommaIds,
 	DeptParamsWithId,
 	DeptResponse,
+	type DeptResponseInput,
 	DeptUpdateBody,
 } from "./schema";
 

@@ -2,8 +2,11 @@ import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { authPlugin } from "@/plugins/auth";
 import { findLoginLogs } from "./queries";
-import type { LoginLogResponseInput } from "./schema";
-import { LoginLogListQuery, LoginLogResponse } from "./schema";
+import {
+	LoginLogListQuery,
+	LoginLogResponse,
+	type LoginLogResponseInput,
+} from "./schema";
 
 /** 响应转换：id 转 string */
 const parseLog = (log: LoginLogResponseInput) => {

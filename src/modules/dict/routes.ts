@@ -20,17 +20,18 @@ import {
 	updateDict,
 	updateDictItem,
 } from "./queries";
-import type { DictItemResponseInput, DictResponseInput } from "./schema";
 import {
 	DictCreateBody,
 	DictItemCreateBody,
 	DictItemListQuery,
 	DictItemParamsWithId,
 	DictItemResponse,
+	type DictItemResponseInput,
 	DictItemUpdateBody,
 	DictListQuery,
 	DictParamsWithId,
 	DictResponse,
+	type DictResponseInput,
 	DictTypeParam,
 	DictUpdateBody,
 } from "./schema";

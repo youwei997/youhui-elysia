@@ -1,6 +1,4 @@
-import type { z } from "zod";
 import type { sysMenu } from "@/db/schema/system/menu";
-import type { MenuDetailResponse, MenuResponse } from "./schema";
 
 /** sys_menu 表原始记录类型 */
 export type MenuRecord = typeof sysMenu.$inferSelect;
@@ -26,12 +24,6 @@ export type MenuRoute = {
 	redirect: string | null;
 	params: unknown;
 };
-
-/** MenuResponse.parse 的输入类型 */
-export type MenuResponseInput = z.input<typeof MenuResponse>;
-
-/** MenuDetailResponse.parse 的输入类型 */
-export type MenuDetailResponseInput = z.input<typeof MenuDetailResponse>;
 
 /**
  * 菜单模块 — 路由映射类型

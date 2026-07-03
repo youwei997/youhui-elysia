@@ -4,8 +4,12 @@ import { BizError, ERR_CODE } from "@/lib/errors";
 import { storage } from "@/lib/storage";
 import { authPlugin } from "@/plugins/auth";
 import { createFile, findFileByUrl, softDeleteFile } from "./queries";
-import type { FileResponseInput } from "./schema";
-import { buildStorageKey, FileDeleteQuery, FileInfoResponse } from "./schema";
+import {
+	buildStorageKey,
+	FileDeleteQuery,
+	FileInfoResponse,
+	type FileResponseInput,
+} from "./schema";
 
 /** 响应转换：parse 对齐前端 FileInfo 契约 */
 const parseFileInfo = (info: FileResponseInput) => FileInfoResponse.parse(info);

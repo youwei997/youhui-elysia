@@ -19,7 +19,6 @@ import {
 	softDeleteRole,
 	updateRole,
 } from "./queries";
-import type { RoleResponseInput } from "./schema";
 import {
 	DATA_SCOPE_LABEL_MAP,
 	RoleAssignDeptsBody,
@@ -29,6 +28,7 @@ import {
 	RoleParamsWithCommaIds,
 	RoleParamsWithId,
 	RoleResponse,
+	type RoleResponseInput,
 	RoleUpdateBody,
 } from "./schema";
 
@@ -212,7 +212,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 		async ({ params }) => {
 			const idStr = params.id;
 
-			// 前端批量删除传 "1,2,3"，单条传 "1",
+			// 前端批量删除传 "1,2,3"，单条传 "1"
 			if (idStr.includes(",")) {
 				const ids = idStr
 					.split(",")
@@ -223,7 +223,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 				}
 
-				// 逐条前置校验：受保护角色 / 已绑定用户,
+				// 逐条前置校验：受保护角色 / 已绑定用户
 				for (const id of ids) {
 					const existing = await findRoleById(id, db);
 					if (!existing) {
@@ -242,7 +242,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 				return deleted.map((r) => parseRole(r));
 			}
 
-			// 单条删除,
+			// 单条删除
 			const id = Number(idStr);
 			if (Number.isNaN(id)) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
@@ -320,7 +320,7 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			// 业务规则前置校验：所有 menuId 必须存在且未软删,
+			// 业务规则前置校验：所有 menuId 必须存在且未软删
 			if (body.length > 0) {
 				const validIds = await findValidMenuIds(body, db);
 				if (validIds.length !== body.length) {
@@ -355,14 +355,14 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (!existing) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
-			// 业务规则：仅 dataScope=5（自定义）角色支持绑定部门,
+			// 业务规则：仅 dataScope=5（自定义）角色支持绑定部门
 			if (existing.dataScope !== 5) {
 				throw new BizError(
 					ERR_CODE.ROLE_NOT_CUSTOM_DATA_SCOPE,
 					"仅 dataScope=5（自定义）的角色支持绑定部门",
 				);
 			}
-			// 业务规则前置校验：所有 deptId 必须存在且未软删,
+			// 业务规则前置校验：所有 deptId 必须存在且未软删
 			if (body.deptIds.length > 0) {
 				const validIds = await findValidDeptIds(body.deptIds, db);
 				if (validIds.length !== body.deptIds.length) {

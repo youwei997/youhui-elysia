@@ -15,7 +15,6 @@ import {
 	softDeleteUser,
 	updateUser,
 } from "./queries";
-import type { UserResponseInput } from "./schema";
 import {
 	UserCreateBody,
 	UserListQuery,
@@ -23,6 +22,7 @@ import {
 	UserParamsWithId,
 	UserResetPasswordQuery,
 	UserResponse,
+	type UserResponseInput,
 	UserUpdateBody,
 } from "./schema";
 
