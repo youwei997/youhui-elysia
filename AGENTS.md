@@ -69,6 +69,7 @@
 生成代码时默认遵守以下约束，详细规范见 `docs/architecture.md`：
 - 模块三件套：`modules/<domain>/{schema,routes,queries}.ts`，见 §4.1
 - 禁止 Java 风格目录 / 装饰器控制器 / DI 容器 / `class XxxService` / `as any` / 静默吞错，见 §4.14
+- **严禁使用 `sql` 模板或任何原生 SQL 字符串**；聚合、子查询、批量关联等应通过 Drizzle 类型安全 API 或应用层逻辑实现，避免数据库方言耦合
 - 软删规则见 §4.10
 - 前端响应约定见 §4.11
 - 测试要求见 §4.15
