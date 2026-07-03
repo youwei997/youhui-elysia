@@ -1,4 +1,13 @@
-import { and, count, eq, inArray, isNull, like, or } from "drizzle-orm";
+import {
+	and,
+	count,
+	eq,
+	getColumns,
+	inArray,
+	isNull,
+	like,
+	or,
+} from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
 import {
@@ -33,7 +42,9 @@ export const findUsers = async (
 	},
 	ctx: DataScopeContext,
 	db: DB,
-): Promise<PageResult<(typeof sysUser)["$inferSelect"]>> => {
+): Promise<
+	PageResult<typeof sysUser.$inferSelect & { deptName: string | null }>
+> => {
 	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选 + 数据权限
 	const where = [isNull(sysUser.deleteTime)];
 	if (query.keywords) {
@@ -60,8 +71,12 @@ export const findUsers = async (
 	}
 
 	const list = await db
-		.select()
+		.select({
+			...getColumns(sysUser),
+			deptName: sysDept.name,
+		})
 		.from(sysUser)
+		.leftJoin(sysDept, eq(sysUser.deptId, sysDept.id))
 		.where(and(...where)) // 数组至少含软删过滤，永远不会空
 		.limit(query.pageSize)
 		.offset((query.pageNum - 1) * query.pageSize);

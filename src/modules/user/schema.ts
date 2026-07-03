@@ -79,13 +79,16 @@ export const UserUpdateBody = createUpdateSchema(sysUser, {
 	})
 	.describe("更新用户请求参数，未传字段保持原值");
 
-/** 用户响应（排除密码、软删标志、创建人/更新人，保留创建/更新时间） */
+/** 用户响应（排除密码、软删标志、创建人/更新人，保留创建/更新时间；deptName 为列表 JOIN 部门所得） */
 export const UserResponse = createSelectSchema(sysUser)
 	.omit({
 		password: true,
 		deleteTime: true,
 		createdBy: true,
 		updatedBy: true,
+	})
+	.extend({
+		deptName: z.string().nullable().optional().describe("部门名称"),
 	})
 	.describe("用户信息（不含密码、软删标志）");
 
