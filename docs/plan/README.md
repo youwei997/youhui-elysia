@@ -26,22 +26,22 @@
 - seed 数据与 E2E 预期矛盾
 - Menu treePath 未级联更新
 
-### 阶段 5 应纳入的缺失模块
+### 阶段 5 新增模块（项目从未规划过）
 - 个人中心（profile / password / mobile / email）
 - 用户导入导出（template / import / export）
 - 系统配置（sys_config）
 - 通知公告（sys_notice + sys_user_notice）
-- 定时任务（pg-boss，阶段 5.5 未完成）
-- 限流 + IP 黑名单 rate-limit plugin（阶段 5.6 部分）
+
+### 阶段 5 计划内未完成子任务
+- 定时任务（pg-boss，阶段 5.5）
 
 ### 已实现模块的契约差异
 - **dict**：路径参数 dictCode vs id + 缺多个接口
 - **log**：路径 `/logs` vs `/oper-logs`+`/login-logs` + 缺 analytics
-- **user**：缺 profile / 导入导出 / 手机邮箱
-- **findUsers**：缺 `deptName` / `roleNames` JOIN
+- **user**：缺 profile / 导入导出 / 手机邮箱；`findUsers` 缺 `deptName` / `roleNames` JOIN
 
 ### 待确认
-- **tenant / tenant-plan**：前端有完整模块，受 `tenantEnabled` 开关控制。是否启用待定；youlai-boot 无参考。
+- **tenant / tenant-plan**：前端有完整模块，受 `tenantEnabled` 开关控制。是否启用待定。
 
 ### 不做
 - 社交登录（`sys_user_social`）、第三方登录、短信登录
@@ -96,4 +96,8 @@ Elysia 范式吃透 █████████ 25%
 [2026-06-23] 阶段 4.4 完成。Dept 模块三件套落地（5 路由 + 8 queries 函数），核心：1）treePath 在 insert/update 时自动维护，update 改父部门时事务级联更新子树 treePath；2）treePath 正则匹配级联软删子树 + sys_role_dept 事务清理；3）isParentIdCyclic 防循环 + routes 层前置校验链（父存在→防循环→用户引用）；4）descendantsByTreePath helper 供数据权限使用。docs/notes 补充设计要点笔记。进入 4.5 Permission macro。
 [2026-06-28] 阶段 4.5-4.6 完成。4.5 Permission macro：鉴权与权限分离（auth plugin + permission plugin），isSuperUser ROOT/*:*:* 双层短路，perm/requireRole 两个 macro + 6 单测。4.6 dataScope：纯函数 dataScopeFilter（5 档 switch + ALL 短路 + 边界降级）+ 8 单测 + buildDataScopeContext 装配 + GET /users 接入。进入 4.7 菜单树接口。
 [2026-06-29] 阶段 4.7-4.8 完成。4.7 新增 GET /menus/my-tree 接口，复用 buildUserMenuTree + JWT perms，返回 { menuTree, perms } 供前端动态路由 + v-permission 使用。同时重构 /routes 接口共享 buildUserMenuTree。4.8 ADR-0002 权限模型文档，记录 5 个设计决策（显式 macro、显式 query helper、超管短路、多角色并集、tokenVersion 生效策略）及反对方案。阶段 4 全部完成，进入阶段 5。
+[2026-06-30] 阶段 5.1-5.2 完成。5.1 操作日志：audit-log plugin（onAfterHandle/onError 双采集点 + setImmediate 异步落库 + audit-mask 脱敏截断）+ modules/oper-log 三件套（3 接口），设计决策：物理删除不走软删。5.2 登录日志 + 在线用户：sys_login_log 表 + Redis online:user:{id}（TTL=access token 过期）+ GET /online + DELETE /online/:userId（tokenVersion+1 强制下线）。auth 模块接入登录成功/失败记录。
+[2026-06-30] 阶段 5.3a-5.3b 完成。5.3a 字典管理：sys_dict + sys_dict_item 双表 + modules/dict 三件套（10 接口）。5.3b withCache 缓存防击穿：双重检查 + 分布式锁（SET NX EX）+ 写操作主动失效，接入 GET /dicts/:type/items。已知口子：dict 路由用 :id 而非 :dictCode，与前端契约不一致（详见 .analysis/）。
+[2026-07-02] 阶段 5.4 完成。5.4 文件存储抽象：Storage 接口（2 方法 put/delete）+ local-fs driver + createStorage 工厂 + sys_file 表 + modules/storage 三件套（POST /files multipart + DELETE /files?filePath=url）。@elysia/static 挂载 ./uploads/ → /uploads/* 静态服务。对齐前端契约（前端不改）。s3 driver 推迟。
+[2026-07-02] 阶段 5.6 完成。rateLimit macro（Redis INCR+EXPIRE，触发 429+Retry-After）+ sys_ip_blacklist 表 + modules/ip-blacklist CRUD + 全局 ip-blacklist plugin（onRequest 检查，命中 403）+ 登录失败联动入黑名单（auth/routes.ts 接入 addIpToBlacklist）。app.ts 已注册。
 ```
