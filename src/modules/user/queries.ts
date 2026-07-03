@@ -7,7 +7,6 @@ import {
 	isNull,
 	like,
 	or,
-	sql,
 } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
@@ -21,6 +20,55 @@ import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
 import type { PageResult } from "@/lib/pagination";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
+
+/**
+ * 用户列表查询结果行类型
+ *
+ * 在 sys_user 全字段基础上，附加部门名和角色名聚合字段。
+ * 单独抽出而不是内联在 findUsers 签名里，避免返回类型过长且便于复用。
+ */
+export type UserListRecord = typeof sysUser.$inferSelect & {
+	deptName: string | null;
+	roleNames: string | null;
+};
+
+/**
+ * 批量查询用户角色名
+ *
+ * 按 userId 分组，把同一用户的角色名用逗号拼接。
+ * 不依赖原生 SQL 聚合函数，而是分两步：先批量查关联表，再在 JS 层拼接，
+ * 保持 Drizzle 类型安全，同时避免 string_agg / array_agg 等非跨数据库函数。
+ */
+const batchFindUserRoleNames = async (
+	userIds: number[],
+	db: DB,
+): Promise<Map<number, string>> => {
+	if (userIds.length === 0) {
+		return new Map();
+	}
+
+	const rows = await db
+		.select({
+			userId: sysUserRole.userId,
+			roleName: sysRole.name,
+		})
+		.from(sysUserRole)
+		.innerJoin(sysRole, eq(sysUserRole.roleId, sysRole.id))
+		.where(inArray(sysUserRole.userId, userIds));
+
+	const grouped = new Map<number, string[]>();
+	for (const row of rows) {
+		const names = grouped.get(row.userId) ?? [];
+		names.push(row.roleName);
+		grouped.set(row.userId, names);
+	}
+
+	const result = new Map<number, string>();
+	for (const [userId, names] of grouped) {
+		result.set(userId, names.join(","));
+	}
+	return result;
+};
 
 /**
  * 查询用户列表（分页 + 可选过滤 + 数据权限）
@@ -44,14 +92,7 @@ export const findUsers = async (
 	},
 	ctx: DataScopeContext,
 	db: DB,
-): Promise<
-	PageResult<
-		typeof sysUser.$inferSelect & {
-			deptName: string | null;
-			roleNames: string | null;
-		}
-	>
-> => {
+): Promise<PageResult<UserListRecord>> => {
 	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选 + 数据权限
 	const where = [isNull(sysUser.deleteTime)];
 	if (query.keywords) {
@@ -81,18 +122,24 @@ export const findUsers = async (
 		.select({
 			...getColumns(sysUser),
 			deptName: sysDept.name,
-			roleNames: sql<string>`(
-				SELECT string_agg(${sysRole.name}, ',')
-				FROM ${sysUserRole}
-				LEFT JOIN ${sysRole} ON ${sysUserRole.roleId} = ${sysRole.id}
-				WHERE ${sysUserRole.userId} = ${sysUser.id}
-			)`,
 		})
 		.from(sysUser)
 		.leftJoin(sysDept, eq(sysUser.deptId, sysDept.id))
 		.where(and(...where)) // 数组至少含软删过滤，永远不会空
 		.limit(query.pageSize)
 		.offset((query.pageNum - 1) * query.pageSize);
+
+	// 角色名通过单独批量查询聚合：避免在 select 里写原生 SQL，同时保持分页后只查当前页用户角色。
+	const roleNameMap = await batchFindUserRoleNames(
+		list.map((u) => u.id),
+		db,
+	);
+
+	// 把角色名合并回用户记录；无角色时 roleNames 为 null，对齐 UserResponse 的 nullable 类型。
+	const listWithRoles: UserListRecord[] = list.map((u) => ({
+		...u,
+		roleNames: roleNameMap.get(u.id) ?? null,
+	}));
 
 	const result = await db
 		.select({ total: count() })
@@ -101,7 +148,7 @@ export const findUsers = async (
 
 	const total = result[0]?.total ?? 0; // 安全访问，为空时默认 0
 
-	return { list, total };
+	return { list: listWithRoles, total };
 };
 
 /** 根据 ID 查询用户（默认过滤已软删记录） */
