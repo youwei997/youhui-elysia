@@ -97,6 +97,9 @@ export const UserResponse = createSelectSchema(sysUser)
 	})
 	.describe("用户信息（不含密码、软删标志）");
 
+/** UserResponse.parse 的输入类型 */
+export type UserResponseInput = z.input<typeof UserResponse>;
+
 /** 用户 ID 路径参数（coerce.number 将字符串转数字） */
 export const UserParamsWithId = z
 	.object({ id: z.coerce.number() })

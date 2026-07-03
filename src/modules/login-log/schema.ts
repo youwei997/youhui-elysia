@@ -17,3 +17,6 @@ export const LoginLogResponse = createSelectSchema(sysLoginLog)
 		ipRegion: true,
 	})
 	.describe("登录日志信息");
+
+/** LoginLogResponse.parse 的输入类型 */
+export type LoginLogResponseInput = z.input<typeof LoginLogResponse>;

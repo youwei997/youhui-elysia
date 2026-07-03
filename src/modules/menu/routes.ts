@@ -15,6 +15,7 @@ import {
 	softDeleteMenu,
 	updateMenu,
 } from "./queries";
+import type { MenuDetailResponseInput, MenuResponseInput } from "./schema";
 import {
 	MenuCreateBody,
 	MenuDetailResponse,
@@ -24,13 +25,7 @@ import {
 	MenuResponse,
 	MenuUpdateBody,
 } from "./schema";
-import type {
-	MenuDetailResponseInput,
-	MenuResponseInput,
-	MenuRoute,
-	RouteItem,
-	RouteMeta,
-} from "./types";
+import type { MenuRoute, RouteItem, RouteMeta } from "./types";
 
 /** 将单条菜单映射为 RouteItem */
 const toRouteItem = (menu: MenuRoute, children: RouteItem[]): RouteItem => {

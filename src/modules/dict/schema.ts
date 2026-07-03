@@ -22,6 +22,9 @@ export const DictResponse = createSelectSchema(sysDict)
 	})
 	.describe("字典类型信息");
 
+/** DictResponse.parse 的输入类型 */
+export type DictResponseInput = z.input<typeof DictResponse>;
+
 /** 字典类型新增 body */
 export const DictCreateBody = z
 	.object({
@@ -57,6 +60,9 @@ export const DictItemResponse = createSelectSchema(sysDictItem)
 		deleteTime: true,
 	})
 	.describe("字典项信息");
+
+/** DictItemResponse.parse 的输入类型 */
+export type DictItemResponseInput = z.input<typeof DictItemResponse>;
 
 /** 字典项新增 body */
 export const DictItemCreateBody = z

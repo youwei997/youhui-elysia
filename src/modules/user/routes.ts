@@ -15,6 +15,7 @@ import {
 	softDeleteUser,
 	updateUser,
 } from "./queries";
+import type { UserResponseInput } from "./schema";
 import {
 	UserCreateBody,
 	UserListQuery,
@@ -24,7 +25,6 @@ import {
 	UserResponse,
 	UserUpdateBody,
 } from "./schema";
-import type { UserResponseInput } from "./types";
 
 /** 响应转换：parse 后 id 转 string */
 const parseUser = (user: UserResponseInput) => {

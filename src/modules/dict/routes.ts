@@ -20,6 +20,7 @@ import {
 	updateDict,
 	updateDictItem,
 } from "./queries";
+import type { DictItemResponseInput, DictResponseInput } from "./schema";
 import {
 	DictCreateBody,
 	DictItemCreateBody,
@@ -35,12 +36,12 @@ import {
 } from "./schema";
 
 /** 响应转换：parse + id 转 string */
-const parseDict = (dict: Parameters<typeof DictResponse.parse>[0]) => {
+const parseDict = (dict: DictResponseInput) => {
 	const parsed = DictResponse.parse(dict);
 	return { ...parsed, id: String(parsed.id) };
 };
 
-const parseDictItem = (item: Parameters<typeof DictItemResponse.parse>[0]) => {
+const parseDictItem = (item: DictItemResponseInput) => {
 	const parsed = DictItemResponse.parse(item);
 	return { ...parsed, id: String(parsed.id), dictId: String(parsed.dictId) };
 };
@@ -98,6 +99,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 				throw new BizError(ERR_CODE.DICT_TYPE_DUPLICATE);
 			}
 			const dict = await createDict(body, db);
+			if (!dict) throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
 			return parseDict(dict);
 		},
 		{
@@ -199,6 +201,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			}
 
 			const item = await createDictItem(params.id, body, db);
+			if (!item) throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
 			await invalidateDictCache(dict.type);
 			return parseDictItem(item);
 		},

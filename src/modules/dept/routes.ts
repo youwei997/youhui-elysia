@@ -13,6 +13,7 @@ import {
 	softDeleteDept,
 	updateDept,
 } from "./queries";
+import type { DeptResponseInput } from "./schema";
 import {
 	DeptCreateBody,
 	DeptListQuery,
@@ -23,7 +24,7 @@ import {
 } from "./schema";
 
 /** 响应转换：parse 后 id / parentId 转 string */
-const parseDept = (dept: Parameters<typeof DeptResponse.parse>[0]) => {
+const parseDept = (dept: DeptResponseInput) => {
 	const parsed = DeptResponse.parse(dept);
 	return {
 		...parsed,
@@ -160,6 +161,7 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 				}
 			}
 			const dept = await createDept(body, db);
+			if (!dept) throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
 			return parseDept(dept);
 		},
 		{

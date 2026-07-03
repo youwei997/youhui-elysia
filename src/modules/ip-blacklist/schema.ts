@@ -17,6 +17,9 @@ export const IpBlacklistResponse = createSelectSchema(sysIpBlacklist)
 	})
 	.describe("IP 黑名单信息");
 
+/** IpBlacklistResponse.parse 的输入类型 */
+export type IpBlacklistResponseInput = z.input<typeof IpBlacklistResponse>;
+
 /** IP 黑名单入参 */
 export const IpBlacklistParamsWithId = z
 	.object({ id: z.coerce.number() })

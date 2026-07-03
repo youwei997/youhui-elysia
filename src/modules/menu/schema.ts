@@ -121,6 +121,12 @@ export const MenuDetailResponse = createSelectSchema(sysMenu)
 	})
 	.describe("菜单详情");
 
+/** MenuResponse.parse 的输入类型 */
+export type MenuResponseInput = z.input<typeof MenuResponse>;
+
+/** MenuDetailResponse.parse 的输入类型 */
+export type MenuDetailResponseInput = z.input<typeof MenuDetailResponse>;
+
 /** 菜单 ID 路径参数（coerce.number 将字符串转数字） */
 export const MenuParamsWithId = z
 	.object({ id: z.coerce.number() })

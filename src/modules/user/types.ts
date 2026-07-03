@@ -1,6 +1,4 @@
-import type { z } from "zod";
 import type { sysUser } from "@/db/schema/system/user";
-import type { UserResponse } from "./schema";
 
 /** sys_user 表原始记录类型 */
 export type UserRecord = typeof sysUser.$inferSelect;
@@ -20,6 +18,3 @@ export type UserListRecord = UserRecord & {
 export type UserFormData = UserRecord & {
 	roleIds: number[];
 };
-
-/** UserResponse.parse 的输入类型（用于 parseUser 等转换函数） */
-export type UserResponseInput = z.input<typeof UserResponse>;

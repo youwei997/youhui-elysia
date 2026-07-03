@@ -29,6 +29,9 @@ export const OperLogResponse = createSelectSchema(sysOperLog)
 	})
 	.describe("操作日志信息");
 
+/** OperLogResponse.parse 的输入类型 */
+export type OperLogResponseInput = z.input<typeof OperLogResponse>;
+
 /** 操作日志 ID 路径参数 */
 export const OperLogParamsWithId = z
 	.object({ id: z.coerce.number() })

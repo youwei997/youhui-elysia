@@ -7,6 +7,7 @@ import {
 	deleteOperLogsBefore,
 	findOperLogs,
 } from "./queries";
+import type { OperLogResponseInput } from "./schema";
 import {
 	OperLogBatchDeleteBody,
 	OperLogListQuery,
@@ -15,7 +16,7 @@ import {
 } from "./schema";
 
 /** 响应转换：id 转 string，与其他模块保持一致 */
-const parseLog = (log: Parameters<typeof OperLogResponse.parse>[0]) => {
+const parseLog = (log: OperLogResponseInput) => {
 	const parsed = OperLogResponse.parse(log);
 	return {
 		...parsed,

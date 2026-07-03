@@ -23,6 +23,9 @@ export const FileInfoResponse = z
 	})
 	.describe("文件信息");
 
+/** FileInfoResponse.parse 的输入类型 */
+export type FileResponseInput = z.input<typeof FileInfoResponse>;
+
 /** 删除文件查询参数 */
 export const FileDeleteQuery = z
 	.object({

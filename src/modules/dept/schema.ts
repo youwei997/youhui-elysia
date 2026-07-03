@@ -63,6 +63,9 @@ export const DeptResponse = createSelectSchema(sysDept)
 	})
 	.describe("部门信息");
 
+/** DeptResponse.parse 的输入类型 */
+export type DeptResponseInput = z.input<typeof DeptResponse>;
+
 export type DeptCreateBody = z.infer<typeof DeptCreateBody>;
 export type DeptUpdateBody = z.infer<typeof DeptUpdateBody>;
 export type DeptListQuery = z.infer<typeof DeptListQuery>;

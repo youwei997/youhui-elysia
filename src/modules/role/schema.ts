@@ -123,6 +123,9 @@ export const RoleResponse = createSelectSchema(sysRole)
 	})
 	.describe("角色信息");
 
+/** RoleResponse.parse 的输入类型 */
+export type RoleResponseInput = z.input<typeof RoleResponse>;
+
 /** 角色 ID 路径参数（coerce.number 将字符串转数字） */
 export const RoleParamsWithId = z
 	.object({ id: z.coerce.number() })
