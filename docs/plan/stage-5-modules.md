@@ -175,7 +175,7 @@
 ### 5.3a 字典管理 (0.5d)✅ 已完成
 
 `db/schema/system/dict.ts` + `dict-item.ts`：
-- sys_dict：id / type（如 'gender'）/ name / status
+- sys_dict：id / type（如 'gender'）/ name / status / remark
 - sys_dict_item：id / dictId / label / value / sort / status / tag_type（标签类型，N/P/S/W/I/D）
 
 `modules/dict/`：
@@ -184,13 +184,14 @@
 - `keywords` 模糊搜索（type/name 或 label/value）
 - 字典项列表分页（`{ list, total }` 格式）
 - `GET /dicts/:type/items` 取字典项（仅返回启用项，供前端下拉框，内部用 pageSize=9999 取全量）
-- `GET /dicts/:id/items/options` 取字典项下拉选项（对齐前端路径）
-- `GET /dicts/options` 字典类型下拉列表
+- `GET /dicts/:id/items/options` 取字典项下拉选项（对齐前端路径，:id 支持数字 ID 或 dictCode）
+- `GET /dicts/options` 字典类型下拉列表（返回 `{ value, label }`）
 - `GET /dicts/:id/form` 字典类型表单数据
 - `GET /dicts/:id/items/:itemId/form` 字典项表单数据
-- `DELETE /dicts/:ids` 批量删除字典类型（前端传 1,2,3）
-- `DELETE /dicts/:id/items/:ids` 批量删除字典项
+- `DELETE /dicts/:id` 批量删除字典类型（前端传 1,2,3，单条传 1）
+- `DELETE /dicts/:id/items/:itemId` 批量删除字典项（同上）
 - tagType 字段（前端 primary/success/warning/info/danger ↔ 后端 N/P/S/W/I/D 编解码在 API 层处理）
+- 写操作后主动失效字典项缓存
 
 ### 5.3b WithCache 缓存防击穿 (0.5d)✅ 已完成
 
