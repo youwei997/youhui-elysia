@@ -31,6 +31,8 @@ export const sysDictItem = pgTable(
 		sort: integer("sort").default(0).notNull(),
 		/** 状态：1-启用 0-禁用 */
 		status: smallint("status").default(1).notNull(),
+		/** 标签类型：前端 tag 颜色，N(文本)/P(primary)/S(success)/W(warning)/I(info)/D(danger) */
+		tagType: varchar("tag_type", { length: 8 }).default("N").notNull(),
 
 		...auditColumns,
 	},

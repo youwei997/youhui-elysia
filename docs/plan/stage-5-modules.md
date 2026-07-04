@@ -176,11 +176,15 @@
 
 `db/schema/system/dict.ts` + `dict-item.ts`：
 - sys_dict：id / type（如 'gender'）/ name / status
-- sys_dict_item：id / dictId / label / value / sort / status
+- sys_dict_item：id / dictId / label / value / sort / status / tag_type（标签类型，N/P/S/W/I/D）
 
 `modules/dict/`：
 - 字典 + 字典项 CRUD（10 个接口）
-- `GET /dicts/:type/items` 取字典项（仅返回启用项，供前端下拉框）
+- 响应字段 `type` 映射为 `dictCode` 对齐前端契约
+- `keywords` 模糊搜索（type/name 或 label/value）
+- 字典项列表分页（`{ list, total }` 格式）
+- `GET /dicts/:type/items` 取字典项（仅返回启用项，供前端下拉框，内部用 pageSize=9999 取全量）
+- tagType 字段（前端 primary/success/warning/info/danger ↔ 后端 N/P/S/W/I/D 编解码在 API 层处理）
 
 ### 5.3b WithCache 缓存防击穿 (0.5d)✅ 已完成
 
@@ -345,10 +349,10 @@ handler 注册：
 - [x] 强制下线后旧 token 立即失效
 
 ### 字典 + 缓存
-- [ ] sys_dict / sys_dict_item 双表
-- [ ] withCache 实现含双重检查 + 分布式锁
-- [ ] 字典项查询走缓存（连续两次查只打 DB 一次）
-- [ ] 写操作主动失效缓存
+- [x] sys_dict / sys_dict_item 双表
+- [x] withCache 实现含双重检查 + 分布式锁
+- [x] 字典项查询走缓存（连续两次查只打 DB 一次）
+- [x] 写操作主动失效缓存
 - [ ] 缓存击穿测试：并发 100 个请求同一 key，DB 只被打 1 次
 
 ### 文件存储
@@ -375,8 +379,8 @@ handler 注册：
 - [ ] 黑名单 IP 直接 403
 
 ### 整体
-- [ ] `bun run check` 通过
-- [ ] `bun run tsc` 通过
+- [x] `bun run check` 通过
+- [x] `bun run tsc` 通过
 - [ ] `docs/modules.md` 列出本阶段所有新模块及其能力
 
 ## 本阶段收获（完成后填写）

@@ -28,7 +28,6 @@
 
 
 ### 已实现模块的契约差异
-- **dict**：路径参数 dictCode vs id + 缺多个接口
 - **log**：路径 `/logs` vs `/oper-logs`+`/login-logs` + 缺 analytics
 - **user**：`findUsers` 已返回 deptName / roleNames；仍缺 profile / 导入导出 / 手机邮箱
 
@@ -104,4 +103,5 @@ Elysia 范式吃透 █████████ 25%
 [2026-07-02] 阶段 5.4 完成。5.4 文件存储抽象：Storage 接口（2 方法 put/delete）+ local-fs driver + createStorage 工厂 + sys_file 表 + modules/storage 三件套（POST /files multipart + DELETE /files?filePath=url）。@elysia/static 挂载 ./uploads/ → /uploads/* 静态服务。对齐前端契约（前端不改）。s3 driver 推迟。
 [2026-07-02] 阶段 5.6 完成。rateLimit macro（Redis INCR+EXPIRE，触发 429+Retry-After）+ sys_ip_blacklist 表 + modules/ip-blacklist CRUD + 全局 ip-blacklist plugin（onRequest 检查，命中 403）+ 登录失败联动入黑名单（auth/routes.ts 接入 addIpToBlacklist）。app.ts 已注册。
 [2026-07-04] 阶段 4/5 契约收尾：`findUsers` 补齐 deptName / roleNames（应用层聚合角色名，避免原生 SQL），各模块类型统一抽到 `types.ts`，删除 `INSERT ... RETURNING` 死代码 guard。更新 AGENTS.md 红线与重构实践保持一致。阶段 5 仍剩 5.5（pg-boss 定时任务）。
+[2026-07-04] 阶段 5.3a 契约对齐：dict 模块修复 4 项前后端差异——type/dictCode 字段映射、keywords 模糊搜索、字典项分页（{list,total}）、tagType 颜色标签（sys_dict_item.tag_type 列 + 前端编解码）。对齐 vue3-element-admin-v4.6.0 前端契约。
 ```

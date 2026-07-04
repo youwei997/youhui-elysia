@@ -6,10 +6,9 @@ import { createListQuery } from "@/lib/crud-dto";
 
 // ── 字典类型 ──
 
-/** 字典类型列表查询参数 */
+/** 字典类型列表查询参数（前端用 keywords 模糊匹配 type/name） */
 export const DictListQuery = createListQuery(sysDict, {
-	type: z.string().optional().describe("字典类型标识（模糊匹配）"),
-	name: z.string().optional().describe("字典名称（模糊匹配）"),
+	keywords: z.string().optional().describe("搜索关键词（模糊匹配 type/name）"),
 	status: z.coerce.number().int().optional().describe("状态：1-启用 0-禁用"),
 }).describe("字典类型列表查询参数");
 
@@ -25,10 +24,21 @@ export const DictResponse = createSelectSchema(sysDict)
 /** DictResponse.parse 的输入类型 */
 export type DictResponseInput = z.input<typeof DictResponse>;
 
-/** 字典类型新增 body */
+/** 字典类型新增 body（前端传 dictCode，后端存 type，两者皆可） */
 export const DictCreateBody = z
 	.object({
-		type: z.string().min(1).max(64).describe("字典类型标识（全局唯一）"),
+		type: z
+			.string()
+			.min(1)
+			.max(64)
+			.optional()
+			.describe("字典类型标识（后端字段）"),
+		dictCode: z
+			.string()
+			.min(1)
+			.max(64)
+			.optional()
+			.describe("字典类型标识（前端字段）"),
 		name: z.string().min(1).max(64).describe("字典名称"),
 		status: z.coerce.number().int().default(1).describe("状态：1-启用 0-禁用"),
 	})
@@ -47,7 +57,12 @@ export const DictUpdateBody = z
 /** 字典项列表查询参数 */
 export const DictItemListQuery = z
 	.object({
-		label: z.string().optional().describe("标签（模糊匹配）"),
+		pageNum: z.coerce.number().int().default(1).describe("页码"),
+		pageSize: z.coerce.number().int().max(100).default(20).describe("每页条数"),
+		keywords: z
+			.string()
+			.optional()
+			.describe("搜索关键词（模糊匹配 label/value）"),
 		status: z.coerce.number().int().optional().describe("状态：1-启用 0-禁用"),
 	})
 	.describe("字典项列表查询参数");
@@ -71,6 +86,7 @@ export const DictItemCreateBody = z
 		value: z.string().min(1).max(128).describe("字典项值"),
 		sort: z.coerce.number().int().default(0).describe("排序号"),
 		status: z.coerce.number().int().default(1).describe("状态：1-启用 0-禁用"),
+		tagType: z.string().max(8).default("N").describe("标签类型：N/P/S/W/I/D"),
 	})
 	.describe("创建字典项请求体");
 
@@ -81,6 +97,7 @@ export const DictItemUpdateBody = z
 		value: z.string().min(1).max(128).optional().describe("字典项值"),
 		sort: z.coerce.number().int().optional().describe("排序号"),
 		status: z.coerce.number().int().optional().describe("状态：1-启用 0-禁用"),
+		tagType: z.string().max(8).optional().describe("标签类型：N/P/S/W/I/D"),
 	})
 	.describe("更新字典项请求体");
 

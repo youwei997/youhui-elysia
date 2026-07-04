@@ -36,10 +36,11 @@ import {
 	DictUpdateBody,
 } from "./schema";
 
-/** 响应转换：parse + id 转 string */
+/** 响应转换：parse + id 转 string + 字段名对齐前端（type → dictCode） */
 const parseDict = (dict: DictResponseInput) => {
 	const parsed = DictResponse.parse(dict);
-	return { ...parsed, id: String(parsed.id) };
+	const { type, ...rest } = parsed;
+	return { ...rest, dictCode: type, id: String(parsed.id) };
 };
 
 const parseDictItem = (item: DictItemResponseInput) => {
@@ -71,7 +72,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			detail: {
 				tags: ["Dict"],
 				summary: "字典类型列表（分页）",
-				description: "支持 type/name 模糊搜索和 status 筛选",
+				description: "支持 keywords 模糊搜索和 status 筛选",
 			},
 		},
 	)
@@ -95,11 +96,21 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	.post(
 		"/",
 		async ({ body }) => {
-			const existing = await findDictByType(body.type, db);
+			const type = body.type ?? body.dictCode;
+			if (!type) {
+				throw new BizError(
+					ERR_CODE.USER_REQUEST_PARAMETER_ERROR,
+					"必须提供 type 或 dictCode",
+				);
+			}
+			const existing = await findDictByType(type, db);
 			if (existing) {
 				throw new BizError(ERR_CODE.DICT_TYPE_DUPLICATE);
 			}
-			const dict = await createDict(body, db);
+			const dict = await createDict(
+				{ type, name: body.name, status: body.status },
+				db,
+			);
 			return parseDict(dict);
 		},
 		{
@@ -110,7 +121,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			detail: {
 				tags: ["Dict"],
 				summary: "创建字典类型",
-				description: "type 全局唯一，不可重复",
+				description: "type/dictCode 全局唯一，不可重复",
 			},
 		},
 	)
@@ -156,14 +167,17 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			},
 		},
 	)
-	// ── 字典项 CRUD（嵌套在 dictId 下，需要先注册以拦截数字 id） ──
+	// ── 字典项 CRUD（嵌套在 dictId 下） ──
 	.get(
 		"/:id/items",
 		async ({ params, query }) => {
 			const dict = await findDictById(params.id, db);
 			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			const list = await findDictItems(params.id, query, db);
-			return list.map((item) => parseDictItem(item));
+			const result = await findDictItems(params.id, query, db);
+			return {
+				list: result.list.map((item) => parseDictItem(item)),
+				total: result.total,
+			};
 		},
 		{
 			auth: true,
@@ -172,7 +186,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			query: DictItemListQuery,
 			detail: {
 				tags: ["Dict"],
-				summary: "字典项列表",
+				summary: "字典项列表（分页）",
 				description: "查询某个字典类型下的所有字典项",
 			},
 		},
@@ -290,8 +304,12 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			return withCache(redisKeys.dictCache(params.type), 600, async () => {
 				const dict = await findDictByType(params.type, db);
 				if (!dict) return [];
-				const items = await findDictItems(dict.id, { status: 1 }, db);
-				return items.map((item) => parseDictItem(item));
+				const items = await findDictItems(
+					dict.id,
+					{ status: 1, pageNum: 1, pageSize: 9999 },
+					db,
+				);
+				return items.list.map((item) => parseDictItem(item));
 			});
 		},
 		{

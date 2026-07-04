@@ -1,0 +1,1 @@
+ALTER TABLE "sys_dict_item" ADD COLUMN "tag_type" varchar(8) DEFAULT 'N' NOT NULL;

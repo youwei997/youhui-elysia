@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, like } from "drizzle-orm";
+import { and, asc, count, eq, isNull, like, or } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { sysDict } from "@/db/schema/system/dict";
 import { sysDictItem } from "@/db/schema/system/dict-item";
@@ -8,25 +8,25 @@ import type { DictItemRecord, DictRecord } from "./types";
 // ── 字典类型 ──
 
 /**
- * 字典类型列表查询（分页，软删过滤）
+ * 字典类型列表查询（分页，软删过滤，keywords 模糊匹配 type/name）
  */
 export const findDicts = async (
 	query: {
 		pageNum: number;
 		pageSize: number;
-		type?: string;
-		name?: string;
+		keywords?: string;
 		status?: number;
 	},
 	db: DB,
 ): Promise<PageResult<DictRecord>> => {
 	const where = [isNull(sysDict.deleteTime)];
 
-	if (query.type) {
-		where.push(like(sysDict.type, `%${query.type}%`));
-	}
-	if (query.name) {
-		where.push(like(sysDict.name, `%${query.name}%`));
+	if (query.keywords) {
+		const kwCond = or(
+			like(sysDict.type, `%${query.keywords}%`),
+			like(sysDict.name, `%${query.keywords}%`),
+		);
+		if (kwCond) where.push(kwCond);
 	}
 	if (query.status !== undefined) {
 		where.push(eq(sysDict.status, query.status));
@@ -123,29 +123,49 @@ export const softDeleteDict = async (id: number, db: DB): Promise<boolean> => {
 
 // ── 字典项 ──
 
-/** 字典项列表查询（软删过滤） */
+/** 字典项列表查询（分页，软删过滤） */
 export const findDictItems = async (
 	dictId: number,
-	query: { label?: string | undefined; status?: number | undefined },
+	query: {
+		keywords?: string | undefined;
+		status?: number | undefined;
+		pageNum: number;
+		pageSize: number;
+	},
 	db: DB,
-): Promise<DictItemRecord[]> => {
+): Promise<PageResult<DictItemRecord>> => {
 	const where = [
 		eq(sysDictItem.dictId, dictId),
 		isNull(sysDictItem.deleteTime),
 	];
 
-	if (query.label) {
-		where.push(like(sysDictItem.label, `%${query.label}%`));
+	if (query.keywords) {
+		const kwCond = or(
+			like(sysDictItem.label, `%${query.keywords}%`),
+			like(sysDictItem.value, `%${query.keywords}%`),
+		);
+		if (kwCond) where.push(kwCond);
 	}
 	if (query.status !== undefined) {
 		where.push(eq(sysDictItem.status, query.status));
 	}
 
-	return db
+	const whereClause = where.length > 0 ? and(...where) : undefined;
+
+	const list = await db
 		.select()
 		.from(sysDictItem)
-		.where(and(...where))
-		.orderBy(asc(sysDictItem.sort), asc(sysDictItem.id));
+		.where(whereClause)
+		.orderBy(asc(sysDictItem.sort), asc(sysDictItem.id))
+		.limit(query.pageSize)
+		.offset((query.pageNum - 1) * query.pageSize);
+
+	const [{ total = 0 } = {}] = await db
+		.select({ total: count() })
+		.from(sysDictItem)
+		.where(whereClause);
+
+	return { list, total };
 };
 
 /** 按 ID 查字典项 */
