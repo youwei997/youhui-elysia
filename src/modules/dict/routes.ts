@@ -242,6 +242,24 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			},
 		},
 	)
+	.get(
+		"/:id/items/:itemId/form",
+		async ({ params }) => {
+			const existing = await findDictItemById(params.itemId, db);
+			if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
+			return parseDictItem(existing);
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:dict:list"],
+			params: DictItemParamsWithId,
+			detail: {
+				tags: ["Dict"],
+				summary: "字典项表单数据",
+				description: "编辑字典项时回填表单，:id 支持数字 ID 或 dictCode",
+			},
+		},
+	)
 	.put(
 		"/:id/items/:itemId",
 		async ({ params, body }) => {
