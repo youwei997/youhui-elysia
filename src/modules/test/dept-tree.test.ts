@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sysRoleDept } from "@/db/schema/system/relation";
 import { sysDept } from "@/db/schema/system/dept";
+import { sysRoleDept } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
 import {
 	createDept,
@@ -25,7 +25,9 @@ const cleanUpDept = async () => {
 	await db.delete(sysUser).where(eq(sysUser.id, TEST_USER_ID));
 	await db.delete(sysRoleDept).where(eq(sysRoleDept.deptId, TEST_DEPT_ROOT));
 	await db.delete(sysRoleDept).where(eq(sysRoleDept.deptId, TEST_DEPT_CHILD));
-	await db.delete(sysRoleDept).where(eq(sysRoleDept.deptId, TEST_DEPT_GRANDCHILD));
+	await db
+		.delete(sysRoleDept)
+		.where(eq(sysRoleDept.deptId, TEST_DEPT_GRANDCHILD));
 	await db.delete(sysDept).where(eq(sysDept.id, TEST_DEPT_GRANDCHILD));
 	await db.delete(sysDept).where(eq(sysDept.id, TEST_DEPT_CHILD));
 	await db.delete(sysDept).where(eq(sysDept.id, TEST_DEPT_ROOT));
@@ -119,11 +121,19 @@ describe("dept treePath 级联查询", () => {
 
 	test("isParentIdCyclic 检测循环引用", async () => {
 		// 正常：子部门 parentId 指向根部门，不是循环
-		const notCyclic = await isParentIdCyclic(TEST_DEPT_CHILD, TEST_DEPT_ROOT, db);
+		const notCyclic = await isParentIdCyclic(
+			TEST_DEPT_CHILD,
+			TEST_DEPT_ROOT,
+			db,
+		);
 		expect(notCyclic).toBe(false);
 
 		// 循环：孙部门 parentId 指向自己
-		const cyclic = await isParentIdCyclic(TEST_DEPT_GRANDCHILD, TEST_DEPT_GRANDCHILD, db);
+		const cyclic = await isParentIdCyclic(
+			TEST_DEPT_GRANDCHILD,
+			TEST_DEPT_GRANDCHILD,
+			db,
+		);
 		expect(cyclic).toBe(true);
 	});
 

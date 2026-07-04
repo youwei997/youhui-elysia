@@ -114,16 +114,8 @@ describe("rateLimitPlugin", () => {
 		test("不同路径互不干扰", async () => {
 			const app = new Elysia()
 				.use(rateLimitPlugin)
-				.get(
-					"/a",
-					() => "a",
-					{ rateLimit: "2:10" },
-				)
-				.get(
-					"/b",
-					() => "b",
-					{ rateLimit: "2:10" },
-				);
+				.get("/a", () => "a", { rateLimit: "2:10" })
+				.get("/b", () => "b", { rateLimit: "2:10" });
 
 			// /a 打满 2 次
 			for (let i = 0; i < 2; i++) {
@@ -147,9 +139,7 @@ describe("rateLimitPlugin", () => {
 		test("无 IP 时跳过限流（空 X-Forwarded-For + 无 X-Real-IP）", async () => {
 			const app = makeApp({ rateLimit: "1:10" });
 
-			const res = await app.handle(
-				new Request("http://localhost/test"),
-			);
+			const res = await app.handle(new Request("http://localhost/test"));
 
 			expect(res.status).toBe(200);
 		});

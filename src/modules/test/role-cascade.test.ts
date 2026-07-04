@@ -1,9 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sysRole } from "@/db/schema/system/role";
-import { sysRoleDept, sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
 import { sysMenu } from "@/db/schema/system/menu";
+import {
+	sysRoleDept,
+	sysRoleMenu,
+	sysUserRole,
+} from "@/db/schema/system/relation";
+import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
 import {
 	batchSoftDeleteRoles,
@@ -185,7 +189,11 @@ describe("role 与 dept/menu 事务级联", () => {
 			.update(sysRole)
 			.set({ dataScope: 5 })
 			.where(eq(sysRole.id, TEST_ROLE_ID));
-		await replaceRoleDepts(TEST_ROLE_ID, { deptIds: [TEST_DEPT_ID_1, TEST_DEPT_ID_2] }, db);
+		await replaceRoleDepts(
+			TEST_ROLE_ID,
+			{ deptIds: [TEST_DEPT_ID_1, TEST_DEPT_ID_2] },
+			db,
+		);
 
 		const formData = await findRoleFormData(TEST_ROLE_ID, db);
 		expect(formData).toBeDefined();
@@ -205,10 +213,14 @@ describe("role 与 dept/menu 事务级联", () => {
 		expect(assigned).toBe(true);
 
 		// 解绑
-		await db.delete(sysUserRole).where(and(
-			eq(sysUserRole.userId, TEST_USER_ID),
-			eq(sysUserRole.roleId, TEST_ROLE_ID),
-		));
+		await db
+			.delete(sysUserRole)
+			.where(
+				and(
+					eq(sysUserRole.userId, TEST_USER_ID),
+					eq(sysUserRole.roleId, TEST_ROLE_ID),
+				),
+			);
 		const unassigned = await isRoleAssignedToUsers(TEST_ROLE_ID, db);
 		expect(unassigned).toBe(false);
 	});

@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
+import { sysUser } from "@/db/schema/system/user";
 import {
 	auditKeys,
 	createInsertDto,
 	createListQuery,
 	createUpdateDto,
 } from "../crud-dto";
-import { sysUser } from "@/db/schema/system/user";
 
 describe("crud-dto", () => {
 	test("auditKeys 包含所有审计字段", () => {

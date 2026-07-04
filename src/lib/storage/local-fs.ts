@@ -15,7 +15,10 @@ export const createLocalFsStorage = (
 
 	const resolveKey = (key: string): string => {
 		const fullPath = path.resolve(resolvedRoot, key);
-		if (!fullPath.startsWith(resolvedRoot + path.sep) && fullPath !== resolvedRoot) {
+		if (
+			!fullPath.startsWith(resolvedRoot + path.sep) &&
+			fullPath !== resolvedRoot
+		) {
 			throw new Error("Invalid storage key");
 		}
 		return fullPath;

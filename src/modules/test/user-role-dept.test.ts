@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sysDept } from "@/db/schema/system/dept";
-import { sysRole } from "@/db/schema/system/role";
-import { sysRoleDept, sysUserRole } from "@/db/schema/system/relation";
-import { sysUser } from "@/db/schema/system/user";
 import { DATA_SCOPE, type DataScopeContext } from "@/db/helpers/data-scope";
+import { sysDept } from "@/db/schema/system/dept";
+import { sysRoleDept, sysUserRole } from "@/db/schema/system/relation";
+import { sysRole } from "@/db/schema/system/role";
+import { sysUser } from "@/db/schema/system/user";
 import { findUsers } from "@/modules/user/queries";
 
 // ==========================================
@@ -119,11 +119,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.SELF }],
 		};
 
-		const result = await findUsers(
-			{ pageNum: 1, pageSize: 10 },
-			ctx,
-			db,
-		);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
 		expect(result.list.every((u) => u.id === TEST_USER_ID)).toBe(true);
 	});
 
@@ -135,11 +131,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.DEPT }],
 		};
 
-		const result = await findUsers(
-			{ pageNum: 1, pageSize: 10 },
-			ctx,
-			db,
-		);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
 		expect(result.list.every((u) => u.deptId === TEST_DEPT_ID)).toBe(true);
 	});
 
@@ -182,11 +174,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.DEPT_AND_SUB }],
 		};
 
-		const result = await findUsers(
-			{ pageNum: 1, pageSize: 10 },
-			ctx,
-			db,
-		);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
 		const ids = result.list.map((u) => u.id);
 		expect(ids).toContain(TEST_USER_ID);
 		expect(ids).toContain(childUserId);
@@ -208,11 +196,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.CUSTOM, customDeptIds: [TEST_DEPT_ID] }],
 		};
 
-		const result = await findUsers(
-			{ pageNum: 1, pageSize: 10 },
-			ctx,
-			db,
-		);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
 		expect(result.list.every((u) => u.deptId === TEST_DEPT_ID)).toBe(true);
 	});
 
@@ -245,11 +229,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.ALL }],
 		};
 
-		const result = await findUsers(
-			{ pageNum: 1, pageSize: 10 },
-			ctx,
-			db,
-		);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
 		expect(result.list.some((u) => u.id === TEST_USER_ID)).toBe(false);
 
 		await db

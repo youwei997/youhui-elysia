@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sysRole } from "@/db/schema/system/role";
-import { sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
 import { sysMenu } from "@/db/schema/system/menu";
+import { sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
+import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
 import { findUserPerms, findUserRoles } from "@/modules/auth/queries";
 
@@ -159,10 +159,14 @@ describe("auth 权限链联合查询", () => {
 		expect(editCount).toBe(1);
 
 		await db.delete(sysRoleMenu).where(eq(sysRoleMenu.roleId, role2Id));
-		await db.delete(sysUserRole).where(and(
-			eq(sysUserRole.userId, TEST_USER_ID),
-			eq(sysUserRole.roleId, role2Id),
-		));
+		await db
+			.delete(sysUserRole)
+			.where(
+				and(
+					eq(sysUserRole.userId, TEST_USER_ID),
+					eq(sysUserRole.roleId, role2Id),
+				),
+			);
 		await db.delete(sysRole).where(eq(sysRole.id, role2Id));
 	});
 

@@ -1,11 +1,8 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { CAPTCHA_TTL_S } from "@/lib/auth-constants";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
-import { CAPTCHA_TTL_S } from "@/lib/auth-constants";
-import {
-	generateCaptcha,
-	verifyCaptcha,
-} from "../captcha";
+import { generateCaptcha, verifyCaptcha } from "../captcha";
 
 describe("captcha", () => {
 	let captchaId: string;
@@ -21,9 +18,7 @@ describe("captcha", () => {
 		test("返回 captchaId + base64 SVG", async () => {
 			const result = await generateCaptcha();
 			expect(result.captchaId).toBeTruthy();
-			expect(result.captchaBase64).toMatch(
-				/^data:image\/svg\+xml;base64,/,
-			);
+			expect(result.captchaBase64).toMatch(/^data:image\/svg\+xml;base64,/);
 			captchaId = result.captchaId;
 		});
 
@@ -97,12 +92,7 @@ describe("captcha", () => {
 
 		test("首尾空格忽略", async () => {
 			const fakeId = "space-test";
-			await redis.set(
-				redisKeys.captchaAnswer(fakeId),
-				"  7  ",
-				"EX",
-				60,
-			);
+			await redis.set(redisKeys.captchaAnswer(fakeId), "  7  ", "EX", 60);
 			captchaId = fakeId;
 
 			expect(await verifyCaptcha(fakeId, "  7  ")).toBe(true);

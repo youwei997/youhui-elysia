@@ -96,12 +96,12 @@ describe("login-lock", () => {
 			await incrementTokenVersion(TEST_USER_ID);
 			await incrementTokenVersion(otherUserId);
 
-			expect(
-				await redis.get(redisKeys.userTokenVersion(TEST_USER_ID)),
-			).toBe("1");
-			expect(
-				await redis.get(redisKeys.userTokenVersion(otherUserId)),
-			).toBe("1");
+			expect(await redis.get(redisKeys.userTokenVersion(TEST_USER_ID))).toBe(
+				"1",
+			);
+			expect(await redis.get(redisKeys.userTokenVersion(otherUserId))).toBe(
+				"1",
+			);
 		});
 	});
 });

@@ -5,15 +5,12 @@ import { errorHandler } from "../error-handler";
 
 /** 创建带 errorHandler 的最小测试 app */
 const makeApp = () =>
-	new Elysia().use(errorHandler)
+	new Elysia()
+		.use(errorHandler)
 		// NOT_FOUND：路由不存在
 		.get("/missing", () => "ok")
 		// VALIDATION：zod 校验失败
-		.post(
-			"/validate",
-			() => "ok",
-			{ body: t.Object({ name: t.String() }) },
-		)
+		.post("/validate", () => "ok", { body: t.Object({ name: t.String() }) })
 		// BizError：业务错误
 		.get("/biz", () => {
 			throw new BizError(ERR_CODE.ROLE_NOT_FOUND, "角色不存在", 404);
@@ -28,9 +25,7 @@ type ErrorResponse = { code: string; msg: string; data: null };
 describe("error-handler", () => {
 	test("NOT_FOUND → 404 + C0113", async () => {
 		const app = makeApp();
-		const res = await app.handle(
-			new Request("http://localhost/not-exist"),
-		);
+		const res = await app.handle(new Request("http://localhost/not-exist"));
 		expect(res.status).toBe(404);
 		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.INTERFACE_NOT_EXIST);
@@ -56,9 +51,7 @@ describe("error-handler", () => {
 
 	test("BizError → 对应状态码 + 错误码 + 自定义消息", async () => {
 		const app = makeApp();
-		const res = await app.handle(
-			new Request("http://localhost/biz"),
-		);
+		const res = await app.handle(new Request("http://localhost/biz"));
 		expect(res.status).toBe(404);
 		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.ROLE_NOT_FOUND);
@@ -68,9 +61,7 @@ describe("error-handler", () => {
 
 	test("未知 Error → 500 + B0001", async () => {
 		const app = makeApp();
-		const res = await app.handle(
-			new Request("http://localhost/unknown"),
-		);
+		const res = await app.handle(new Request("http://localhost/unknown"));
 		expect(res.status).toBe(500);
 		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.SYSTEM_ERROR);
@@ -79,14 +70,10 @@ describe("error-handler", () => {
 	});
 
 	test("notFound 便捷工厂 → 404 + 默认 USER_NOT_FOUND", async () => {
-		const app = new Elysia()
-			.use(errorHandler)
-			.get("/nf", () => {
-				throw notFound();
-			});
-		const res = await app.handle(
-			new Request("http://localhost/nf"),
-		);
+		const app = new Elysia().use(errorHandler).get("/nf", () => {
+			throw notFound();
+		});
+		const res = await app.handle(new Request("http://localhost/nf"));
 		expect(res.status).toBe(404);
 		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.USER_NOT_FOUND);

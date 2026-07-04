@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sysRole } from "@/db/schema/system/role";
-import { sysRoleMenu } from "@/db/schema/system/relation";
 import { sysMenu } from "@/db/schema/system/menu";
+import { sysRoleMenu } from "@/db/schema/system/relation";
+import { sysRole } from "@/db/schema/system/role";
 import { findMenusByRoleCodes } from "@/modules/menu/queries";
 
 // ==========================================

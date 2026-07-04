@@ -12,9 +12,7 @@ describe("requestContext", () => {
 				return { reqId, startTime, hasLogger: !!logger };
 			});
 
-		const res = await app.handle(
-			new Request("http://localhost/test"),
-		);
+		const res = await app.handle(new Request("http://localhost/test"));
 		const body = (await res.json()) as ReqIdResponse;
 
 		expect(body.reqId).toBeTruthy();
@@ -31,12 +29,8 @@ describe("requestContext", () => {
 			.use(requestContext)
 			.get("/test", ({ reqId }) => ({ reqId }));
 
-		const res1 = await app.handle(
-			new Request("http://localhost/test"),
-		);
-		const res2 = await app.handle(
-			new Request("http://localhost/test"),
-		);
+		const res1 = await app.handle(new Request("http://localhost/test"));
+		const res2 = await app.handle(new Request("http://localhost/test"));
 
 		const body1 = (await res1.json()) as ReqIdResponse;
 		const body2 = (await res2.json()) as ReqIdResponse;
@@ -51,9 +45,7 @@ describe("requestContext", () => {
 			.use(requestContext)
 			.get("/openapi.json", () => "openapi");
 
-		const res = await app.handle(
-			new Request("http://localhost/openapi.json"),
-		);
+		const res = await app.handle(new Request("http://localhost/openapi.json"));
 		expect(res.status).toBe(200);
 		const body = await res.text();
 		expect(body).toBe("openapi");
@@ -64,20 +56,14 @@ describe("requestContext", () => {
 			.use(requestContext)
 			.get("/favicon.ico", () => "ico");
 
-		const res = await app.handle(
-			new Request("http://localhost/favicon.ico"),
-		);
+		const res = await app.handle(new Request("http://localhost/favicon.ico"));
 		expect(res.status).toBe(200);
 	});
 
 	test("skip prefixes：/health 不记录完成日志", async () => {
-		const app = new Elysia()
-			.use(requestContext)
-			.get("/health", () => "ok");
+		const app = new Elysia().use(requestContext).get("/health", () => "ok");
 
-		const res = await app.handle(
-			new Request("http://localhost/health"),
-		);
+		const res = await app.handle(new Request("http://localhost/health"));
 		expect(res.status).toBe(200);
 		const body = await res.text();
 		expect(body).toBe("ok");
@@ -88,9 +74,7 @@ describe("requestContext", () => {
 			.use(requestContext)
 			.get("/api/users", () => "users");
 
-		const res = await app.handle(
-			new Request("http://localhost/api/users"),
-		);
+		const res = await app.handle(new Request("http://localhost/api/users"));
 		expect(res.status).toBe(200);
 		const body = await res.text();
 		expect(body).toBe("users");

@@ -103,7 +103,11 @@ describe("withCache", () => {
 		expect(result).toEqual(expected);
 
 		// 第二次应命中缓存
-		const again = await withCache(key, 60, async (): Promise<typeof expected> => ({ list: [], total: 0 }));
+		const again = await withCache(
+			key,
+			60,
+			async (): Promise<typeof expected> => ({ list: [], total: 0 }),
+		);
 		expect(again).toEqual(expected);
 	});
 });

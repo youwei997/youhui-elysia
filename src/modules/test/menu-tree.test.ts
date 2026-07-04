@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { sysRoleMenu } from "@/db/schema/system/relation";
 import { sysMenu } from "@/db/schema/system/menu";
+import { sysRoleMenu } from "@/db/schema/system/relation";
 import {
 	createMenu,
 	findAllMenus,
@@ -22,7 +22,9 @@ const TEST_MENU_GRANDCHILD = 5002;
 const cleanUpMenu = async () => {
 	await db.delete(sysRoleMenu).where(eq(sysRoleMenu.menuId, TEST_MENU_ROOT));
 	await db.delete(sysRoleMenu).where(eq(sysRoleMenu.menuId, TEST_MENU_CHILD));
-	await db.delete(sysRoleMenu).where(eq(sysRoleMenu.menuId, TEST_MENU_GRANDCHILD));
+	await db
+		.delete(sysRoleMenu)
+		.where(eq(sysRoleMenu.menuId, TEST_MENU_GRANDCHILD));
 	await db.delete(sysMenu).where(eq(sysMenu.id, TEST_MENU_GRANDCHILD));
 	await db.delete(sysMenu).where(eq(sysMenu.id, TEST_MENU_CHILD));
 	await db.delete(sysMenu).where(eq(sysMenu.id, TEST_MENU_ROOT));
@@ -123,11 +125,19 @@ describe("menu treePath 级联查询", () => {
 
 	test("isParentIdCyclic 检测循环引用", async () => {
 		// 正常：子菜单 parentId 指向根菜单，不是循环
-		const notCyclic = await isParentIdCyclic(TEST_MENU_CHILD, TEST_MENU_ROOT, db);
+		const notCyclic = await isParentIdCyclic(
+			TEST_MENU_CHILD,
+			TEST_MENU_ROOT,
+			db,
+		);
 		expect(notCyclic).toBe(false);
 
 		// 循环：孙菜单 parentId 指向自己
-		const cyclic = await isParentIdCyclic(TEST_MENU_GRANDCHILD, TEST_MENU_GRANDCHILD, db);
+		const cyclic = await isParentIdCyclic(
+			TEST_MENU_GRANDCHILD,
+			TEST_MENU_GRANDCHILD,
+			db,
+		);
 		expect(cyclic).toBe(true);
 	});
 

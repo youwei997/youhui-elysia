@@ -7,9 +7,9 @@ import {
 	createDictItem,
 	findDictById,
 	findDictByType,
-	findDictItemById,
 	findDictItemByDictIdAndLabel,
 	findDictItemByDictIdAndValue,
+	findDictItemById,
 	findDictItems,
 	findDicts,
 	softDeleteDict,
@@ -27,11 +27,15 @@ const TEST_DICT_ITEM_ID_2 = 6001;
 const cleanUp = async () => {
 	await db.delete(sysDictItem).where(eq(sysDictItem.dictId, TEST_DICT_ID));
 	await db.delete(sysDict).where(eq(sysDict.id, TEST_DICT_ID));
-	await db.delete(sysDictItem).where(or(
-		eq(sysDictItem.id, 601),
-		eq(sysDictItem.id, 6000),
-		eq(sysDictItem.id, 6001),
-	));
+	await db
+		.delete(sysDictItem)
+		.where(
+			or(
+				eq(sysDictItem.id, 601),
+				eq(sysDictItem.id, 6000),
+				eq(sysDictItem.id, 6001),
+			),
+		);
 	await db.delete(sysDict).where(eq(sysDict.id, 601));
 };
 
@@ -102,11 +106,15 @@ describe("dict 父子关联查询", () => {
 	});
 
 	test("findDictItems 查询字典项列表（按 dictId）", async () => {
-		const result = await findDictItems(TEST_DICT_ID, {
-			pageNum: 1,
-			pageSize: 10,
-			keywords: "选项",
-		}, db);
+		const result = await findDictItems(
+			TEST_DICT_ID,
+			{
+				pageNum: 1,
+				pageSize: 10,
+				keywords: "选项",
+			},
+			db,
+		);
 		expect(result.list.length).toBeGreaterThanOrEqual(2);
 		const ids = result.list.map((item) => item.id);
 		expect(ids).toContain(TEST_DICT_ITEM_ID_1);
@@ -136,11 +144,7 @@ describe("dict 父子关联查询", () => {
 	});
 
 	test("findDictItemByDictIdAndValue 跨表重复校验", async () => {
-		const existing = await findDictItemByDictIdAndValue(
-			TEST_DICT_ID,
-			"2",
-			db,
-		);
+		const existing = await findDictItemByDictIdAndValue(TEST_DICT_ID, "2", db);
 		expect(existing?.id).toBe(TEST_DICT_ITEM_ID_2);
 	});
 
@@ -210,10 +214,14 @@ describe("dict 父子关联查询", () => {
 		const dict = await findDictById(TEST_DICT_ID, db);
 		expect(dict?.deleteTime).not.toBeNull();
 
-		const items = await findDictItems(TEST_DICT_ID, {
-			pageNum: 1,
-			pageSize: 10,
-		}, db);
+		const items = await findDictItems(
+			TEST_DICT_ID,
+			{
+				pageNum: 1,
+				pageSize: 10,
+			},
+			db,
+		);
 		expect(items.list.length).toBe(0);
 
 		// 级联软删后，findDictItemById 也不应返回

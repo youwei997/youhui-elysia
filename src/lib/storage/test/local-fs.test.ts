@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
 import { createLocalFsStorage } from "@/lib/storage/local-fs";
 
 const makeStorage = () => {
@@ -72,8 +72,8 @@ describe("local-fs storage", () => {
 
 	test("key 路径穿越被拒绝", async () => {
 		const { storage } = makeStorage();
-		await expect(storage.put("../escape.txt", Buffer.from("escape"), {})).rejects.toThrow(
-			"Invalid storage key",
-		);
+		await expect(
+			storage.put("../escape.txt", Buffer.from("escape"), {}),
+		).rejects.toThrow("Invalid storage key");
 	});
 });
