@@ -171,7 +171,8 @@ export const verifyCaptcha = async (
 			)
 			.replace(/（/g, "(")
 			.replace(/）/g, ")")
-			.replace(/×/g, "*");
+			.replace(/×/g, "*")
+			.replace(/＋/g, "+");
 	};
 	return normalize(cleanCode) === normalize(cleanAnswer);
 };
