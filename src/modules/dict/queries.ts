@@ -80,7 +80,7 @@ export const createDict = async (
 		type: string;
 		name: string;
 		status: number;
-		remark: string | undefined;
+		remark?: string | undefined;
 	},
 	db: DB,
 ): Promise<DictRecord> => {
