@@ -160,6 +160,13 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			if (body.deptIds) {
 				await ensureValidDeptIds(body.deptIds);
 			}
+			// 前置校验：角色编码必须全大写（Zod 已做正则防御，此处给出业务级明确提示）
+			if (!/^[A-Z][A-Z0-9_]*$/.test(body.code)) {
+				throw new BizError(
+					ERR_CODE.USER_REQUEST_PARAMETER_ERROR,
+					"角色编码必须以大写字母开头，且仅含大写字母、数字、下划线（如 ADMIN）",
+				);
+			}
 			const role = await createRole(body, db);
 			return parseRole(role);
 		},
