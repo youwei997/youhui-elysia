@@ -3,6 +3,8 @@ import { sysUser } from "@/db/schema/system/user";
 import { sysRole } from "@/db/schema/system/role";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysMenu } from "@/db/schema/system/menu";
+import { sysDict } from "@/db/schema/system/dict";
+import { sysDictItem } from "@/db/schema/system/dict-item";
 import { sysUserRole, sysRoleMenu, sysRoleDept } from "@/db/schema/system/relation";
 
 /**
@@ -462,8 +464,150 @@ const main = async () => {
 			updatedBy: 1,
 			updateTime: NOW,
 		},
+		// ── 字典管理 ──
+		{
+			id: 250,
+			parentId: 1,
+			treePath: "0,1",
+			type: "M",
+			name: "字典管理",
+			routeName: "Dict",
+			routePath: "dict",
+			component: "system/dict/index",
+			icon: "dict",
+			sort: 5,
+			visible: 1,
+			keepAlive: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2501,
+			parentId: 250,
+			treePath: "0,1,250",
+			type: "B",
+			name: "字典查询",
+			perm: "sys:dict:list",
+			sort: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2502,
+			parentId: 250,
+			treePath: "0,1,250",
+			type: "B",
+			name: "字典新增",
+			perm: "sys:dict:create",
+			sort: 2,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2503,
+			parentId: 250,
+			treePath: "0,1,250",
+			type: "B",
+			name: "字典编辑",
+			perm: "sys:dict:update",
+			sort: 3,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2504,
+			parentId: 250,
+			treePath: "0,1,250",
+			type: "B",
+			name: "字典删除",
+			perm: "sys:dict:delete",
+			sort: 4,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		// ── 字典项 ──
+		{
+			id: 251,
+			parentId: 1,
+			treePath: "0,1",
+			type: "M",
+			name: "字典项",
+			routeName: "DictItem",
+			routePath: "dict-item",
+			component: "system/dict/dict-item",
+			icon: "dict-item",
+			sort: 6,
+			visible: 1,
+			keepAlive: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2511,
+			parentId: 251,
+			treePath: "0,1,251",
+			type: "B",
+			name: "字典项查询",
+			perm: "sys:dict:list",
+			sort: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2512,
+			parentId: 251,
+			treePath: "0,1,251",
+			type: "B",
+			name: "字典项新增",
+			perm: "sys:dict:create",
+			sort: 2,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2513,
+			parentId: 251,
+			treePath: "0,1,251",
+			type: "B",
+			name: "字典项编辑",
+			perm: "sys:dict:update",
+			sort: 3,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2514,
+			parentId: 251,
+			treePath: "0,1,251",
+			type: "B",
+			name: "字典项删除",
+			perm: "sys:dict:delete",
+			sort: 4,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
 	]);
-	console.log("  ✅ 菜单表：27 条（1 目录 + 4 菜单 + 20 按钮 + 2 文件存储按钮）");
+	console.log("  ✅ 菜单表：37 条（1 目录 + 6 菜单 + 30 按钮）");
 
 	// ==========================================
 	// 3. 角色表（sys_role）—— dataScope：1=全部 2=部门及子部门 3=本部门 4=本人 5=自定义
@@ -708,6 +852,8 @@ const main = async () => {
 		30, 301, 302, 303, 304, // 菜单管理
 		40, 401, 402, 403, 404, // 部门管理
 		50, 51, // 文件存储按钮
+		250, 2501, 2502, 2503, 2504, // 字典管理
+		251, 2511, 2512, 2513, 2514, // 字典项
 	];
 	await db.insert(sysRoleMenu).values(
 		adminMenuIds.map((menuId) => ({ roleId: 2, menuId })),
@@ -762,13 +908,71 @@ const main = async () => {
 	console.log("  ✅ 角色-部门关联：2 条（CUSTOM_USER）");
 
 	// ==========================================
-	// 8. 复位自增序列（种子显式指定 ID → identity sequence 错位）
+	// 8. 字典类型（sys_dict）+ 字典项（sys_dict_item）
+	// ==========================================
+	await db.insert(sysDict).values([
+		{
+			id: 1,
+			type: "gender",
+			name: "性别",
+			status: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2,
+			type: "notice_type",
+			name: "通知类型",
+			status: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 3,
+			type: "notice_level",
+			name: "通知级别",
+			status: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+	]);
+	console.log("  ✅ 字典类型：3 条");
+
+	await db.insert(sysDictItem).values([
+		// gender
+		{ id: 1, dictId: 1, label: "男", value: "1", sort: 1, status: 1, tagType: "primary", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 2, dictId: 1, label: "女", value: "2", sort: 2, status: 1, tagType: "danger", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 3, dictId: 1, label: "保密", value: "0", sort: 3, status: 1, tagType: "info", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		// notice_type
+		{ id: 4, dictId: 2, label: "系统升级", value: "1", sort: 1, status: 1, tagType: "success", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 5, dictId: 2, label: "系统维护", value: "2", sort: 2, status: 1, tagType: "primary", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 6, dictId: 2, label: "安全警告", value: "3", sort: 3, status: 1, tagType: "danger", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 7, dictId: 2, label: "假期通知", value: "4", sort: 4, status: 1, tagType: "success", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 8, dictId: 2, label: "公司新闻", value: "5", sort: 5, status: 1, tagType: "primary", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 9, dictId: 2, label: "其他", value: "99", sort: 99, status: 1, tagType: "info", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		// notice_level
+		{ id: 10, dictId: 3, label: "低", value: "L", sort: 1, status: 1, tagType: "info", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 11, dictId: 3, label: "中", value: "M", sort: 2, status: 1, tagType: "warning", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+		{ id: 12, dictId: 3, label: "高", value: "H", sort: 3, status: 1, tagType: "danger", createdBy: 1, createTime: NOW, updatedBy: 1, updateTime: NOW },
+	]);
+	console.log("  ✅ 字典项：12 条");
+
+	// ==========================================
+	// 9. 复位自增序列（种子显式指定 ID → identity sequence 错位）
 	// ==========================================
 	await db.execute(
 		`SELECT setval('sys_dept_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_dept));
 SELECT setval('sys_menu_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_menu));
 SELECT setval('sys_role_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_role));
-SELECT setval('sys_user_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_user));`,
+SELECT setval('sys_user_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_user));
+SELECT setval('sys_dict_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_dict));
+SELECT setval('sys_dict_item_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_dict_item));`,
 	);
 	console.log("  ✅ 自增序列已复位");
 
@@ -778,12 +982,14 @@ SELECT setval('sys_user_id_seq', (SELECT COALESCE(MAX(id), 1) FROM sys_user));`,
 	console.log("");
 	console.log("🎉 种子数据写入完成！");
 	console.log("  ├─ 部门：3 条");
-	console.log("  ├─ 菜单：25 条（1 目录 + 4 菜单 + 20 按钮）");
+	console.log("  ├─ 菜单：37 条（1 目录 + 6 菜单 + 30 按钮）");
+	console.log("  ├─ 字典类型：3 条");
+	console.log("  ├─ 字典项：12 条");
 	console.log("  ├─ 角色：7 条");
 	console.log("  ├─ 用户：7 条");
 	console.log("  ├─ 用户-角色：7 条");
 	console.log("  ├─ 角色-菜单：已写入");
-	console.log("  └─ 角色-部门：2 条");
+	console.log("  └─ 角色-部门：2 条（CUSTOM_USER）");
 	console.log("");
 	console.log("📋 角色清单（密码均为 123456）：");
 	console.log("  root          → ROOT          超管，无部门，dataScope=ALL");
