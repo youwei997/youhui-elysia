@@ -200,7 +200,13 @@ export const findDictItemById = async (
 /** 新增字典项 */
 export const createDictItem = async (
 	dictId: number,
-	data: { label: string; value: string; sort: number; status: number },
+	data: {
+		label: string;
+		value: string;
+		sort: number;
+		status: number;
+		tagType: string;
+	},
 	db: DB,
 ): Promise<DictItemRecord> => {
 	const [item] = await db
@@ -218,6 +224,7 @@ export const updateDictItem = async (
 		value?: string | undefined;
 		sort?: number | undefined;
 		status?: number | undefined;
+		tagType?: string | undefined;
 	},
 	db: DB,
 ): Promise<DictItemRecord | undefined> => {
