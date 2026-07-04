@@ -113,10 +113,20 @@ export const DictItemListParams = z
 	.object({ id: z.string() })
 	.describe("字典类型 ID 或编码");
 
+/** 字典类型 ID 列表路径参数（批量操作，前端传 "1,2,3"） */
+export const DictParamsWithCommaIds = z
+	.object({ ids: z.string() })
+	.describe("字典类型 ID 列表（逗号分隔）");
+
 /** 字典项 ID 路径参数 */
 export const DictItemParamsWithId = z
 	.object({ itemId: z.coerce.number() })
 	.describe("字典项 ID");
+
+/** 字典项 ID 列表路径参数（批量操作，前端传 "1,2,3"） */
+export const DictItemParamsWithCommaIds = z
+	.object({ ids: z.string() })
+	.describe("字典项 ID 列表（逗号分隔）");
 
 /** 字典类型标识路径参数（供 /dicts/:type/items 查询） */
 export const DictTypeParam = z

@@ -25,11 +25,13 @@ import {
 	DictItemCreateBody,
 	DictItemListParams,
 	DictItemListQuery,
+	DictItemParamsWithCommaIds,
 	DictItemParamsWithId,
 	DictItemResponse,
 	type DictItemResponseInput,
 	DictItemUpdateBody,
 	DictListQuery,
+	DictParamsWithCommaIds,
 	DictParamsWithId,
 	DictResponse,
 	type DictResponseInput,
@@ -78,6 +80,22 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		},
 	)
 	.get(
+		"/options",
+		async () => {
+			const dicts = await findDicts({ pageNum: 1, pageSize: 1000 }, db);
+			return dicts.list.map((d) => parseDict(d));
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:dict:list"],
+			detail: {
+				tags: ["Dict"],
+				summary: "字典类型下拉列表",
+				description: "返回所有启用字典类型，供前端下拉框使用",
+			},
+		},
+	)
+	.get(
 		"/:id",
 		async ({ params }) => {
 			const dict = await findDictById(params.id, db);
@@ -91,6 +109,24 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			detail: {
 				tags: ["Dict"],
 				summary: "字典类型详情",
+			},
+		},
+	)
+	.get(
+		"/:id/form",
+		async ({ params }) => {
+			const dict = await findDictById(params.id, db);
+			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+			return parseDict(dict);
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:dict:list"],
+			params: DictParamsWithId,
+			detail: {
+				tags: ["Dict"],
+				summary: "字典类型表单数据",
+				description: "编辑字典类型时回填表单",
 			},
 		},
 	)
@@ -168,6 +204,38 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			},
 		},
 	)
+	.delete(
+		"/:ids",
+		async ({ params }) => {
+			const ids = params.ids
+				.split(",")
+				.map((s) => Number(s.trim()))
+				.filter((n) => !Number.isNaN(n));
+
+			if (ids.length === 0) {
+				throw notFound(ERR_CODE.DICT_NOT_FOUND);
+			}
+
+			for (const id of ids) {
+				const existing = await findDictById(id, db);
+				if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+				await softDeleteDict(id, db);
+				await invalidateDictCache(existing.type);
+			}
+			return true;
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:dict:delete"],
+			audit: "dict:batch-delete",
+			params: DictParamsWithCommaIds,
+			detail: {
+				tags: ["Dict"],
+				summary: "批量删除字典类型（级联软删字典项）",
+				description: "前端传逗号分隔的 ID，如 1,2,3",
+			},
+		},
+	)
 	// ── 字典项 CRUD（嵌套在 dictId 下） ──
 	.get(
 		"/:id/items",
@@ -199,6 +267,39 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 				summary: "字典项列表（分页）",
 				description:
 					"查询某个字典类型下的所有字典项，:id 支持数字 ID 或 dictCode",
+			},
+		},
+	)
+	.get(
+		"/:id/items/options",
+		async ({ params }) => {
+			const raw = params.id;
+			let dictId: number;
+			if (/^\d+$/.test(raw)) {
+				const dict = await findDictById(Number(raw), db);
+				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+				dictId = dict.id;
+			} else {
+				const dict = await findDictByType(raw, db);
+				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+				dictId = dict.id;
+			}
+			const items = await findDictItems(
+				dictId,
+				{ status: 1, pageNum: 1, pageSize: 9999 },
+				db,
+			);
+			return items.list.map((item) => parseDictItem(item));
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:dict:list"],
+			params: DictItemListParams,
+			detail: {
+				tags: ["Dict"],
+				summary: "字典项下拉列表",
+				description:
+					"返回某个字典类型下的启用字典项，供前端下拉框使用，:id 支持数字 ID 或 dictCode",
 			},
 		},
 	)
@@ -323,6 +424,39 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			detail: {
 				tags: ["Dict"],
 				summary: "删除字典项（软删）",
+			},
+		},
+	)
+	.delete(
+		"/:id/items/:ids",
+		async ({ params }) => {
+			const ids = params.ids
+				.split(",")
+				.map((s) => Number(s.trim()))
+				.filter((n) => !Number.isNaN(n));
+
+			if (ids.length === 0) {
+				throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
+			}
+
+			for (const itemId of ids) {
+				const existing = await findDictItemById(itemId, db);
+				if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
+				await softDeleteDictItem(itemId, db);
+				const dict = await findDictById(existing.dictId, db);
+				if (dict) await invalidateDictCache(dict.type);
+			}
+			return true;
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:dict:delete"],
+			audit: "dict:batch-delete-item",
+			params: DictItemParamsWithCommaIds,
+			detail: {
+				tags: ["Dict"],
+				summary: "批量删除字典项（软删）",
+				description: "前端传逗号分隔的 ID，如 1,2,3",
 			},
 		},
 	)
