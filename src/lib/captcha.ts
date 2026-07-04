@@ -1,3 +1,4 @@
+import { CAPTCHA_TTL_S } from "@/lib/auth-constants";
 import { redis } from "./redis";
 import { redisKeys } from "./redis-keys";
 
@@ -8,9 +9,6 @@ import { redisKeys } from "./redis-keys";
  * 答案存入 Redis（5 分钟 TTL）。
  * 对齐 youlai-boot 的 EasyCaptcha 设计，简化实现。
  */
-
-/** 验证码答案 TTL（5 分钟） */
-const CAPTCHA_TTL_SECONDS = 5 * 60;
 
 /**
  * 生成随机运算题
@@ -138,7 +136,7 @@ export const generateCaptcha = async (): Promise<CaptchaResult> => {
 		redisKeys.captchaAnswer(captchaId),
 		String(answer),
 		"EX",
-		CAPTCHA_TTL_SECONDS,
+		CAPTCHA_TTL_S,
 	);
 
 	return { captchaId, captchaBase64 };

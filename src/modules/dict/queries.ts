@@ -1,5 +1,6 @@
 import { and, asc, count, eq, isNull, like, or } from "drizzle-orm";
 import type { DB } from "@/db/client";
+import { escapeLike } from "@/db/helpers/like";
 import { sysDict } from "@/db/schema/system/dict";
 import { sysDictItem } from "@/db/schema/system/dict-item";
 import type { PageResult } from "@/lib/pagination";
@@ -23,8 +24,8 @@ export const findDicts = async (
 
 	if (query.keywords) {
 		const kwCond = or(
-			like(sysDict.type, `%${query.keywords}%`),
-			like(sysDict.name, `%${query.keywords}%`),
+			like(sysDict.type, `%${escapeLike(query.keywords)}%`),
+			like(sysDict.name, `%${escapeLike(query.keywords)}%`),
 		);
 		if (kwCond) where.push(kwCond);
 	}
@@ -158,8 +159,8 @@ export const findDictItems = async (
 
 	if (query.keywords) {
 		const kwCond = or(
-			like(sysDictItem.label, `%${query.keywords}%`),
-			like(sysDictItem.value, `%${query.keywords}%`),
+			like(sysDictItem.label, `%${escapeLike(query.keywords)}%`),
+			like(sysDictItem.value, `%${escapeLike(query.keywords)}%`),
 		);
 		if (kwCond) where.push(kwCond);
 	}

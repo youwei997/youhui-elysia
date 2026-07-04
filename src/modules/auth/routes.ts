@@ -1,6 +1,11 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { sysLoginLog } from "@/db/schema/system/login-log";
+import {
+	IP_FAIL_WINDOW_TTL_S,
+	ONLINE_USER_TTL_S,
+	PERMS_CACHE_TTL_S,
+} from "@/lib/auth-constants";
 import { generateCaptcha, verifyCaptcha } from "@/lib/captcha";
 import { BizError, ERR_CODE } from "@/lib/errors";
 import type { JwtPayload } from "@/lib/jwt";
@@ -97,7 +102,7 @@ const recordLoginSuccess = async (
 			userAgent,
 		}),
 		"EX",
-		15 * 60,
+		ONLINE_USER_TTL_S,
 	);
 };
 
@@ -128,7 +133,7 @@ const recordIpFail = async (headers: Headers): Promise<void> => {
 	const key = `blacklist:fail:ip:${ip}`;
 	const count = await redis.incr(key);
 	if (count === 1) {
-		await redis.expire(key, 15 * 60); // 15 分钟窗口
+		await redis.expire(key, IP_FAIL_WINDOW_TTL_S); // 15 分钟窗口
 	}
 
 	if (count >= MAX_IP_FAIL_COUNT) {
@@ -239,7 +244,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 					redisKeys.userPerms(user.id),
 					JSON.stringify(userPerms),
 					"EX",
-					15 * 60,
+					PERMS_CACHE_TTL_S,
 				);
 
 				// 登录日志 + 在线状态
@@ -321,14 +326,14 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				redisKeys.userPerms(userId),
 				JSON.stringify(userPerms),
 				"EX",
-				15 * 60,
+				PERMS_CACHE_TTL_S,
 			);
 
 			// 延长在线状态 TTL（用户活跃中）
 			const onlineKey = redisKeys.onlineUser(userId);
 			const onlineData = await redis.get(onlineKey);
 			if (onlineData) {
-				await redis.expire(onlineKey, 15 * 60);
+				await redis.expire(onlineKey, ONLINE_USER_TTL_S);
 			}
 
 			return {

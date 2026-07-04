@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, like, lte } from "drizzle-orm";
 import type { DB } from "@/db/client";
+import { escapeLike } from "@/db/helpers/like";
 import { sysLoginLog } from "@/db/schema/system/login-log";
 import type { PageResult } from "@/lib/pagination";
 import type { LoginLogRecord } from "./types";
@@ -23,7 +24,7 @@ export const findLoginLogs = async (
 	const where = [];
 
 	if (query.username) {
-		where.push(like(sysLoginLog.username, `%${query.username}%`));
+		where.push(like(sysLoginLog.username, `%${escapeLike(query.username)}%`));
 	}
 	if (query.status) {
 		where.push(eq(sysLoginLog.status, query.status));

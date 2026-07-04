@@ -145,10 +145,14 @@ export class BizError extends Error {
 	}
 }
 
-/** 便捷工厂：资源不存在 → 404 */
-export const notFound = (
-	code: ErrCode = ERR_CODE.ACCOUNT_NOT_FOUND,
-): BizError => new BizError(code, undefined, 404);
+/**
+ * 便捷工厂：资源不存在 → 404
+ *
+ * 调用时应始终传入具体错误码（ROLE_NOT_FOUND / DEPT_NOT_FOUND 等），
+ * 默认用 USER_NOT_FOUND 兜底（对齐 HTTP 404 语义）。
+ */
+export const notFound = (code: ErrCode = ERR_CODE.USER_NOT_FOUND): BizError =>
+	new BizError(code, undefined, 404);
 
 /** 便捷工厂：未登录/未授权 → 401 */
 export const unauthorized = (

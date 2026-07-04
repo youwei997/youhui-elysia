@@ -5,14 +5,12 @@
  * 从 auth/queries.ts 拆分至此，保持 queries 层的纯函数性质。
  */
 
+import { LOGIN_FAIL_TTL_S } from "@/lib/auth-constants";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
 
 /** 登录失败次数上限，达到后锁定账户 */
 const MAX_FAIL_COUNT = 5;
-
-/** 登录失败计数 TTL（秒）：15 分钟窗口 */
-const FAIL_TTL = 15 * 60;
 
 /** 获取登录失败次数 */
 export const getLoginFailCount = async (username: string): Promise<number> => {
@@ -28,7 +26,7 @@ export const incrementLoginFailCount = async (
 	const count = await redis.incr(key);
 	// 首次失败时设置过期，后续失败只 incr 不重置 TTL
 	if (count === 1) {
-		await redis.expire(key, FAIL_TTL);
+		await redis.expire(key, LOGIN_FAIL_TTL_S);
 	}
 	return count;
 };

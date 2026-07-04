@@ -24,15 +24,30 @@ import { redis } from "@/lib/redis";
  *   await new Promise(r => setTimeout(r, 50)) 就是让这个请求
  *   暂停 50ms（不占 CPU、不占网络），50ms 后醒过来重试。
  *   这 50ms 里抢到锁的人已经写完缓存了，重试时 Redis 就能命中。
+ *
+ * ponytail: JSON.parse 用 try-catch 兜底，缓存数据损坏时
+ * 降级为缓存未命中（查 DB），而非抛 SyntaxError 导致 500。
+ * 如果缓存频繁损坏说明上游写入有 bug，不应依赖此兜底隐藏问题。
  */
 export const withCache = async <T>(
 	key: string,
 	ttl: number,
 	fetcher: () => Promise<T>,
 ): Promise<T> => {
+	const safeParse = (data: string): T | undefined => {
+		try {
+			return JSON.parse(data) as T;
+		} catch {
+			return undefined;
+		}
+	};
+
 	// 1. 查 Redis。有缓存直接返回，不碰 DB。
 	const cached = await redis.get(key);
-	if (cached !== null) return JSON.parse(cached);
+	if (cached !== null) {
+		const parsed = safeParse(cached);
+		if (parsed !== undefined) return parsed;
+	}
 
 	// 2. 缓存过期了 → 抢分布式锁。
 	//    锁就是 key "lock:dict:gender"，谁先 SET NX 成功谁去查 DB。
@@ -44,7 +59,8 @@ export const withCache = async <T>(
 			// 3. 双重检查：等锁的时候别人可能已经写好了缓存
 			const doubleCheck = await redis.get(key);
 			if (doubleCheck !== null) {
-				return JSON.parse(doubleCheck);
+				const parsed = safeParse(doubleCheck);
+				if (parsed !== undefined) return parsed;
 			}
 
 			// 4. 查 DB，写缓存，返回

@@ -26,3 +26,27 @@ export const ROLE_ROOT = "ROOT" as const;
  *   - 实际只有 ROLE_ROOT 短路在生效
  */
 export const WILDCARD_PERM = "*:*:*" as const;
+
+/**
+ * Redis 缓存 TTL 常量（秒）
+ *
+ * 集中管理避免分散硬编码，改过期时间只需改一处。
+ *
+ * 注意：jwt.ts 的 ACCESS_EXPIRES / REFRESH_EXPIRES 是 jose 格式的时长字符串
+ * （"15m" / "7d"），用途不同，不在本文件管理。
+ */
+
+/** 在线用户状态 TTL（15 分钟） */
+export const ONLINE_USER_TTL_S = 15 * 60;
+
+/** 用户权限缓存 TTL（15 分钟，与 access token 有效期对齐） */
+export const PERMS_CACHE_TTL_S = 15 * 60;
+
+/** IP 失败计数窗口 TTL（15 分钟） */
+export const IP_FAIL_WINDOW_TTL_S = 15 * 60;
+
+/** 验证码答案 TTL（5 分钟） */
+export const CAPTCHA_TTL_S = 5 * 60;
+
+/** 登录失败计数 TTL（15 分钟窗口） */
+export const LOGIN_FAIL_TTL_S = 15 * 60;

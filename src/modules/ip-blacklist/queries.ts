@@ -1,5 +1,6 @@
 import { and, asc, count, eq, isNull, like } from "drizzle-orm";
 import type { DB } from "@/db/client";
+import { escapeLike } from "@/db/helpers/like";
 import { sysIpBlacklist } from "@/db/schema/system/ip-blacklist";
 import type { PageResult } from "@/lib/pagination";
 import { redis } from "@/lib/redis";
@@ -14,7 +15,7 @@ export const findIpBlacklists = async (
 	const where = [isNull(sysIpBlacklist.deleteTime)];
 
 	if (query.ip) {
-		where.push(like(sysIpBlacklist.ip, `%${query.ip}%`));
+		where.push(like(sysIpBlacklist.ip, `%${escapeLike(query.ip)}%`));
 	}
 
 	const whereClause = where.length > 0 ? and(...where) : undefined;

@@ -1,6 +1,7 @@
 import { and, count, eq, inArray, isNull, like } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
+import { escapeLike } from "@/db/helpers/like";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysMenu } from "@/db/schema/system/menu";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
+import { BizError, ERR_CODE } from "@/lib/errors";
 import type { PageResult } from "@/lib/pagination";
 import type {
 	RoleAssignDeptsBody,
@@ -31,7 +33,7 @@ export const findRoles = async (
 ): Promise<PageResult<RoleRecord>> => {
 	const where = [isNull(sysRole.deleteTime)];
 	if (query.keywords) {
-		where.push(like(sysRole.name, `%${query.keywords}%`));
+		where.push(like(sysRole.name, `%${escapeLike(query.keywords)}%`));
 	}
 	if (query.status !== undefined) {
 		where.push(eq(sysRole.status, query.status));
@@ -75,7 +77,7 @@ export const createRole = async (
 	return await db.transaction(async (tx) => {
 		const [role] = await tx.insert(sysRole).values(roleData).returning();
 		if (!role) {
-			throw new Error("创建角色失败：未返回插入记录");
+			throw new BizError(ERR_CODE.SYSTEM_ERROR, "创建角色失败：未返回插入记录");
 		}
 
 		if (roleData.dataScope === 5 && deptIds && deptIds.length > 0) {

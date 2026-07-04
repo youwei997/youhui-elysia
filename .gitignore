@@ -65,3 +65,4 @@ uploads/
 
 # 分析报告临时目录（前后端契约对齐分析等），一律不纳入版本管理
 .analysis/
+/.bitfun/search/flashgrep-index/

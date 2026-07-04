@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
+import { escapeLike } from "@/db/helpers/like";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysRoleDept } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
@@ -17,7 +18,7 @@ export const findAllDepts = async (
 ) => {
 	const where = [isNull(sysDept.deleteTime)];
 	if (query.keywords) {
-		where.push(like(sysDept.name, `%${query.keywords}%`));
+		where.push(like(sysDept.name, `%${escapeLike(query.keywords)}%`));
 	}
 	if (query.status !== undefined) {
 		where.push(eq(sysDept.status, query.status));

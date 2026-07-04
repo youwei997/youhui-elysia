@@ -1,5 +1,6 @@
 import { and, count, desc, eq, gte, like, lt, lte } from "drizzle-orm";
 import type { DB } from "@/db/client";
+import { escapeLike } from "@/db/helpers/like";
 import { sysOperLog } from "@/db/schema/system/oper-log";
 import type { PageResult } from "@/lib/pagination";
 import type { OperLogRecord } from "./types";
@@ -25,7 +26,7 @@ export const findOperLogs = async (
 	const where = [];
 
 	if (query.username) {
-		where.push(like(sysOperLog.username, `%${query.username}%`));
+		where.push(like(sysOperLog.username, `%${escapeLike(query.username)}%`));
 	}
 	if (query.module) {
 		where.push(eq(sysOperLog.module, query.module));

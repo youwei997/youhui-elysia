@@ -14,6 +14,7 @@ import {
 	type DataScopeContext,
 	dataScopeFilter,
 } from "@/db/helpers/data-scope";
+import { escapeLike } from "@/db/helpers/like";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
@@ -87,8 +88,8 @@ export const findUsers = async (
 	const where = [isNull(sysUser.deleteTime)];
 	if (query.keywords) {
 		const keywordCondition = or(
-			like(sysUser.username, `%${query.keywords}%`),
-			like(sysUser.nickname, `%${query.keywords}%`),
+			like(sysUser.username, `%${escapeLike(query.keywords)}%`),
+			like(sysUser.nickname, `%${escapeLike(query.keywords)}%`),
 		);
 		// Drizzle 的 or() 返回类型可能为 undefined，防御性检查避免推入空条件
 		if (keywordCondition) {
