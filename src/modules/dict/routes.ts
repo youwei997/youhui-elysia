@@ -302,11 +302,14 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	.post(
 		"/:id/items",
 		async ({ params, body }) => {
-			const dict = await findDictById(params.id, db);
+			const raw = params.id;
+			const dict = /^\d+$/.test(raw)
+				? await findDictById(Number(raw), db)
+				: await findDictByType(raw, db);
 			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
 
 			const dupLabel = await findDictItemByDictIdAndLabel(
-				params.id,
+				dict.id,
 				body.label,
 				db,
 			);
@@ -314,7 +317,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 				throw new BizError(ERR_CODE.DICT_ITEM_LABEL_DUPLICATE);
 			}
 			const dupValue = await findDictItemByDictIdAndValue(
-				params.id,
+				dict.id,
 				body.value,
 				db,
 			);
@@ -322,7 +325,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 				throw new BizError(ERR_CODE.DICT_ITEM_VALUE_DUPLICATE);
 			}
 
-			const item = await createDictItem(params.id, body, db);
+			const item = await createDictItem(dict.id, body, db);
 			await invalidateDictCache(dict.type);
 			return parseDictItem(item, dict.type);
 		},
@@ -330,7 +333,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			auth: true,
 			requirePerm: ["sys:dict:create"],
 			audit: "dict:create-item",
-			params: DictParamsWithId,
+			params: DictItemListParams,
 			body: DictItemCreateBody,
 			detail: {
 				tags: ["Dict"],
