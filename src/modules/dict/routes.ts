@@ -44,9 +44,10 @@ const parseDict = (dict: DictResponseInput) => {
 	return { ...rest, dictCode: type, id: String(parsed.id) };
 };
 
-const parseDictItem = (item: DictItemResponseInput) => {
+const parseDictItem = (item: DictItemResponseInput, dictCode: string) => {
 	const parsed = DictItemResponse.parse(item);
-	return { ...parsed, id: String(parsed.id), dictId: String(parsed.dictId) };
+	const { dictId, ...rest } = parsed;
+	return { ...rest, id: String(parsed.id), dictCode };
 };
 
 /** 失效字典项缓存（写操作后调用） */
@@ -81,7 +82,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		"/options",
 		async () => {
 			const dicts = await findDicts({ pageNum: 1, pageSize: 1000 }, db);
-			return dicts.list.map((d) => parseDict(d));
+			return dicts.list.map((d) => ({ value: d.type, label: d.name }));
 		},
 		{
 			auth: true,
@@ -248,19 +249,13 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		"/:id/items",
 		async ({ params, query }) => {
 			const raw = params.id;
-			let dictId: number;
-			if (/^\d+$/.test(raw)) {
-				const dict = await findDictById(Number(raw), db);
-				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-				dictId = dict.id;
-			} else {
-				const dict = await findDictByType(raw, db);
-				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-				dictId = dict.id;
-			}
-			const result = await findDictItems(dictId, query, db);
+			const dict = /^\d+$/.test(raw)
+				? await findDictById(Number(raw), db)
+				: await findDictByType(raw, db);
+			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+			const result = await findDictItems(dict.id, query, db);
 			return {
-				list: result.list.map((item) => parseDictItem(item)),
+				list: result.list.map((item) => parseDictItem(item, dict.type)),
 				total: result.total,
 			};
 		},
@@ -281,22 +276,16 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		"/:id/items/options",
 		async ({ params }) => {
 			const raw = params.id;
-			let dictId: number;
-			if (/^\d+$/.test(raw)) {
-				const dict = await findDictById(Number(raw), db);
-				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-				dictId = dict.id;
-			} else {
-				const dict = await findDictByType(raw, db);
-				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-				dictId = dict.id;
-			}
+			const dict = /^\d+$/.test(raw)
+				? await findDictById(Number(raw), db)
+				: await findDictByType(raw, db);
+			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
 			const items = await findDictItems(
-				dictId,
+				dict.id,
 				{ status: 1, pageNum: 1, pageSize: 9999 },
 				db,
 			);
-			return items.list.map((item) => parseDictItem(item));
+			return items.list.map((item) => parseDictItem(item, dict.type));
 		},
 		{
 			auth: true,
@@ -335,7 +324,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 
 			const item = await createDictItem(params.id, body, db);
 			await invalidateDictCache(dict.type);
-			return parseDictItem(item);
+			return parseDictItem(item, dict.type);
 		},
 		{
 			auth: true,
@@ -355,7 +344,9 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		async ({ params }) => {
 			const existing = await findDictItemById(params.itemId, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
-			return parseDictItem(existing);
+			const dict = await findDictById(existing.dictId, db);
+			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+			return parseDictItem(existing, dict.type);
 		},
 		{
 			auth: true,
@@ -399,7 +390,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			if (!item) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
 			const dict = await findDictById(existing.dictId, db);
 			if (dict) await invalidateDictCache(dict.type);
-			return parseDictItem(item);
+			return parseDictItem(item, dict!.type);
 		},
 		{
 			auth: true,
@@ -473,7 +464,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 					{ status: 1, pageNum: 1, pageSize: 9999 },
 					db,
 				);
-				return items.list.map((item) => parseDictItem(item));
+				return items.list.map((item) => parseDictItem(item, dict.type));
 			});
 		},
 		{
