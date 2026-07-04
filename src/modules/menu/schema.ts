@@ -100,7 +100,6 @@ export const MenuResponse = createSelectSchema(sysMenu)
 		alwaysShow: true,
 		keepAlive: true,
 		params: true,
-		scope: true,
 	})
 	.describe("菜单列表项");
 

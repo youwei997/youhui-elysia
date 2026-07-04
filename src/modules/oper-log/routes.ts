@@ -15,12 +15,12 @@ import {
 	type OperLogResponseInput,
 } from "./schema";
 
-/** 响应转换：id 转 string，与其他模块保持一致 */
+/** 响应转换：id 保持 number，对齐前端 LogItem.id: number */
 const parseLog = (log: OperLogResponseInput) => {
 	const parsed = OperLogResponse.parse(log);
 	return {
 		...parsed,
-		id: String(parsed.id),
+		id: parsed.id,
 	};
 };
 
