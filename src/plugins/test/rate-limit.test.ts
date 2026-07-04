@@ -5,7 +5,6 @@ import { redisKeys } from "@/lib/redis-keys";
 import { rateLimitPlugin } from "../rate-limit";
 
 const TEST_IP = "192.168.1.100";
-const TEST_PATH = "/api/v1/users";
 
 const makeApp = (opts?: { rateLimit?: string }) =>
 	new Elysia()

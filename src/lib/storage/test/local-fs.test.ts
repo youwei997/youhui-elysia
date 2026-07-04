@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -65,8 +65,6 @@ describe("local-fs storage", () => {
 	});
 
 	test("URL 拼接正确处理 trailing slash", async () => {
-		const { storage } = makeStorage();
-		// publicBaseUrl 无 trailing slash
 		const s = createLocalFsStorage("/tmp", "http://localhost:3000/uploads");
 		const result = await s.put("a.txt", Buffer.from("a"), {});
 		expect(result.url).toBe("http://localhost:3000/uploads/a.txt");

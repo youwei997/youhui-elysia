@@ -23,6 +23,8 @@ const makeApp = () =>
 			throw new Error("something went wrong");
 		});
 
+type ErrorResponse = { code: string; msg: string; data: null };
+
 describe("error-handler", () => {
 	test("NOT_FOUND → 404 + C0113", async () => {
 		const app = makeApp();
@@ -30,7 +32,7 @@ describe("error-handler", () => {
 			new Request("http://localhost/not-exist"),
 		);
 		expect(res.status).toBe(404);
-		const body = await res.json();
+		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.INTERFACE_NOT_EXIST);
 		expect(body.msg).toBe("接口不存在");
 		expect(body.data).toBeNull();
@@ -46,7 +48,7 @@ describe("error-handler", () => {
 			}),
 		);
 		expect(res.status).toBe(422);
-		const body = await res.json();
+		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.USER_REQUEST_PARAMETER_ERROR);
 		expect(body.msg).toBe("参数校验失败");
 		expect(body.data).toBeNull();
@@ -58,7 +60,7 @@ describe("error-handler", () => {
 			new Request("http://localhost/biz"),
 		);
 		expect(res.status).toBe(404);
-		const body = await res.json();
+		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.ROLE_NOT_FOUND);
 		expect(body.msg).toBe("角色不存在");
 		expect(body.data).toBeNull();
@@ -70,7 +72,7 @@ describe("error-handler", () => {
 			new Request("http://localhost/unknown"),
 		);
 		expect(res.status).toBe(500);
-		const body = await res.json();
+		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.SYSTEM_ERROR);
 		expect(body.msg).toBe("系统执行出错");
 		expect(body.data).toBeNull();
@@ -86,7 +88,7 @@ describe("error-handler", () => {
 			new Request("http://localhost/nf"),
 		);
 		expect(res.status).toBe(404);
-		const body = await res.json();
+		const body = (await res.json()) as ErrorResponse;
 		expect(body.code).toBe(ERR_CODE.USER_NOT_FOUND);
 	});
 });

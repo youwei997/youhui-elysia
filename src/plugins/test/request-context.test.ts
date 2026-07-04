@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { Elysia } from "elysia";
 import { requestContext } from "../request-context";
 
+type ReqIdResponse = { reqId: string; startTime: number; hasLogger: boolean };
+
 describe("requestContext", () => {
 	test("derive 注入 reqId + startTime + logger", async () => {
 		const app = new Elysia()
@@ -13,7 +15,7 @@ describe("requestContext", () => {
 		const res = await app.handle(
 			new Request("http://localhost/test"),
 		);
-		const body = await res.json();
+		const body = (await res.json()) as ReqIdResponse;
 
 		expect(body.reqId).toBeTruthy();
 		expect(body.reqId).toMatch(
@@ -36,8 +38,8 @@ describe("requestContext", () => {
 			new Request("http://localhost/test"),
 		);
 
-		const body1 = await res1.json();
-		const body2 = await res2.json();
+		const body1 = (await res1.json()) as ReqIdResponse;
+		const body2 = (await res2.json()) as ReqIdResponse;
 
 		expect(body1.reqId).toBeTruthy();
 		expect(body2.reqId).toBeTruthy();

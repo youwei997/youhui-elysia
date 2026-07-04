@@ -37,7 +37,7 @@ describe("crud-dto", () => {
 			pageSize: 10,
 			username: "admin",
 			status: 1,
-		});
+		}) as unknown as { username: string; status: number };
 		expect(result.username).toBe("admin");
 		expect(result.status).toBe(1);
 	});
