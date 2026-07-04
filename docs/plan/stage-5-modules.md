@@ -179,11 +179,17 @@
 - sys_dict_item：id / dictId / label / value / sort / status / tag_type（标签类型，N/P/S/W/I/D）
 
 `modules/dict/`：
-- 字典 + 字典项 CRUD（10 个接口）
+- 字典 + 字典项 CRUD（14 个接口）
 - 响应字段 `type` 映射为 `dictCode` 对齐前端契约
 - `keywords` 模糊搜索（type/name 或 label/value）
 - 字典项列表分页（`{ list, total }` 格式）
 - `GET /dicts/:type/items` 取字典项（仅返回启用项，供前端下拉框，内部用 pageSize=9999 取全量）
+- `GET /dicts/:id/items/options` 取字典项下拉选项（对齐前端路径）
+- `GET /dicts/options` 字典类型下拉列表
+- `GET /dicts/:id/form` 字典类型表单数据
+- `GET /dicts/:id/items/:itemId/form` 字典项表单数据
+- `DELETE /dicts/:ids` 批量删除字典类型（前端传 1,2,3）
+- `DELETE /dicts/:id/items/:ids` 批量删除字典项
 - tagType 字段（前端 primary/success/warning/info/danger ↔ 后端 N/P/S/W/I/D 编解码在 API 层处理）
 
 ### 5.3b WithCache 缓存防击穿 (0.5d)✅ 已完成
