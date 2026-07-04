@@ -25,13 +25,11 @@ import {
 	DictItemCreateBody,
 	DictItemListParams,
 	DictItemListQuery,
-	DictItemParamsWithCommaIds,
 	DictItemParamsWithId,
 	DictItemResponse,
 	type DictItemResponseInput,
 	DictItemUpdateBody,
 	DictListQuery,
-	DictParamsWithCommaIds,
 	DictParamsWithId,
 	DictResponse,
 	type DictResponseInput,
@@ -187,9 +185,34 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	.delete(
 		"/:id",
 		async ({ params }) => {
-			const existing = await findDictById(params.id, db);
+			const idStr = String(params.id);
+			// 前端批量删除传 "1,2,3"，单条传 "1"
+			if (idStr.includes(",")) {
+				const ids = idStr
+					.split(",")
+					.map((s) => Number(s.trim()))
+					.filter((n) => !Number.isNaN(n));
+
+				if (ids.length === 0) {
+					throw notFound(ERR_CODE.DICT_NOT_FOUND);
+				}
+
+				for (const id of ids) {
+					const existing = await findDictById(id, db);
+					if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+					await softDeleteDict(id, db);
+					await invalidateDictCache(existing.type);
+				}
+				return true;
+			}
+
+			const id = Number(idStr);
+			if (Number.isNaN(id)) {
+				throw notFound(ERR_CODE.DICT_NOT_FOUND);
+			}
+			const existing = await findDictById(id, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			await softDeleteDict(params.id, db);
+			await softDeleteDict(id, db);
 			await invalidateDictCache(existing.type);
 			return true;
 		},
@@ -201,38 +224,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			detail: {
 				tags: ["Dict"],
 				summary: "删除字典类型（级联软删字典项）",
-			},
-		},
-	)
-	.delete(
-		"/:ids",
-		async ({ params }) => {
-			const ids = params.ids
-				.split(",")
-				.map((s) => Number(s.trim()))
-				.filter((n) => !Number.isNaN(n));
-
-			if (ids.length === 0) {
-				throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			}
-
-			for (const id of ids) {
-				const existing = await findDictById(id, db);
-				if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-				await softDeleteDict(id, db);
-				await invalidateDictCache(existing.type);
-			}
-			return true;
-		},
-		{
-			auth: true,
-			requirePerm: ["sys:dict:delete"],
-			audit: "dict:batch-delete",
-			params: DictParamsWithCommaIds,
-			detail: {
-				tags: ["Dict"],
-				summary: "批量删除字典类型（级联软删字典项）",
-				description: "前端传逗号分隔的 ID，如 1,2,3",
+				description: "支持单条 ID 或逗号分隔的批量 ID，如 1 或 1,2,3",
 			},
 		},
 	)
@@ -409,9 +401,35 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	.delete(
 		"/:id/items/:itemId",
 		async ({ params }) => {
-			const existing = await findDictItemById(params.itemId, db);
+			const idStr = String(params.itemId);
+			// 前端批量删除传 "1,2,3"，单条传 "1"
+			if (idStr.includes(",")) {
+				const ids = idStr
+					.split(",")
+					.map((s) => Number(s.trim()))
+					.filter((n) => !Number.isNaN(n));
+
+				if (ids.length === 0) {
+					throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
+				}
+
+				for (const itemId of ids) {
+					const existing = await findDictItemById(itemId, db);
+					if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
+					await softDeleteDictItem(itemId, db);
+					const dict = await findDictById(existing.dictId, db);
+					if (dict) await invalidateDictCache(dict.type);
+				}
+				return true;
+			}
+
+			const itemId = Number(idStr);
+			if (Number.isNaN(itemId)) {
+				throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
+			}
+			const existing = await findDictItemById(itemId, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
-			await softDeleteDictItem(params.itemId, db);
+			await softDeleteDictItem(itemId, db);
 			const dict = await findDictById(existing.dictId, db);
 			if (dict) await invalidateDictCache(dict.type);
 			return true;
@@ -424,39 +442,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			detail: {
 				tags: ["Dict"],
 				summary: "删除字典项（软删）",
-			},
-		},
-	)
-	.delete(
-		"/:id/items/:ids",
-		async ({ params }) => {
-			const ids = params.ids
-				.split(",")
-				.map((s) => Number(s.trim()))
-				.filter((n) => !Number.isNaN(n));
-
-			if (ids.length === 0) {
-				throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
-			}
-
-			for (const itemId of ids) {
-				const existing = await findDictItemById(itemId, db);
-				if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
-				await softDeleteDictItem(itemId, db);
-				const dict = await findDictById(existing.dictId, db);
-				if (dict) await invalidateDictCache(dict.type);
-			}
-			return true;
-		},
-		{
-			auth: true,
-			requirePerm: ["sys:dict:delete"],
-			audit: "dict:batch-delete-item",
-			params: DictItemParamsWithCommaIds,
-			detail: {
-				tags: ["Dict"],
-				summary: "批量删除字典项（软删）",
-				description: "前端传逗号分隔的 ID，如 1,2,3",
+				description: "支持单条 ID 或逗号分隔的批量 ID，如 1 或 1,2,3",
 			},
 		},
 	)
