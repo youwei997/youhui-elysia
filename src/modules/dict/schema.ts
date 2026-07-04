@@ -41,6 +41,7 @@ export const DictCreateBody = z
 			.describe("字典类型标识（前端字段）"),
 		name: z.string().min(1).max(64).describe("字典名称"),
 		status: z.coerce.number().int().default(1).describe("状态：1-启用 0-禁用"),
+		remark: z.string().max(255).optional().describe("备注"),
 	})
 	.describe("创建字典类型请求体");
 
@@ -49,6 +50,7 @@ export const DictUpdateBody = z
 	.object({
 		name: z.string().min(1).max(64).optional().describe("字典名称"),
 		status: z.coerce.number().int().optional().describe("状态：1-启用 0-禁用"),
+		remark: z.string().max(255).optional().describe("备注"),
 	})
 	.describe("更新字典类型请求体");
 

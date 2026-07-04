@@ -26,6 +26,8 @@ export const sysDict = pgTable(
 		name: varchar("name", { length: 64 }).notNull(),
 		/** 状态：1-启用 0-禁用 */
 		status: smallint("status").default(1).notNull(),
+		/** 备注 */
+		remark: varchar("remark", { length: 255 }).default("").notNull(),
 
 		...auditColumns,
 	},
