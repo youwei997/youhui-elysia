@@ -389,8 +389,9 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			const item = await updateDictItem(params.itemId, body, db);
 			if (!item) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
 			const dict = await findDictById(existing.dictId, db);
-			if (dict) await invalidateDictCache(dict.type);
-			return parseDictItem(item, dict!.type);
+			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+			await invalidateDictCache(dict.type);
+			return parseDictItem(item, dict.type);
 		},
 		{
 			auth: true,
