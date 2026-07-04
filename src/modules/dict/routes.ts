@@ -144,7 +144,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 				throw new BizError(ERR_CODE.DICT_TYPE_DUPLICATE);
 			}
 			const dict = await createDict(
-				{ type, name: body.name, status: body.status },
+				{ type, name: body.name, status: body.status, remark: body.remark },
 				db,
 			);
 			return parseDict(dict);

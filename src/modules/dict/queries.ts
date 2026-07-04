@@ -76,7 +76,12 @@ export const findDictByType = async (
 
 /** 新增字典类型 */
 export const createDict = async (
-	data: { type: string; name: string; status: number },
+	data: {
+		type: string;
+		name: string;
+		status: number;
+		remark: string | undefined;
+	},
 	db: DB,
 ): Promise<DictRecord> => {
 	const [dict] = await db.insert(sysDict).values(data).returning();
