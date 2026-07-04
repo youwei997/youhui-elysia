@@ -128,7 +128,9 @@ describe("dataScopeFilter", () => {
 		expect(okQuery.sql.toUpperCase()).toContain("LIKE");
 		expect(okQuery.sql).toContain('"dept_id"');
 		expect(okQuery.sql).toContain('"tree_path"');
-		expect(okQuery.params).toContain("0,1,5%");
+		expect(okQuery.params).toEqual(
+			expect.arrayContaining(["0,1,5", "0,1,5,%"]),
+		);
 
 		// 边界：treePath 为 null → 零结果
 		const nullCtx = baseCtx({

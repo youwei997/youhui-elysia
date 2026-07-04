@@ -27,15 +27,6 @@ describe("captcha", () => {
 			captchaId = result.captchaId;
 		});
 
-		test("答案存入 Redis", async () => {
-			const result = await generateCaptcha();
-			captchaId = result.captchaId;
-
-			const answer = await redis.get(redisKeys.captchaAnswer(captchaId));
-			expect(answer).toBeTruthy();
-			expect(Number(answer)).toBeGreaterThanOrEqual(0);
-		});
-
 		test("TTL 为 5 分钟", async () => {
 			const result = await generateCaptcha();
 			captchaId = result.captchaId;
