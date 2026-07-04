@@ -65,7 +65,11 @@ export const withCache = async <T>(
 
 			// 4. 查 DB，写缓存，返回
 			const value = await fetcher();
-			await redis.set(key, JSON.stringify(value), "EX", String(ttl));
+			if (ttl > 0) {
+				await redis.set(key, JSON.stringify(value), "EX", String(ttl));
+			} else {
+				await redis.set(key, JSON.stringify(value));
+			}
 			return value;
 		} finally {
 			// 5. 删锁，让下一个等待的人能抢到
