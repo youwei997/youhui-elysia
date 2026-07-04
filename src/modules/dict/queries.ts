@@ -86,15 +86,27 @@ export const createDict = async (
 /** 更新字典类型 */
 export const updateDict = async (
 	id: number,
-	data: { name?: string | undefined; status?: number | undefined },
+	data: {
+		name?: string | undefined;
+		status?: number | undefined;
+		type?: string | undefined;
+	},
 	db: DB,
 ): Promise<DictRecord | undefined> => {
+	// 如果要修改 type，需检查新值是否已被其他记录占用
+	if (data.type) {
+		const existing = await findDictByType(data.type, db);
+		if (existing && existing.id !== id) {
+			throw new Error("DICT_TYPE_DUPLICATE");
+		}
+	}
+
 	const [dict] = await db
 		.update(sysDict)
 		.set(data)
 		.where(and(eq(sysDict.id, id), isNull(sysDict.deleteTime)))
 		.returning();
-	return dict;
+	return dict as DictRecord | undefined;
 };
 
 /**

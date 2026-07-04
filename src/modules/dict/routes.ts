@@ -165,9 +165,24 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		async ({ params, body }) => {
 			const existing = await findDictById(params.id, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			const dict = await updateDict(params.id, body, db);
-			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			return parseDict(dict);
+
+			// 前端传 dictCode，映射为后端 type 字段
+			const updateData = {
+				...body,
+				...(body.dictCode ? { type: body.dictCode } : {}),
+			};
+			delete (updateData as Record<string, unknown>).dictCode;
+
+			try {
+				const dict = await updateDict(params.id, updateData, db);
+				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+				return parseDict(dict);
+			} catch (e) {
+				if ((e as Error).message === "DICT_TYPE_DUPLICATE") {
+					throw new BizError(ERR_CODE.DICT_TYPE_DUPLICATE);
+				}
+				throw e;
+			}
 		},
 		{
 			auth: true,
@@ -178,7 +193,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			detail: {
 				tags: ["Dict"],
 				summary: "更新字典类型",
-				description: "type 不可修改，仅支持 name/status",
+				description: "支持修改 name/status/dictCode，dictCode 全局唯一",
 			},
 		},
 	)
