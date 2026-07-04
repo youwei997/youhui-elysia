@@ -537,8 +537,79 @@ const main = async () => {
 			updatedBy: 1,
 			updateTime: NOW,
 		},
+		// ── 字典项（visible=0 隐藏菜单，但保留路由供「字典数据」按钮跳转） ──
+		{
+			id: 251,
+			parentId: 1,
+			treePath: "0,1",
+			type: "M",
+			name: "字典项",
+			routeName: "DictItem",
+			routePath: "dict-item",
+			component: "system/dict/dict-item",
+			icon: "dict-item",
+			sort: 99,
+			visible: 0,
+			keepAlive: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2511,
+			parentId: 251,
+			treePath: "0,1,251",
+			type: "B",
+			name: "字典项查询",
+			perm: "sys:dict:list",
+			sort: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2512,
+			parentId: 251,
+			treePath: "0,1,251",
+			type: "B",
+			name: "字典项新增",
+			perm: "sys:dict:create",
+			sort: 2,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2513,
+			parentId: 251,
+			treePath: "0,1,251",
+			type: "B",
+			name: "字典项编辑",
+			perm: "sys:dict:update",
+			sort: 3,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2514,
+			parentId: 251,
+			treePath: "0,1,251",
+			type: "B",
+			name: "字典项删除",
+			perm: "sys:dict:delete",
+			sort: 4,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
 	]);
-	console.log("  ✅ 菜单表：33 条（1 目录 + 5 菜单 + 27 按钮）");
+	console.log("  ✅ 菜单表：33 条（1 目录 + 5 菜单 + 27 按钮 + 1 隐藏菜单 + 4 隐藏按钮）");
 
 	// ==========================================
 	// 3. 角色表（sys_role）—— dataScope：1=全部 2=部门及子部门 3=本部门 4=本人 5=自定义
@@ -784,6 +855,7 @@ const main = async () => {
 		40, 401, 402, 403, 404, // 部门管理
 		50, 51, // 文件存储按钮
 		250, 2501, 2502, 2503, 2504, // 字典管理
+		251, 2511, 2512, 2513, 2514, // 字典项（隐藏）
 	];
 	await db.insert(sysRoleMenu).values(
 		adminMenuIds.map((menuId) => ({ roleId: 2, menuId })),
