@@ -23,6 +23,7 @@ import {
 import {
 	DictCreateBody,
 	DictItemCreateBody,
+	DictItemListParams,
 	DictItemListQuery,
 	DictItemParamsWithId,
 	DictItemResponse,
@@ -171,9 +172,18 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	.get(
 		"/:id/items",
 		async ({ params, query }) => {
-			const dict = await findDictById(params.id, db);
-			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
-			const result = await findDictItems(params.id, query, db);
+			const raw = params.id;
+			let dictId: number;
+			if (/^\d+$/.test(raw)) {
+				const dict = await findDictById(Number(raw), db);
+				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+				dictId = dict.id;
+			} else {
+				const dict = await findDictByType(raw, db);
+				if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
+				dictId = dict.id;
+			}
+			const result = await findDictItems(dictId, query, db);
 			return {
 				list: result.list.map((item) => parseDictItem(item)),
 				total: result.total,
@@ -182,12 +192,13 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		{
 			auth: true,
 			requirePerm: ["sys:dict:list"],
-			params: DictParamsWithId,
+			params: DictItemListParams,
 			query: DictItemListQuery,
 			detail: {
 				tags: ["Dict"],
 				summary: "字典项列表（分页）",
-				description: "查询某个字典类型下的所有字典项",
+				description:
+					"查询某个字典类型下的所有字典项，:id 支持数字 ID 或 dictCode",
 			},
 		},
 	)

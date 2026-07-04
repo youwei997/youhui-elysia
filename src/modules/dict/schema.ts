@@ -103,10 +103,15 @@ export const DictItemUpdateBody = z
 
 // ── 通用参数 ──
 
-/** 字典类型 ID 路径参数 */
+/** 字典类型 ID 路径参数（数字 ID，用于详情/更新/删除） */
 export const DictParamsWithId = z
 	.object({ id: z.coerce.number() })
 	.describe("字典类型 ID");
+
+/** 字典类型 ID 或编码路径参数（用于字典项列表，兼容前端 dictCode） */
+export const DictItemListParams = z
+	.object({ id: z.string() })
+	.describe("字典类型 ID 或编码");
 
 /** 字典项 ID 路径参数 */
 export const DictItemParamsWithId = z
