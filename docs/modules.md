@@ -11,9 +11,9 @@
 |---|---|---|---|
 | GET | `/auth/captcha` | 公开 | 获取图形验证码（验证码 ID + base64 图片） |
 | POST | `/auth/login` | 公开 | 用户登录（用户名 + 密码 + 验证码 ID） |
-| POST | `/auth/refresh` | 公开 | 刷新 access token（用 refresh token） |
-| POST | `/auth/logout` | 登录 | 登出（将当前 jti 加入黑名单） |
-| DELETE | `/auth/kick-all` | 登录 | 踢全端下线（递增 tokenVersion） |
+| POST | `/auth/refresh-token` | 公开 | 刷新 access token（用 refresh token） |
+| DELETE | `/auth/logout` | 登录 | 登出（将当前 jti 加入黑名单） |
+| POST | `/auth/logout-all` | 登录 | 踢全端下线（递增 tokenVersion） |
 
 **关键设计：**
 - JWT 三层失效：`exp`（过期时间）+ `tokenVersion`（改密码/踢全端失效）+ `jti` 黑名单（单 token 注销）
@@ -57,10 +57,10 @@
 | POST | `/roles/` | `sys:role:create` | 创建角色 |
 | PUT | `/roles/:id` | `sys:role:update` | 更新角色 |
 | DELETE | `/roles/:id` | `sys:role:delete` | 删除角色（软删，支持批量） |
-| GET | `/roles/:id/menu-ids` | `sys:role:list` | 查询角色已绑定的菜单 ID 列表 |
-| GET | `/roles/:id/dept-ids` | `sys:role:list` | 查询角色已绑定的部门 ID 列表（仅 CUSTOM dataScope） |
-| PUT | `/roles/:id/menus` | `sys:role:authorize` | 绑定角色菜单 |
-| PUT | `/roles/:id/depts` | `sys:role:authorize` | 绑定角色部门（仅 CUSTOM dataScope） |
+| GET | `/roles/:id/menu-ids` | `sys:role:assign` | 查询角色已绑定的菜单 ID 列表 |
+| GET | `/roles/:id/dept-ids` | `sys:role:assign` | 查询角色已绑定的部门 ID 列表（仅 CUSTOM dataScope） |
+| PUT | `/roles/:id/menus` | `sys:role:assign` | 绑定角色菜单 |
+| PUT | `/roles/:id/depts` | `sys:role:assign` | 绑定角色部门（仅 CUSTOM dataScope） |
 
 ---
 
@@ -68,7 +68,7 @@
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| GET | `/depts/tree` | `sys:dept:list` | 获取部门树形列表 |
+| GET | `/depts/` | `sys:dept:list` | 获取部门树形列表（支持关键字模糊搜索和状态筛选） |
 | GET | `/depts/options` | `sys:dept:list` | 部门下拉选项 |
 | GET | `/depts/:id` | `sys:dept:list` | 获取部门详情 |
 | GET | `/depts/:id/form` | `sys:dept:list` | 获取部门表单数据 |
@@ -88,7 +88,7 @@
 |---|---|---|---|
 | GET | `/menus/my-tree` | 登录 | 当前用户菜单树 + 权限列表（用于前端动态路由） |
 | GET | `/menus/routes` | 登录 | 当前用户路由列表（不含按钮，仅目录和菜单） |
-| GET | `/menus/tree` | `sys:menu:list` | 菜单树形列表（含按钮） |
+| GET | `/menus/` | `sys:menu:list` | 菜单树形列表（含按钮） |
 | GET | `/menus/options` | `sys:menu:list` | 菜单下拉选项 |
 | GET | `/menus/:id/form` | `sys:menu:list` | 获取菜单表单数据 |
 | POST | `/menus/` | `sys:menu:create` | 创建菜单（treePath 由服务端根据 parentId 自动计算） |
@@ -129,8 +129,8 @@
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| GET | `/online/` | `sys:online-user:query` | 在线用户列表 |
-| DELETE | `/online/:userId` | `sys:online-user:force-logout` | 强制下线（递增 tokenVersion 使旧 token 失效） |
+| GET | `/online/` | `sys:online:list` | 在线用户列表 |
+| DELETE | `/online/:userId` | `sys:online:kick` | 强制下线（递增 tokenVersion 使旧 token 失效） |
 
 ---
 
@@ -145,14 +145,13 @@
 | POST | `/dicts/` | `sys:dict:create` | 创建字典类型 |
 | PUT | `/dicts/:id` | `sys:dict:update` | 更新字典类型 |
 | DELETE | `/dicts/:id` | `sys:dict:delete` | 删除字典类型（级联软删字典项） |
-| GET | `/dicts/:id/items` | `sys:dict:list` | 字典项列表（分页） |
-| GET | `/dicts/items/options` | 登录 | 字典项下拉列表（按 type 查询） |
-| GET | `/dicts/items/:id/items/options` | 登录 | 字典项下拉列表（按字典项 ID 查询） |
+| GET | `/dicts/:id/items` | `sys:dict:list` | 字典项列表（分页，`:id` 支持数字 ID 或 dictCode） |
+| GET | `/dicts/:id/items/options` | `sys:dict:list` | 字典项下拉列表（`:id` 支持数字 ID 或 dictCode，仅返回启用项） |
 | GET | `/dicts/:id/items/:itemId/form` | `sys:dict:list` | 字典项表单数据 |
 | POST | `/dicts/:id/items` | `sys:dict:create` | 新增字典项（parentId=0） |
 | PUT | `/dicts/:id/items/:itemId` | `sys:dict:update` | 更新字典项 |
 | DELETE | `/dicts/:id/items/:itemId` | `sys:dict:delete` | 删除字典项（软删，支持批量） |
-| GET | `/dicts/:type/items` | 登录 | 按字典类型获取字典项（用于前端标签颜色解码） |
+| GET | `/dicts/by-type/:type/items` | 公开 | 按字典类型获取启用字典项（前端下拉/标签颜色解码，带 10 分钟缓存） |
 
 **关键设计：**
 - Cache-Aside 旁路缓存：withCache 双重检查锁防缓存击穿，写操作主动失效
@@ -163,8 +162,8 @@
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| POST | `/files` | 登录 | 上传文件（multipart/form-data，返回文件 URL） |
-| DELETE | `/files` | 登录 | 删除文件（query: `filePath`，同步删除存储侧文件） |
+| POST | `/files` | `sys:file:upload` | 上传文件（multipart/form-data，返回文件 URL） |
+| DELETE | `/files` | `sys:file:delete` | 删除文件（query: `filePath`，同步删除存储侧文件） |
 
 **关键设计：**
 - Storage 存储抽象：`Storage` 接口 + `createStorage` 工厂，通过 env 切换 driver
@@ -177,13 +176,12 @@
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| GET | `/ip-blacklist/` | `sys:ip-blacklist:query` | IP 黑名单列表（分页） |
-| POST | `/ip-blacklist/` | `sys:ip-blacklist:create` | 添加 IP 到黑名单 |
+| GET | `/ip-blacklist/` | `sys:ip-blacklist:list` | IP 黑名单列表（分页） |
 | DELETE | `/ip-blacklist/:id` | `sys:ip-blacklist:delete` | 移出黑名单（软删） |
 
 **关键设计：**
 - 全局 IP 黑名单 plugin：onRequest 阶段检查，命中直接 403
-- 登录失败超过 5 次自动入黑名单
+- 登录失败超过 5 次自动入黑名单（无手动添加接口，入名单仅走登录失败联动）
 
 ---
 
