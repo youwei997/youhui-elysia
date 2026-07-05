@@ -372,6 +372,8 @@ export const updateUserPassword = async (
 		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
 		.returning();
 
+	if (!updated) return undefined;
+
 	// 密码已变更，递增 tokenVersion 使所有旧 token 失效
 	await incrementTokenVersion(userId);
 
