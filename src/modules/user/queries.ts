@@ -20,6 +20,7 @@ import { sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
 import type { PageResult } from "@/lib/pagination";
+import { verifyPassword } from "@/lib/password";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
 import type { UserFormData, UserListRecord, UserRecord } from "./types";
 
@@ -262,6 +263,139 @@ export const resetUserPassword = async (
 		.update(sysUser)
 		.set({ password })
 		.where(and(eq(sysUser.id, id), isNull(sysUser.deleteTime)))
+		.returning();
+	return user;
+};
+
+/* ── 个人中心 ── */
+
+/**
+ * 获取个人中心详情（含部门名称和角色名称）
+ */
+export const findUserProfileDetail = async (
+	userId: number,
+	db: DB,
+): Promise<
+	| {
+			id: number;
+			username: string;
+			nickname: string | null;
+			avatar: string | null;
+			gender: number | null;
+			mobile: string | null;
+			email: string | null;
+			deptName: string | null;
+			roleNames: string | null;
+			createTime: string | null;
+	  }
+	| undefined
+> => {
+	const user = await findUserById(userId, db);
+	if (!user) return undefined;
+
+	const [dept, roleNamesRow] = await Promise.all([
+		user.deptId
+			? db
+					.select({ deptName: sysDept.name })
+					.from(sysDept)
+					.where(and(eq(sysDept.id, user.deptId), isNull(sysDept.deleteTime)))
+					.limit(1)
+					.then((rows) => rows[0]?.deptName ?? null)
+			: Promise.resolve(null),
+
+		db
+			.select({ roleName: sysRole.name })
+			.from(sysUserRole)
+			.innerJoin(sysRole, eq(sysUserRole.roleId, sysRole.id))
+			.where(eq(sysUserRole.userId, userId))
+			.then((rows) =>
+				rows.length > 0 ? rows.map((r) => r.roleName).join(",") : null,
+			),
+	]);
+
+	return {
+		id: user.id,
+		username: user.username,
+		nickname: user.nickname,
+		avatar: user.avatar,
+		gender: user.gender,
+		mobile: user.mobile,
+		email: user.email,
+		deptName: dept,
+		roleNames: roleNamesRow,
+		createTime: user.createTime,
+	};
+};
+
+/**
+ * 更新个人中心信息（仅允许修改 nickname / avatar / gender）
+ */
+export const updateUserProfile = async (
+	userId: number,
+	data: {
+		nickname?: string | null | undefined;
+		avatar?: string | null | undefined;
+		gender?: number | null | undefined;
+	},
+	db: DB,
+): Promise<UserRecord | undefined> => {
+	const [user] = await db
+		.update(sysUser)
+		.set(data)
+		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+		.returning();
+	return user;
+};
+
+/**
+ * 修改密码（需校验旧密码）
+ */
+export const updateUserPassword = async (
+	userId: number,
+	oldPassword: string,
+	newPassword: string,
+	db: DB,
+): Promise<UserRecord | undefined> => {
+	const user = await findUserById(userId, db);
+	if (!user) return undefined;
+
+	const ok = await verifyPassword(oldPassword, user.password);
+	if (!ok) {
+		throw new Error("PASSWORD_INCORRECT");
+	}
+
+	const [updated] = await db
+		.update(sysUser)
+		.set({ password: newPassword })
+		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+		.returning();
+	return updated;
+};
+
+/** 更新手机号 */
+export const updateUserMobile = async (
+	userId: number,
+	mobile: string | null,
+	db: DB,
+): Promise<UserRecord | undefined> => {
+	const [user] = await db
+		.update(sysUser)
+		.set({ mobile })
+		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+		.returning();
+	return user;
+};
+
+/** 更新邮箱 */
+export const updateUserEmail = async (
+	userId: number,
+	email: string | null,
+	db: DB,
+): Promise<UserRecord | undefined> => {
+	const [user] = await db
+		.update(sysUser)
+		.set({ email })
+		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
 		.returning();
 	return user;
 };

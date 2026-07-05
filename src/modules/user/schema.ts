@@ -116,3 +116,50 @@ export const UserResetPasswordQuery = z
 		password: z.string().min(1, "密码不能为空"),
 	})
 	.describe("重置密码请求参数");
+
+/* ── 个人中心 ── */
+
+/** 个人中心信息更新请求体（仅允许修改 nickname / avatar / gender） */
+export const UserProfileBody = z
+	.object({
+		nickname: z.string().nullable().optional().describe("昵称"),
+		avatar: z.string().nullable().optional().describe("头像 URL"),
+		gender: genderSchema
+			.nullable()
+			.optional()
+			.describe("性别：0-保密 1-男 2-女"),
+	})
+	.describe("个人中心信息更新参数");
+
+/** 修改密码请求体 */
+export const PasswordChangeBody = z
+	.object({
+		oldPassword: z.string().min(1, "原密码不能为空"),
+		newPassword: z.string().min(6, "新密码至少 6 位"),
+	})
+	.describe("修改密码请求参数");
+
+/** 密码验证请求体（解绑手机号/邮箱时校验当前密码） */
+export const PasswordVerifyBody = z
+	.object({
+		password: z.string().min(1, "密码不能为空"),
+	})
+	.describe("密码验证请求参数");
+
+/** 绑定/更换手机号请求体（code 字段保留但忽略，未接入短信服务） */
+export const MobileUpdateBody = z
+	.object({
+		mobile: z.string().min(1, "手机号不能为空"),
+		code: z.string().optional().describe("验证码（未接入短信服务，忽略）"),
+		password: z.string().min(1, "密码不能为空"),
+	})
+	.describe("绑定/更换手机号请求参数");
+
+/** 绑定/更换邮箱请求体（code 字段保留但忽略，未接入邮件服务） */
+export const EmailUpdateBody = z
+	.object({
+		email: z.string().email("邮箱格式不正确"),
+		code: z.string().optional().describe("验证码（未接入邮件服务，忽略）"),
+		password: z.string().min(1, "密码不能为空"),
+	})
+	.describe("绑定/更换邮箱请求参数");

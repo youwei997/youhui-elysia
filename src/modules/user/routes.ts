@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { buildDataScopeContext } from "@/db/helpers/data-scope";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
+import { verifyPassword } from "@/lib/password";
 import { findUserPerms, findUserRoles } from "@/modules/auth/queries";
 import { authPlugin } from "@/plugins/auth";
 import {
@@ -10,16 +11,26 @@ import {
 	findUserById,
 	findUserFormData,
 	findUserOptions,
+	findUserProfileDetail,
 	findUsers,
 	resetUserPassword,
 	softDeleteUser,
 	updateUser,
+	updateUserEmail,
+	updateUserMobile,
+	updateUserPassword,
+	updateUserProfile,
 } from "./queries";
 import {
+	EmailUpdateBody,
+	MobileUpdateBody,
+	PasswordChangeBody,
+	PasswordVerifyBody,
 	UserCreateBody,
 	UserListQuery,
 	UserParamsWithCommaIds,
 	UserParamsWithId,
+	UserProfileBody,
 	UserResetPasswordQuery,
 	UserResponse,
 	type UserResponseInput,
@@ -66,6 +77,214 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				description: "返回当前登录用户的角色和权限标识集合",
 			},
 			// 不加 perm：所有登录用户都需要获取自己的信息
+		},
+	)
+	// ── 个人中心（无 perm，所有登录用户可访问） ──
+	.get(
+		"/profile",
+		async ({ user }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const userId = Number(user.sub);
+			const detail = await findUserProfileDetail(userId, db);
+			if (!detail) throw notFound(ERR_CODE.USER_NOT_FOUND);
+			return detail;
+		},
+		{
+			auth: true,
+			detail: {
+				tags: ["User"],
+				summary: "获取当前用户个人中心详情",
+				description: "返回当前用户的详细资料（含部门名称、角色名称）",
+			},
+		},
+	)
+	.put(
+		"/profile",
+		async ({ user, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const userId = Number(user.sub);
+			const updated = await updateUserProfile(userId, body, db);
+			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
+			return updated;
+		},
+		{
+			auth: true,
+			body: UserProfileBody,
+			detail: {
+				tags: ["User"],
+				summary: "更新当前用户个人信息",
+				description: "仅允许修改昵称、头像、性别",
+			},
+		},
+	)
+	.put(
+		"/password",
+		async ({ user, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const userId = Number(user.sub);
+			await updateUserPassword(userId, body.oldPassword, body.newPassword, db);
+			return true;
+		},
+		{
+			auth: true,
+			body: PasswordChangeBody,
+			detail: {
+				tags: ["User"],
+				summary: "修改当前用户密码",
+				description: "需提供原密码和新密码",
+			},
+		},
+	)
+	.post(
+		"/mobile/code",
+		async () => {
+			// 未接入短信服务，直接返回空对象（前端调用后继续走绑定流程）
+			return {};
+		},
+		{
+			auth: true,
+			detail: {
+				tags: ["User"],
+				summary: "发送手机验证码",
+				description: "未接入短信服务，直接返回成功",
+			},
+		},
+	)
+	.put(
+		"/mobile",
+		async ({ user, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const userId = Number(user.sub);
+			const userRecord = await findUserById(userId, db);
+			if (!userRecord) throw notFound(ERR_CODE.USER_NOT_FOUND);
+
+			const ok = await verifyPassword(body.password, userRecord.password);
+			if (!ok) {
+				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
+			}
+
+			const updated = await updateUserMobile(userId, body.mobile, db);
+			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
+			return updated;
+		},
+		{
+			auth: true,
+			body: MobileUpdateBody,
+			detail: {
+				tags: ["User"],
+				summary: "绑定或更换手机号",
+				description: "需验证当前密码（未接入短信服务，忽略验证码）",
+			},
+		},
+	)
+	.delete(
+		"/mobile",
+		async ({ user, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const userId = Number(user.sub);
+			const userRecord = await findUserById(userId, db);
+			if (!userRecord) throw notFound(ERR_CODE.USER_NOT_FOUND);
+
+			const ok = await verifyPassword(body.password, userRecord.password);
+			if (!ok) {
+				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
+			}
+
+			const updated = await updateUserMobile(userId, null, db);
+			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
+			return updated;
+		},
+		{
+			auth: true,
+			body: PasswordVerifyBody,
+			detail: {
+				tags: ["User"],
+				summary: "解绑手机号",
+				description: "需验证当前密码",
+			},
+		},
+	)
+	.post(
+		"/email/code",
+		async () => {
+			// 未接入邮件服务，直接返回空对象
+			return {};
+		},
+		{
+			auth: true,
+			detail: {
+				tags: ["User"],
+				summary: "发送邮箱验证码",
+				description: "未接入邮件服务，直接返回成功",
+			},
+		},
+	)
+	.put(
+		"/email",
+		async ({ user, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const userId = Number(user.sub);
+			const userRecord = await findUserById(userId, db);
+			if (!userRecord) throw notFound(ERR_CODE.USER_NOT_FOUND);
+
+			const ok = await verifyPassword(body.password, userRecord.password);
+			if (!ok) {
+				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
+			}
+
+			const updated = await updateUserEmail(userId, body.email, db);
+			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
+			return updated;
+		},
+		{
+			auth: true,
+			body: EmailUpdateBody,
+			detail: {
+				tags: ["User"],
+				summary: "绑定或更换邮箱",
+				description: "需验证当前密码（未接入邮件服务，忽略验证码）",
+			},
+		},
+	)
+	.delete(
+		"/email",
+		async ({ user, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const userId = Number(user.sub);
+			const userRecord = await findUserById(userId, db);
+			if (!userRecord) throw notFound(ERR_CODE.USER_NOT_FOUND);
+
+			const ok = await verifyPassword(body.password, userRecord.password);
+			if (!ok) {
+				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
+			}
+
+			const updated = await updateUserEmail(userId, null, db);
+			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
+			return updated;
+		},
+		{
+			auth: true,
+			body: PasswordVerifyBody,
+			detail: {
+				tags: ["User"],
+				summary: "解绑邮箱",
+				description: "需验证当前密码",
+			},
 		},
 	)
 	.get(

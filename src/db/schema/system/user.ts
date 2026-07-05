@@ -21,7 +21,7 @@ export const sysUser = pgTable("sys_user", {
 	/** 性别（1-男 2-女 0-保密） */
 	gender: smallint("gender").default(1),
 	/** 密码（bcrypt/argon2 哈希后存储） */
-	password: varchar("password", { length: 100 }).notNull(),
+	password: varchar("password", { length: 255 }).notNull(),
 	/** 部门 ID，关联 sys_dept */
 	deptId: integer("dept_id"),
 	/** 用户头像 URL */
