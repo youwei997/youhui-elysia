@@ -16,7 +16,7 @@
 | Driver | 第一版只做 `local-fs` + `s3`（S3 兼容协议覆盖 MinIO/R2/七牛/OSS） |
 | 文件流是否过后端 | **是**（前端契约决定，不是后端选择） |
 | 元数据落库 | `sys_file` 表，完整复用 auditColumns（软删） |
-| 路由数量 | 2 个：`POST /files` + `DELETE /files?filePath=url` |
+| 路由数量 | 详见 [docs/modules.md](../../modules.md) storage 部分 |
 | url 性质 | **永久可访问**（local-fs 挂静态服务；s3 用 PUBLIC 桶或 customDomain） |
 | 预签名 URL | ❌ 不用（前端要永久 url，不要临时签名） |
 
@@ -88,10 +88,10 @@ interface ApiResponse<T = any> {
 
 | 约束 | 值 |
 |---|---|
-| 上传路径 | `POST /api/v1/files` |
+| 上传路径 | 同上 |
 | 请求体 | `multipart/form-data`，字段名 `file` |
 | 响应 data 形状 | `{ name: string, url: string }`（**只有这两字段**） |
-| 删除路径 | `DELETE /api/v1/files?filePath={完整URL}` |
+| 删除路径 | 同上 |
 | url 性质 | 永久可访问（不能是临时签名 URL） |
 | 进度机制 | axios 监听 multipart 流（不能用预签名 PUT） |
 
@@ -353,9 +353,9 @@ export const sysFile = pgTable(
 | 方法 | 路径 | 用途 | 鉴权 |
 |---|---|---|---|
 | POST | `/api/v1/files` | 上传文件（multipart） | `auth: true` + `requirePerm: ["sys:file:upload"]` |
-| DELETE | `/api/v1/files` | 删除文件（query 传 url） | `auth: true` + `requirePerm: ["sys:file:delete"]` |
 
-**对齐前端契约**：前端 `FileAPI.upload` POST `/api/v1/files`，`FileAPI.delete` DELETE `/api/v1/files?filePath=url`。
+
+**对齐前端契约**：详见 [docs/modules.md](../../modules.md) storage 部分
 
 ### 6.2 上传路由
 
@@ -661,9 +661,7 @@ export const buildStorageKey = (originalFilename: string): string => {
 ```
 前端 el-upload
   │ formData.append("file", file)
-  │ axios.post("/api/v1/files", formData, { onUploadProgress })
   ▼
-POST /api/v1/files  (后端)
   │ 1. Elysia multipart parser 接收 file 字段
   │ 2. key = buildStorageKey(file.name)  // {date}/{uuid}.{ext}
   │ 3. storage.put(key, stream, { contentType })
@@ -684,9 +682,7 @@ responseWrap 自动包壳
 
 ```
 前端 FileAPI.delete(fileUrl)
-  │ axios.delete("/api/v1/files", { params: { filePath: fileUrl } })
   ▼
-DELETE /api/v1/files?filePath={url}  (后端)
   │ 1. file = findFileByUrl(filePath, db)
   │    └─ SELECT * FROM sys_file WHERE url = $1 AND deleteTime IS NULL
   │ 2. if (!file) throw BizError(FILE_NOT_FOUND, 404)
@@ -715,7 +711,6 @@ responseWrap 包壳
          → S3 / CDN 返回对象
 
 前端 FileAPI.download(url)
-  │ axios.get(url, { responseType: "blob" })
   │ → 触发浏览器下载
 ```
 

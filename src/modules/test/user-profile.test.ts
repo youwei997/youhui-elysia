@@ -8,7 +8,6 @@ import { sysUser } from "@/db/schema/system/user";
 import { hashPassword } from "@/lib/password";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
-import { UserProfileBody } from "@/modules/user/schema";
 import {
 	findUserById,
 	findUserProfileDetail,
@@ -17,6 +16,7 @@ import {
 	updateUserPassword,
 	updateUserProfile,
 } from "@/modules/user/queries";
+import { UserProfileBody } from "@/modules/user/schema";
 
 // ==========================================
 // 测试数据：用固定 ID 避免与种子冲突

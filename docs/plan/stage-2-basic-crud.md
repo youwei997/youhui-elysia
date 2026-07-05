@@ -140,9 +140,9 @@ bun run db:seed
 bun dev
 curl http://localhost:3000/users
 curl http://localhost:3000/users/1
-curl -XPOST http://localhost:3000/users -d '{"username":"new","password":"x"}' -H "Content-Type: application/json"
-curl -XPUT http://localhost:3000/users/2 -d '{"nickname":"updated"}' -H "Content-Type: application/json"
-curl -XDELETE http://localhost:3000/users/3
+
+
+
 # 在 Scalar UI 里能完整玩一遍
 ```
 

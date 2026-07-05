@@ -217,7 +217,6 @@ curl localhost:3000/users
 # 响应: { "code": "A0001", "msg": "未登录", "data": null }
 
 # logout
-curl -XPOST localhost:3000/auth/logout -H "Authorization: Bearer $TOKEN"
 
 # 旧 token 失效
 curl localhost:3000/users -H "Authorization: Bearer $TOKEN"
