@@ -29,7 +29,7 @@
 
 ### 已实现模块的契约差异
 - **log**：路径 `/logs` vs `/oper-logs`+`/login-logs` + 缺 analytics
-- **user**：`findUsers` 已返回 deptName / roleNames；仍缺 profile / 导入导出 / 手机邮箱
+- **user**：`findUsers` 已返回 deptName / roleNames；profile / 手机号 / 邮箱 ✅；仍缺导入导出
 - **dict**：✅ 已完全对齐前端契约（14 接口 + remark/dictCode/tagType/options/pagination）
 
 ### 阶段 5 计划内未完成子任务
@@ -37,7 +37,7 @@
 - 文件存储 S3 driver（5.4.5，可推迟）
 
 ### 新增模块（项目从未规划过）
-- 个人中心（profile / password / mobile / email）
+- 个人中心（profile / password / mobile / email） ✅
 - 用户导入导出（template / import / export）
 - 系统配置（sys_config）
 - 通知公告（sys_notice + sys_user_notice）
