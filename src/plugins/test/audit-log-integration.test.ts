@@ -34,6 +34,7 @@ describe("Operation Log Integration (5.1.5)", () => {
 
 		// 2. 在测试开始前，先清理之前可能残留的数据，确保测试的独立性与准确性
 		await db.delete(sysOperLog).where(eq(sysOperLog.module, "user"));
+		await db.delete(sysUser).where(eq(sysUser.username, testUsername));
 	});
 
 	afterAll(async () => {
