@@ -202,10 +202,13 @@
 
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "code": "00000",
+  "msg": "成功",
   "data": {}
 }
 ```
+
+- `code`：字符串业务码，成功固定 `"00000"`，错误码为 A/B/C 开头的 5 位字符串
+- 失败时 `data` 固定为 `null`
 
 错误码定义见 `src/lib/errors.ts`。
