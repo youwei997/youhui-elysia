@@ -19,8 +19,9 @@ import { sysDept } from "@/db/schema/system/dept";
 import { sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
+import { incrementTokenVersion } from "@/lib/login-lock";
 import type { PageResult } from "@/lib/pagination";
-import { verifyPassword } from "@/lib/password";
+import { hashPassword, verifyPassword } from "@/lib/password";
 import type { UserCreateBody, UserUpdateBody } from "./schema";
 import type { UserFormData, UserListRecord, UserRecord } from "./types";
 
@@ -348,7 +349,7 @@ export const updateUserProfile = async (
 };
 
 /**
- * 修改密码（需校验旧密码）
+ * 修改密码（需校验旧密码，新密码哈希后入库，同时递增 tokenVersion 使旧 token 失效）
  */
 export const updateUserPassword = async (
 	userId: number,
@@ -364,11 +365,16 @@ export const updateUserPassword = async (
 		throw new Error("PASSWORD_INCORRECT");
 	}
 
+	const hashed = await hashPassword(newPassword);
 	const [updated] = await db
 		.update(sysUser)
-		.set({ password: newPassword })
+		.set({ password: hashed })
 		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
 		.returning();
+
+	// 密码已变更，递增 tokenVersion 使所有旧 token 失效
+	await incrementTokenVersion(userId);
+
 	return updated;
 };
 

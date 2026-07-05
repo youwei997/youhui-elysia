@@ -109,7 +109,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			const userId = Number(user.sub);
 			const updated = await updateUserProfile(userId, body, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return updated;
+			return { ...UserResponse.parse(updated), id: String(updated.id) };
 		},
 		{
 			auth: true,
@@ -173,7 +173,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const updated = await updateUserMobile(userId, body.mobile, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return updated;
+			return { ...UserResponse.parse(updated), id: String(updated.id) };
 		},
 		{
 			auth: true,
@@ -202,7 +202,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const updated = await updateUserMobile(userId, null, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return updated;
+			return { ...UserResponse.parse(updated), id: String(updated.id) };
 		},
 		{
 			auth: true,
@@ -246,7 +246,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const updated = await updateUserEmail(userId, body.email, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return updated;
+			return { ...UserResponse.parse(updated), id: String(updated.id) };
 		},
 		{
 			auth: true,
@@ -275,7 +275,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const updated = await updateUserEmail(userId, null, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return updated;
+			return { ...UserResponse.parse(updated), id: String(updated.id) };
 		},
 		{
 			auth: true,

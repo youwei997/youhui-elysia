@@ -6,6 +6,8 @@ import { sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
 import { hashPassword } from "@/lib/password";
+import { redis } from "@/lib/redis";
+import { redisKeys } from "@/lib/redis-keys";
 import {
 	findUserById,
 	findUserProfileDetail,
@@ -27,6 +29,8 @@ const cleanUp = async () => {
 	await db.delete(sysUser).where(eq(sysUser.id, TEST_USER_ID));
 	await db.delete(sysRole).where(eq(sysRole.id, TEST_ROLE_ID));
 	await db.delete(sysDept).where(eq(sysDept.id, TEST_DEPT_ID));
+	// 清理 tokenVersion key
+	await redis.del(redisKeys.userTokenVersion(TEST_USER_ID));
 };
 
 describe("user profile 个人中心", () => {
@@ -126,7 +130,11 @@ describe("user profile 个人中心", () => {
 		);
 	});
 
-	test("updateUserPassword 旧密码正确可修改", async () => {
+	test("updateUserPassword 新密码哈希入库且 tokenVersion 递增", async () => {
+		const oldTokenVersion = Number(
+			(await redis.get(redisKeys.userTokenVersion(TEST_USER_ID))) ?? "0",
+		);
+
 		const updated = await updateUserPassword(
 			TEST_USER_ID,
 			"test123456",
@@ -134,7 +142,16 @@ describe("user profile 个人中心", () => {
 			db,
 		);
 		expect(updated).toBeDefined();
-		expect(updated!.password).not.toBe("test123456");
+
+		// 验证：密码已哈希（不是明文）
+		expect(updated!.password).not.toBe("newpass123");
+		expect(updated!.password).toMatch(/^\$argon2id\$/);
+
+		// 验证：tokenVersion 已递增
+		const newTokenVersion = Number(
+			(await redis.get(redisKeys.userTokenVersion(TEST_USER_ID))) ?? "0",
+		);
+		expect(newTokenVersion).toBe(oldTokenVersion + 1);
 
 		// 恢复密码
 		const newHash = await hashPassword("test123456");
