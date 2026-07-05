@@ -97,7 +97,6 @@
 
 ### 4.6 数据权限纯函数（关键）(1.5d)
 
-
 `src/db/helpers/data-scope.ts`：
 
 ```ts
@@ -219,6 +218,8 @@ const where = and(
 ### 数据权限
 - [x] user 模块的 GET /users 接入 dataScope，三角色返回不同数据集
 - [x] dataScope 5 档枚举均有实现
+- [x] DEPT_AND_SUB 用 treePath 子树查询，跑通
+- [x] CUSTOM 从 sys_role_dept 查 deptIds
 - [x] 多角色取并集：admin（ALL）+ 其他 → 等同于 ALL
 
 ### 菜单树接口
@@ -248,9 +249,18 @@ const where = and(
 bun run scripts/verify-stage4-e2e.ts
 
 # 或手动 curl
-# 三角色对比
+# 三角色对比（先登录取 token）
+ADMIN_TOKEN=$(curl -s -XPOST localhost:8000/api/v1/auth/login \
+  -d '{"username":"admin","password":"123456"}' \
+  -H "Content-Type: application/json" | jq -r .data.accessToken)
 
+MANAGER_TOKEN=$(curl -s -XPOST localhost:8000/api/v1/auth/login \
+  -d '{"username":"dept_manager","password":"123456"}' \
+  -H "Content-Type: application/json" | jq -r .data.accessToken)
 
+STAFF_TOKEN=$(curl -s -XPOST localhost:8000/api/v1/auth/login \
+  -d '{"username":"employee","password":"123456"}' \
+  -H "Content-Type: application/json" | jq -r .data.accessToken)
 
 # 同一接口不同结果
 curl /api/v1/users -H "Authorization: Bearer $ADMIN_TOKEN"     # 11 条（全部）

@@ -126,7 +126,7 @@
 
 **验收**:
 - [x] 列表支持多条件搜索(username 模糊 / module 精确 / status / 时间范围)
-- [x] 已实现
+- [x] DELETE 单条生效(硬删)
 - [x] `POST /batch-delete` 批量按时间清理
 - [x] 权限 macro 生效(无 token → 401；403 待权限种子/普通用户补测)
 - [x] 按 `createTime DESC` 返回
@@ -270,11 +270,31 @@ src/
 - [x] 边界：空文件 → A0400、超 50MB → A0400、不存在的 url → A0470 (404)
 - [x] `bun run check` + `bun run tsc` 通过
 
-
-
 ### 5.5 定时任务（pg-boss）(1d)【已推迟】
 
-> 推迟,待核心模块稳定后再投入。
+> 已推迟，待核心模块稳定后再投入。以下设计方案保留，届时直接按此实施。
+
+为什么 pg-boss：你已经有 PG，零额外组件，足够这个项目规模。
+
+`src/lib/queue.ts`：
+- 包装 pg-boss 客户端
+- 启动时初始化 schema（pg-boss 自带 migration）
+- 暴露 `enqueue(name, data, opts)` / `schedule(name, cron, data)` / `subscribe(name, handler)`
+
+`db/schema/system/job.ts`：
+- 自定义 sys_job 表（**不依赖 pg-boss 内部表**，元数据 + UI 操作）
+- 字段：id / name / handlerName / cron / args / status / lastRunAt / lastRunResult / createdBy + auditColumns
+
+`modules/job/`：
+- CRUD
+- 启动时把 status='running' 的所有 job 调用 `pgBoss.schedule(...)` 注册
+- 增/改/删时同步更新 pg-boss 调度
+- `POST /jobs/:id/run` 立即触发一次
+- `POST /jobs/:id/pause` / `:id/resume`
+
+handler 注册：
+- `src/jobs/index.ts` 集中注册（一个 handlerName → 一个函数）
+- 第一版可写 2-3 个示例任务（清理过期日志、清理过期黑名单等）
 
 ### 5.6 限流 + IP 黑名单 (0.5d)
 

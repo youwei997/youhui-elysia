@@ -141,8 +141,6 @@ bun dev
 curl http://localhost:3000/users
 curl http://localhost:3000/users/1
 
-
-
 # 在 Scalar UI 里能完整玩一遍
 ```
 
