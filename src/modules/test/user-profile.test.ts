@@ -8,6 +8,7 @@ import { sysUser } from "@/db/schema/system/user";
 import { hashPassword } from "@/lib/password";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
+import { UserProfileBody } from "@/modules/user/schema";
 import {
 	findUserById,
 	findUserProfileDetail,
@@ -128,6 +129,10 @@ describe("user profile 个人中心", () => {
 			{ nickname: "测试用户", gender: 1 },
 			db,
 		);
+	});
+
+	test("UserProfileBody 拒绝空对象", () => {
+		expect(() => UserProfileBody.parse({})).toThrow();
 	});
 
 	test("updateUserPassword 新密码哈希入库且 tokenVersion 递增", async () => {

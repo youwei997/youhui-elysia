@@ -129,6 +129,10 @@ export const UserProfileBody = z
 			.optional()
 			.describe("性别：0-保密 1-男 2-女"),
 	})
+	.refine(
+		(data) => data.nickname !== undefined || data.avatar !== undefined || data.gender !== undefined,
+		{ message: "至少需要提供一个要更新的字段" },
+	)
 	.describe("个人中心信息更新参数");
 
 /** 修改密码请求体 */
