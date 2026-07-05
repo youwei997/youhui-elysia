@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { buildTree } from "../tree";
 
+const defined = <T>(value: T | undefined): T => {
+	if (value === undefined) throw new Error("Expected defined value");
+	return value;
+};
+
 describe("buildTree", () => {
 	test("空数组返回空数组", () => {
 		expect(buildTree([])).toEqual([]);
@@ -10,8 +15,8 @@ describe("buildTree", () => {
 		const nodes = [{ id: 1, parentId: 0, name: "Root" }];
 		const result = buildTree(nodes);
 		expect(result).toHaveLength(1);
-		expect(result[0]!.id).toBe(1);
-		expect(result[0]!.children).toEqual([]);
+		expect(defined(result[0]).id).toBe(1);
+		expect(defined(result[0]).children).toEqual([]);
 	});
 
 	test("两层树：1 个根 + 2 个子节点", () => {
@@ -22,9 +27,9 @@ describe("buildTree", () => {
 		];
 		const result = buildTree(nodes);
 		expect(result).toHaveLength(1);
-		expect(result[0]!.children).toHaveLength(2);
-		expect(result[0]!.children[0]!.id).toBe(2);
-		expect(result[0]!.children[1]!.id).toBe(3);
+		expect(defined(result[0]).children).toHaveLength(2);
+		expect(defined(defined(result[0]).children[0]).id).toBe(2);
+		expect(defined(defined(result[0]).children[1]).id).toBe(3);
 	});
 
 	test("三层嵌套", () => {
@@ -34,7 +39,9 @@ describe("buildTree", () => {
 			{ id: 3, parentId: 2, name: "Grandchild" },
 		];
 		const result = buildTree(nodes);
-		expect(result[0]!.children[0]!.children[0]!.id).toBe(3);
+		expect(
+			defined(defined(defined(result[0]).children[0]).children[0]).id,
+		).toBe(3);
 	});
 
 	test("多根节点", () => {
@@ -53,7 +60,7 @@ describe("buildTree", () => {
 		];
 		const result = buildTree(nodes);
 		expect(result).toHaveLength(2);
-		expect(result[1]!.id).toBe(2);
+		expect(defined(result[1]).id).toBe(2);
 	});
 
 	test("字符串 ID 兼容", () => {
@@ -62,8 +69,8 @@ describe("buildTree", () => {
 			{ id: "b", parentId: "a", name: "Child" },
 		];
 		const result = buildTree(nodes);
-		expect(result[0]!.id).toBe("a");
-		expect(result[0]!.children[0]!.id).toBe("b");
+		expect(defined(result[0]).id).toBe("a");
+		expect(defined(defined(result[0]).children[0]).id).toBe("b");
 	});
 
 	test("保留原始字段", () => {
@@ -72,7 +79,7 @@ describe("buildTree", () => {
 			{ id: 2, parentId: 1, name: "Child", extra: 123 },
 		];
 		const result = buildTree(nodes);
-		expect(result[0]!.extra).toBe("value");
-		expect(result[0]!.children[0]!.extra).toBe(123);
+		expect(defined(result[0]).extra).toBe("value");
+		expect(defined(defined(result[0]).children[0]).extra).toBe(123);
 	});
 });

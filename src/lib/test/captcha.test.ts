@@ -4,6 +4,11 @@ import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
 import { generateCaptcha, verifyCaptcha } from "../captcha";
 
+const defined = <T>(value: T | null): T => {
+	if (value === null) throw new Error("Expected defined value");
+	return value;
+};
+
 describe("captcha", () => {
 	let captchaId: string;
 
@@ -38,7 +43,7 @@ describe("captcha", () => {
 			captchaId = result.captchaId;
 
 			const answer = await redis.get(redisKeys.captchaAnswer(captchaId));
-			expect(await verifyCaptcha(captchaId, answer!)).toBe(true);
+			expect(await verifyCaptcha(captchaId, defined(answer))).toBe(true);
 		});
 
 		test("错误答案拒绝", async () => {
@@ -57,10 +62,10 @@ describe("captcha", () => {
 			captchaId = result.captchaId;
 
 			const answer = await redis.get(redisKeys.captchaAnswer(captchaId));
-			await verifyCaptcha(captchaId, answer!);
+			await verifyCaptcha(captchaId, defined(answer));
 
 			// 再次验证应失败
-			expect(await verifyCaptcha(captchaId, answer!)).toBe(false);
+			expect(await verifyCaptcha(captchaId, defined(answer))).toBe(false);
 		});
 
 		test("全角数字兼容", async () => {

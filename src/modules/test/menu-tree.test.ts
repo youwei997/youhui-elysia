@@ -30,6 +30,11 @@ const cleanUpMenu = async () => {
 	await db.delete(sysMenu).where(eq(sysMenu.id, TEST_MENU_ROOT));
 };
 
+const defined = <T>(value: T | undefined): T => {
+	if (value === undefined) throw new Error("Expected defined value");
+	return value;
+};
+
 describe("menu treePath 级联查询", () => {
 	beforeAll(async () => {
 		await cleanUpMenu();
@@ -119,8 +124,8 @@ describe("menu treePath 级联查询", () => {
 	test("findMenuById 正常查询", async () => {
 		const menu = await findMenuById(TEST_MENU_ROOT, db);
 		expect(menu).toBeDefined();
-		expect(menu!.name).toBe("菜单树根");
-		expect(menu!.treePath).toBe("0");
+		expect(defined(menu).name).toBe("菜单树根");
+		expect(defined(menu).treePath).toBe("0");
 	});
 
 	test("isParentIdCyclic 检测循环引用", async () => {

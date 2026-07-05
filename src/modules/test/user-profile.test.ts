@@ -34,6 +34,11 @@ const cleanUp = async () => {
 	await redis.del(redisKeys.userTokenVersion(TEST_USER_ID));
 };
 
+const defined = <T>(value: T | undefined): T => {
+	if (value === undefined) throw new Error("Expected defined value");
+	return value;
+};
+
 describe("user profile 个人中心", () => {
 	beforeAll(async () => {
 		await cleanUp();
@@ -101,11 +106,11 @@ describe("user profile 个人中心", () => {
 	test("findUserProfileDetail 返回含 deptName 和 roleNames 的详情", async () => {
 		const detail = await findUserProfileDetail(TEST_USER_ID, db);
 		expect(detail).toBeDefined();
-		expect(detail!.username).toBeDefined();
-		expect(detail!.deptName).toBe("个人中心测试部门");
-		expect(detail!.roleNames).toBe("个人中心测试角色");
-		expect(detail!.mobile).toBe("13800138000");
-		expect(detail!.email).toBe("test@example.com");
+		expect(defined(detail).username).toBeDefined();
+		expect(defined(detail).deptName).toBe("个人中心测试部门");
+		expect(defined(detail).roleNames).toBe("个人中心测试角色");
+		expect(defined(detail).mobile).toBe("13800138000");
+		expect(defined(detail).email).toBe("test@example.com");
 	});
 
 	test("updateUserProfile 更新昵称/头像/性别", async () => {
@@ -119,9 +124,9 @@ describe("user profile 个人中心", () => {
 			db,
 		);
 		expect(updated).toBeDefined();
-		expect(updated!.nickname).toBe("新昵称");
-		expect(updated!.avatar).toBe("https://example.com/avatar.png");
-		expect(updated!.gender).toBe(2);
+		expect(defined(updated).nickname).toBe("新昵称");
+		expect(defined(updated).avatar).toBe("https://example.com/avatar.png");
+		expect(defined(updated).gender).toBe(2);
 
 		// 恢复
 		await updateUserProfile(
@@ -149,8 +154,8 @@ describe("user profile 个人中心", () => {
 		expect(updated).toBeDefined();
 
 		// 验证：密码已哈希（不是明文）
-		expect(updated!.password).not.toBe("newpass123");
-		expect(updated!.password).toMatch(/^\$argon2id\$/);
+		expect(defined(updated).password).not.toBe("newpass123");
+		expect(defined(updated).password).toMatch(/^\$argon2id\$/);
 
 		// 验证：tokenVersion 已递增
 		const newTokenVersion = Number(
@@ -174,21 +179,21 @@ describe("user profile 个人中心", () => {
 
 	test("updateUserMobile 绑定手机号", async () => {
 		const updated = await updateUserMobile(TEST_USER_ID, "13900139000", db);
-		expect(updated!.mobile).toBe("13900139000");
+		expect(defined(updated).mobile).toBe("13900139000");
 
 		// 解绑
 		await updateUserMobile(TEST_USER_ID, null, db);
 		const user = await findUserById(TEST_USER_ID, db);
-		expect(user!.mobile).toBeNull();
+		expect(defined(user).mobile).toBeNull();
 	});
 
 	test("updateUserEmail 绑定邮箱", async () => {
 		const updated = await updateUserEmail(TEST_USER_ID, "new@example.com", db);
-		expect(updated!.email).toBe("new@example.com");
+		expect(defined(updated).email).toBe("new@example.com");
 
 		// 解绑
 		await updateUserEmail(TEST_USER_ID, null, db);
 		const user = await findUserById(TEST_USER_ID, db);
-		expect(user!.email).toBeNull();
+		expect(defined(user).email).toBeNull();
 	});
 });
