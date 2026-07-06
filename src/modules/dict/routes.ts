@@ -81,10 +81,11 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	.get(
 		"/options",
 		async () => {
+			// 下拉框只返回启用项，避免前端出现已禁用的字典类型
 			const dicts = await findDicts(
-			{ status: 1, pageNum: 1, pageSize: 1000 },
-			db,
-		);
+				{ status: 1, pageNum: 1, pageSize: 1000 },
+				db,
+			);
 			return dicts.list.map((d) => ({ value: d.type, label: d.name }));
 		},
 		{
@@ -135,6 +136,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	.post(
 		"/",
 		async ({ body }) => {
+			// 前端传 dictCode，后端存 type；两者选其一即可
 			const type = body.type ?? body.dictCode;
 			if (!type) {
 				throw new BizError(
@@ -142,6 +144,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 					"必须提供 type 或 dictCode",
 				);
 			}
+			// 全局唯一性校验：type 不可重复
 			const existing = await findDictByType(type, db);
 			if (existing) {
 				throw new BizError(ERR_CODE.DICT_TYPE_DUPLICATE);
@@ -252,6 +255,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		"/:id/items",
 		async ({ params, query }) => {
 			const raw = params.id;
+			// :id 双模式：纯数字走 ID 查询，非数字走 dictCode 查询
 			const dict = /^\d+$/.test(raw)
 				? await findDictById(Number(raw), db)
 				: await findDictByType(raw, db);
@@ -279,6 +283,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		"/:id/items/options",
 		async ({ params }) => {
 			const raw = params.id;
+			// :id 双模式：纯数字走 ID 查询，非数字走 dictCode 查询
 			const dict = /^\d+$/.test(raw)
 				? await findDictById(Number(raw), db)
 				: await findDictByType(raw, db);
@@ -306,11 +311,13 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 		"/:id/items",
 		async ({ params, body }) => {
 			const raw = params.id;
+			// :id 双模式：纯数字走 ID 查询，非数字走 dictCode 查询
 			const dict = /^\d+$/.test(raw)
 				? await findDictById(Number(raw), db)
 				: await findDictByType(raw, db);
 			if (!dict) throw notFound(ERR_CODE.DICT_NOT_FOUND);
 
+			// label 全局唯一校验（同一字典类型下）
 			const dupLabel = await findDictItemByDictIdAndLabel(
 				dict.id,
 				body.label,
@@ -319,6 +326,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			if (dupLabel) {
 				throw new BizError(ERR_CODE.DICT_ITEM_LABEL_DUPLICATE);
 			}
+			// value 全局唯一校验（同一字典类型下）
 			const dupValue = await findDictItemByDictIdAndValue(
 				dict.id,
 				body.value,
@@ -371,6 +379,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 			const existing = await findDictItemById(params.itemId, db);
 			if (!existing) throw notFound(ERR_CODE.DICT_ITEM_NOT_FOUND);
 
+			// 更新 label 时校验重复（排除自身）
 			if (body.label) {
 				const dupLabel = await findDictItemByDictIdAndLabel(
 					existing.dictId,
@@ -381,6 +390,7 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 					throw new BizError(ERR_CODE.DICT_ITEM_LABEL_DUPLICATE);
 				}
 			}
+			// 更新 value 时校验重复（排除自身）
 			if (body.value) {
 				const dupValue = await findDictItemByDictIdAndValue(
 					existing.dictId,

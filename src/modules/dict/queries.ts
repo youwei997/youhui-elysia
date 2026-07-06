@@ -9,7 +9,7 @@ import type { DictItemRecord, DictRecord } from "./types";
 // ── 字典类型 ──
 
 /**
- * 字典类型列表查询（分页，软删过滤，keywords 模糊匹配 type/name）
+ * 字典类型列表查询（分页，软删过滤，keywords 模糊匹配 type/name，支持 status 筛选）
  */
 export const findDicts = async (
 	query: {
@@ -20,19 +20,24 @@ export const findDicts = async (
 	},
 	db: DB,
 ): Promise<PageResult<DictRecord>> => {
+	// 默认过滤已软删记录（§4.10 软删过滤规则）
 	const where = [isNull(sysDict.deleteTime)];
 
 	if (query.keywords) {
+		// keywords 非空时 escapeLike 必有输出，or() 实际恒真
+		// guard 仅为了满足 TS 类型（or() 返回 SQL | undefined）
 		const kwCond = or(
 			like(sysDict.type, `%${escapeLike(query.keywords)}%`),
 			like(sysDict.name, `%${escapeLike(query.keywords)}%`),
 		);
 		if (kwCond) where.push(kwCond);
 	}
+	// 用 !== undefined 而非 truthy，因为 status=0（禁用）是合法值
 	if (query.status !== undefined) {
 		where.push(eq(sysDict.status, query.status));
 	}
 
+	// where 为空时传 undefined，Drizzle 会跳过 WHERE 子句
 	const whereClause = where.length > 0 ? and(...where) : undefined;
 
 	const list = await db
@@ -51,7 +56,9 @@ export const findDicts = async (
 	return { list, total };
 };
 
-/** 按 ID 查字典类型 */
+/**
+ * 按 ID 查字典类型（软删过滤）
+ */
 export const findDictById = async (
 	id: number,
 	db: DB,
@@ -63,7 +70,11 @@ export const findDictById = async (
 	return dict;
 };
 
-/** 按 type 查字典类型 */
+/**
+ * 按 type 查字典类型（软删过滤）
+ *
+ * type 字段同时承担后端存储键和前端 dictCode 语义，全局唯一。
+ */
 export const findDictByType = async (
 	type: string,
 	db: DB,
@@ -75,7 +86,9 @@ export const findDictByType = async (
 	return dict;
 };
 
-/** 新增字典类型 */
+/**
+ * 新增字典类型（INSERT ... RETURNING，返回值非空）
+ */
 export const createDict = async (
 	data: {
 		type: string;
@@ -89,7 +102,9 @@ export const createDict = async (
 	return dict as DictRecord;
 };
 
-/** 更新字典类型 */
+/**
+ * 更新字典类型（type 变更时先校验唯一性，抛 "DICT_TYPE_DUPLICATE"）
+ */
 export const updateDict = async (
 	id: number,
 	data: {
@@ -125,6 +140,7 @@ export const updateDict = async (
  *   - 或改用"标记禁用 + 异步清理"策略
  */
 export const softDeleteDict = async (id: number, db: DB): Promise<boolean> => {
+	// 事务保证：先删字典项再删字典类型，避免 FK 约束或级联不一致
 	await db.transaction(async (tx) => {
 		const now = new Date().toISOString();
 		await tx
@@ -141,7 +157,9 @@ export const softDeleteDict = async (id: number, db: DB): Promise<boolean> => {
 
 // ── 字典项 ──
 
-/** 字典项列表查询（分页，软删过滤） */
+/**
+ * 字典项列表查询（分页，软删过滤，keywords 模糊匹配 label/value，支持 status 筛选）
+ */
 export const findDictItems = async (
 	dictId: number,
 	query: {
@@ -158,16 +176,20 @@ export const findDictItems = async (
 	];
 
 	if (query.keywords) {
+		// keywords 非空时 escapeLike 必有输出，or() 实际恒真
+		// guard 仅为了满足 TS 类型（or() 返回 SQL | undefined）
 		const kwCond = or(
 			like(sysDictItem.label, `%${escapeLike(query.keywords)}%`),
 			like(sysDictItem.value, `%${escapeLike(query.keywords)}%`),
 		);
 		if (kwCond) where.push(kwCond);
 	}
+	// 用 !== undefined 而非 truthy，因为 status=0（禁用）是合法值
 	if (query.status !== undefined) {
 		where.push(eq(sysDictItem.status, query.status));
 	}
 
+	// where 为空时传 undefined，Drizzle 会跳过 WHERE 子句
 	const whereClause = where.length > 0 ? and(...where) : undefined;
 
 	const list = await db
@@ -186,7 +208,9 @@ export const findDictItems = async (
 	return { list, total };
 };
 
-/** 按 ID 查字典项 */
+/**
+ * 按 ID 查字典项（用于详情查询、编辑回填、删除前校验）
+ */
 export const findDictItemById = async (
 	id: number,
 	db: DB,
@@ -198,7 +222,9 @@ export const findDictItemById = async (
 	return item;
 };
 
-/** 新增字典项 */
+/**
+ * 新增字典项（INSERT ... RETURNING，返回值非空）
+ */
 export const createDictItem = async (
 	dictId: number,
 	data: {
@@ -217,7 +243,9 @@ export const createDictItem = async (
 	return item as DictItemRecord;
 };
 
-/** 更新字典项 */
+/**
+ * 更新字典项（调用方保证不传入 deleteTime 等受保护字段）
+ */
 export const updateDictItem = async (
 	id: number,
 	data: {
@@ -237,7 +265,11 @@ export const updateDictItem = async (
 	return item;
 };
 
-/** 软删字典项 */
+/**
+ * 软删字典项
+ *
+ * 返回是否实际删除了记录（false 表示记录不存在或已被软删）。
+ */
 export const softDeleteDictItem = async (
 	id: number,
 	db: DB,
@@ -250,7 +282,9 @@ export const softDeleteDictItem = async (
 	return result.length > 0;
 };
 
-/** 按 dictId + label 查字典项（用于校验重复） */
+/**
+ * 按 dictId + label 查字典项（用于校验 label 重复）
+ */
 export const findDictItemByDictIdAndLabel = async (
 	dictId: number,
 	label: string,
@@ -269,7 +303,9 @@ export const findDictItemByDictIdAndLabel = async (
 	return item;
 };
 
-/** 按 dictId + value 查字典项（用于校验重复） */
+/**
+ * 按 dictId + value 查字典项（用于校验 value 重复）
+ */
 export const findDictItemByDictIdAndValue = async (
 	dictId: number,
 	value: string,
