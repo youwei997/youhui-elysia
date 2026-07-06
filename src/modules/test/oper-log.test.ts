@@ -152,7 +152,9 @@ describe("oper-log 模块", () => {
 		const json = await res.json() as { data: { total: number } };
 		// 7月5日有 2 条记录（create + update）
 		expect(json.data.total).toBe(2);
-	});		test("5. 响应字段映射 - OperLogResponse transform", async () => {
+	});
+
+	test("5. 响应字段映射 - OperLogResponse transform", async () => {
 		const res = await fetch(
 			`http://localhost:${port}/api/v1/logs/?pageNum=1&pageSize=1&module=${TEST_MODULE}`,
 			{ headers: { authorization: `Bearer ${token}` } },
