@@ -35,7 +35,7 @@ export const operLogRoutes = new Elysia({ prefix: "/api/v1/logs" })
 				tags: ["OperLog"],
 				summary: "操作日志列表（分页）",
 				description:
-					"支持 username 模糊搜索、module 精确筛选、status 和时间范围筛选，按 createTime 倒序",
+					"支持关键字（操作人/IP）模糊搜索、module 精确筛选、status 和时间范围筛选，按 createTime 倒序",
 			},
 		},
 	)

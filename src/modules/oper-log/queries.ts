@@ -1,4 +1,4 @@
-import { and, count, countDistinct, desc, eq, gte, like, lt, lte, or, sql } from "drizzle-orm";
+import { and, count, countDistinct, desc, eq, gte, like, lt, lte, or } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { escapeLike } from "@/db/helpers/like";
 import { sysOperLog } from "@/db/schema/system/oper-log";
@@ -139,8 +139,8 @@ export const getVisitOverview = async (
  * 访问趋势：按日期分组 PV/UV 列表
  *
  * 按用户实际查询的日期范围聚合，补全无数据的日期（PV=0, UV=0）。
- * 分组用 UTC 日期（TO_CHAR(... AT TIME ZONE 'UTC')），与前端日期循环（UTC）保持一致，
- * 不受数据库会话时区影响；dateMap 的 key 与循环 key 同为 UTC 字符串，避免错位导致全 0。
+ * 应用层 UTC 日期分组（避免 sql 模板方言耦合），
+ * 与日期循环的 key（toISOString().slice(0,10)）均为 UTC 字符串，确保 key 对齐。
  */
 export const getVisitTrend = async (
 	db: DB,
@@ -150,19 +150,30 @@ export const getVisitTrend = async (
 	const start = new Date(`${startDate}T00:00:00.000Z`);
 	const end = new Date(`${endDate}T23:59:59.999Z`);
 
-	const raw = await db
+	// 应用层分组：只取原始时间 + username，避免 sql 模板
+	const rows = await db
 		.select({
-			date: sql<string>`TO_CHAR(${sysOperLog.createTime} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`.as("date"),
-			pv: count(),
-			uv: countDistinct(sysOperLog.username),
+			createTime: sysOperLog.createTime,
+			username: sysOperLog.username,
 		})
 		.from(sysOperLog)
-		.where(and(gte(sysOperLog.createTime, start.toISOString()), lte(sysOperLog.createTime, end.toISOString())))
-		.groupBy(sql`TO_CHAR(${sysOperLog.createTime} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`)
-		.orderBy(sql`TO_CHAR(${sysOperLog.createTime} AT TIME ZONE 'UTC', 'YYYY-MM-DD')`);
+		.where(and(gte(sysOperLog.createTime, start.toISOString()), lte(sysOperLog.createTime, end.toISOString())));
+
+	const dateMap = new Map<string, { pv: number; uv: Set<string> }>();
+	for (const row of rows) {
+		const ds = new Date(row.createTime).toISOString().slice(0, 10);
+		let entry = dateMap.get(ds);
+		if (!entry) {
+			entry = { pv: 0, uv: new Set() };
+			dateMap.set(ds, entry);
+		}
+		entry.pv++;
+		if (row.username) {
+			entry.uv.add(row.username);
+		}
+	}
 
 	// 补全日期范围内无数据的日期
-	const dateMap = new Map(raw.map((r) => [r.date, { pv: r.pv, uv: r.uv }]));
 	const dates: string[] = [];
 	const pvList: number[] = [];
 	const uvList: number[] = [];
@@ -174,7 +185,7 @@ export const getVisitTrend = async (
 		dates.push(ds);
 		const entry = dateMap.get(ds);
 		pvList.push(entry?.pv ?? 0);
-		uvList.push(entry?.uv ?? 0);
+		uvList.push(entry?.uv.size ?? 0);
 		current.setUTCDate(current.getUTCDate() + 1);
 	}
 

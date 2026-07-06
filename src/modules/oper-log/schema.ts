@@ -38,6 +38,7 @@ export const AnalyticsTrendQuery = z
  * title/content/device/browser/os 后端无对应列，留空（前端 optional，JSON 序列化自动省略）。
  */
 export const OperLogResponse = createSelectSchema(sysOperLog)
+	.omit({ userAgent: true, requestParams: true, responseResult: true })
 	.transform((r) => ({
 		/** 日志ID */
 		id: r.id,
