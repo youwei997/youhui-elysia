@@ -105,15 +105,17 @@
 
 | 方法 | 路径 | 权限 | 说明 |
 |---|---|---|---|
-| GET | `/oper-logs/` | `sys:oper-log:query` | 操作日志列表（分页，支持 username/module/status/时间范围搜索） |
-| DELETE | `/oper-logs/:id` | `sys:oper-log:delete` | 删除操作日志（硬删） |
-| POST | `/oper-logs/batch-delete` | `sys:oper-log:delete` | 批量清理操作日志（按 createTime < beforeTime 删除） |
+| GET | `/logs/` | `sys:oper-log:query` | 操作日志列表（分页，支持关键字/模块/状态/时间范围筛选，按 createTime 倒序） |
+| GET | `/logs/analytics/trend` | `sys:oper-log:query` | 访问趋势统计（按日期分组 PV/UV，用于仪表盘折线图） |
+| GET | `/logs/analytics/overview` | `sys:oper-log:query` | 访问概览统计（今日/累计 PV UV + 增长率，用于仪表盘概览卡片） |
 
 **关键设计：**
-- 物理删除（不走软删，定时任务批量清理）
+- 物理删除（不走软删，定时任务批量清理，删除接口待实现）
 - password/token 等敏感字段自动脱敏
 - 大 body 截断（超过 4KB 截断 + `"...truncated"` 标记）
 - 异步落库（`setImmediate`，不阻塞响应）
+- 响应字段映射到前端 LogItem（actionType/operatorId/operatorName/requestUri/requestMethod/executionTime/region）
+- 时间窗口统一 UTC（`getVisitOverview`/`getVisitTrend`/`findOperLogs` 均显式 `Z` 后缀）
 
 ---
 
