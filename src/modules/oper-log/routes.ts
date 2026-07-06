@@ -13,11 +13,8 @@ import {
 	type OperLogResponseInput,
 } from "./schema";
 
-/** 响应转换：id 保持 number，对齐前端 LogItem.id: number */
-const parseLog = (log: OperLogResponseInput) => {
-	const parsed = OperLogResponse.parse(log);
-	return { ...parsed, id: parsed.id };
-};
+/** 响应转换：字段映射在 OperLogResponse.transform 中完成，这里直接 parse */
+const parseLog = (log: OperLogResponseInput) => OperLogResponse.parse(log);
 
 export const operLogRoutes = new Elysia({ prefix: "/api/v1/logs" })
 	.use(authPlugin)
