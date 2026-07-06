@@ -1,16 +1,14 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
-import { ERR_CODE, notFound } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import {
-	deleteOperLogById,
-	deleteOperLogsBefore,
 	findOperLogs,
+	getVisitOverview,
+	getVisitTrend,
 } from "./queries";
 import {
-	OperLogBatchDeleteBody,
+	AnalyticsTrendQuery,
 	OperLogListQuery,
-	OperLogParamsWithId,
 	OperLogResponse,
 	type OperLogResponseInput,
 } from "./schema";
@@ -18,13 +16,10 @@ import {
 /** 响应转换：id 保持 number，对齐前端 LogItem.id: number */
 const parseLog = (log: OperLogResponseInput) => {
 	const parsed = OperLogResponse.parse(log);
-	return {
-		...parsed,
-		id: parsed.id,
-	};
+	return { ...parsed, id: parsed.id };
 };
 
-export const operLogRoutes = new Elysia({ prefix: "/api/v1/oper-logs" })
+export const operLogRoutes = new Elysia({ prefix: "/api/v1/logs" })
 	.use(authPlugin)
 	.get(
 		"/",
@@ -47,40 +42,38 @@ export const operLogRoutes = new Elysia({ prefix: "/api/v1/oper-logs" })
 			},
 		},
 	)
-	.delete(
-		"/:id",
-		async ({ params }) => {
-			const deleted = await deleteOperLogById(params.id, db);
-			if (!deleted) {
-				throw notFound(ERR_CODE.OPER_LOG_NOT_FOUND);
+	.get(
+		"/analytics/trend",
+		async ({ query }) => {
+			const { startDate, endDate } = query;
+			if (!startDate || !endDate) {
+				return { dates: [], pvList: [], uvList: [] };
 			}
-			return true;
+			return getVisitTrend(db, startDate, endDate);
 		},
 		{
 			auth: true,
-			requirePerm: ["sys:oper-log:delete"],
-			params: OperLogParamsWithId,
+			requirePerm: ["sys:oper-log:query"],
+			query: AnalyticsTrendQuery,
 			detail: {
 				tags: ["OperLog"],
-				summary: "删除操作日志（硬删）",
-				description: "操作日志不走软删，DELETE 直接物理删除",
+				summary: "访问趋势统计",
+				description: "按日期返回 PV/UV 列表，用于仪表盘折线图",
 			},
 		},
 	)
-	.post(
-		"/batch-delete",
-		async ({ body }) => {
-			const deletedCount = await deleteOperLogsBefore(body.beforeTime, db);
-			return { count: deletedCount };
+	.get(
+		"/analytics/overview",
+		async () => {
+			return getVisitOverview(db);
 		},
 		{
 			auth: true,
-			requirePerm: ["sys:oper-log:delete"],
-			body: OperLogBatchDeleteBody,
+			requirePerm: ["sys:oper-log:query"],
 			detail: {
 				tags: ["OperLog"],
-				summary: "批量清理操作日志（按时间）",
-				description: "删除 beforeTime 之前的所有日志，用于定时清理任务调用",
+				summary: "访问概览统计",
+				description: "返回今日/累计 PV UV 及增长率，用于仪表盘概览卡片",
 			},
 		},
 	);

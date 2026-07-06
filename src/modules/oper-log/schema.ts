@@ -6,7 +6,7 @@ import { createListQuery } from "@/lib/crud-dto";
 /**
  * 操作日志列表查询参数
  *
- * 与 role/dept 等业务表不同，oper-log 没有软删字段，
+ * 与业务表不同，oper-log 没有软删字段，
  * 不需要 isNull(deleteTime) 过滤，列表查询直接按时间倒序返回。
  */
 export const OperLogListQuery = createListQuery(sysOperLog, {
@@ -18,10 +18,19 @@ export const OperLogListQuery = createListQuery(sysOperLog, {
 }).describe("操作日志列表查询参数");
 
 /**
+ * 趋势统计查询参数
+ */
+export const AnalyticsTrendQuery = z
+	.object({
+		startDate: z.string().describe("起始日期（YYYY-MM-DD）"),
+		endDate: z.string().describe("结束日期（YYYY-MM-DD）"),
+	})
+	.describe("访问趋势查询参数");
+
+/**
  * 操作日志响应 schema
  *
- * 排除无意义的字段（ipRegion 预留暂不返回），
- * id 从 number 转 string 与其他模块保持一致。
+ * 排除无意义的字段（ipRegion 预留暂不返回）。
  */
 export const OperLogResponse = createSelectSchema(sysOperLog)
 	.omit({
@@ -31,15 +40,3 @@ export const OperLogResponse = createSelectSchema(sysOperLog)
 
 /** OperLogResponse.parse 的输入类型 */
 export type OperLogResponseInput = z.input<typeof OperLogResponse>;
-
-/** 操作日志 ID 路径参数 */
-export const OperLogParamsWithId = z
-	.object({ id: z.coerce.number() })
-	.describe("操作日志 ID 路径参数");
-
-/** 批量清理请求体：按时间清理此时间之前的日志 */
-export const OperLogBatchDeleteBody = z
-	.object({
-		beforeTime: z.string().describe("清理此时间之前的日志（ISO 字符串），必传"),
-	})
-	.describe("批量清理操作日志请求体");
