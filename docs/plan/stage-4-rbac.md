@@ -56,7 +56,7 @@
 ### 4.3 Menu 模块 (1d)
 
 `modules/menu/{schema,routes,queries}.ts`：
-- 树形列表（递归构建）：`GET /menus/tree`
+- 树形列表（递归构建）：`GET /menus/`
 - CRUD
 - 校验：parentId 不能形成循环、type=B 必须有 perm
 

@@ -56,8 +56,8 @@ youhui-elysia/
 │   │   │   ├── routes.ts         # Elysia plugin + 路由
 │   │   │   └── queries.ts        # 纯函数 CRUD
 │   │   ├── user/  role/  menu/  dept/  dict/
-│   │   ├── oper-log/  online/
-│   │   └── job/  storage/  codegen/
+│   │   ├── oper-log/  online/  ip-blacklist/  storage/
+│   │   └── job/  codegen/        # ⬜ 规划中，阶段 5.5 / 阶段 6 尚未建立
 │   ├── plugins/                  # 横切关注点 = Elysia plugin
 │   │   ├── error-handler.ts      # onError 全局
 │   │   ├── response-wrap.ts      # onAfterHandle 统一壳
@@ -65,9 +65,12 @@ youhui-elysia/
 │   │   ├── auth.ts               # derive ctx.user
 │   │   ├── permission.ts         # macro: requirePerm/requireRole
 │   │   ├── audit-log.ts          # onAfterHandle 操作日志
-│   │   ├── rate-limit.ts
-│   │   └── i18n.ts               # Accept-Language → 文案映射
+│   │   └── rate-limit.ts
+│   │   # i18n 已跳过，理由见 docs/notes/2026-06-17-后端不做i18n.md
 │   ├── lib/
+│   │   ├── audit-mask.ts         # 操作日志敏感字段脱敏
+│   │   ├── auth-constants.ts     # 登录失败次数/锁定时长等常量
+│   │   ├── cache.ts              # withCache 防缓存击穿
 │   │   ├── captcha.ts            # 验证码生成校验
 │   │   ├── crud-dto.ts           # DTO 工厂（list/create/update）
 │   │   ├── errors.ts             # 错误码 as const + BizError class
@@ -75,12 +78,12 @@ youhui-elysia/
 │   │   ├── login-lock.ts         # Redis 登录锁定
 │   │   ├── logger.ts             # pino
 │   │   ├── pagination.ts         # 通用分页 DTO（零 Drizzle）
-│   │   ├── password.ts           # bcrypt 密码哈希
+│   │   ├── password.ts           # 密码哈希（Bun.password）
 │   │   ├── redis-keys.ts         # Redis 键规约
 │   │   ├── redis.ts              # Redis 客户端包装
 │   │   ├── storage/              # 存储抽象 + drivers
 │   │   └── test/                 # 单元测试
-│   ├── codegen/                  # ⭐ 后端代码生成器
+│   ├── codegen/                  # ⬜ 规划中，阶段 6 尚未建立
 │   │   ├── meta-reader.ts        # 从 information_schema 读
 │   │   ├── templates/            # eta 模板：schema/routes/queries
 │   │   └── generator.ts
@@ -332,7 +335,8 @@ const list = await db.select().from(users).where(where).limit(20);
 - **所有表必须包含 `auditColumns`**（createTime / updateTime / createdBy / updatedBy / deleteTime），事件型表可局部复用（详见 docs/notes/2026-06-29-auditColumns-局部复用案例.md）。
 - **软删用 `deleteTime: timestamp`**，禁用 `is_deleted: boolean`。
 - **不要写 Repository 包装类**——直接用 Drizzle 链式 API，保留类型推导。
-- **复杂查询用 SQL fragment**（`` sql`...` ``），不要拼字符串。
+- **严禁使用 `sql` 模板或原生 SQL 字符串**拼接业务查询；聚合/子查询/批量关联走 Drizzle 类型安全 API 或应用层逻辑（详见 AGENTS.md §4）。
+  例外：`db/helpers/`（tree.ts、data-scope.ts）等结构性 helper 中，Drizzle API 无法表达的 `REPLACE`/正则 `~`/`ILIKE`/`1=0` 短路允许使用 `sql` 模板。
 - **事务必须用 `db.transaction(async tx => ...)`**，禁止裸调用。
 
 ### 4.13 高内聚 低耦合
@@ -352,6 +356,7 @@ const list = await db.select().from(users).where(where).limit(20);
 - **禁止 `class XxxService` 等业务服务类**。
 - **禁止 `as any` / `as never`** 击穿类型推导。
 - **禁止静默吞错**：catch 后只 `console.log` 或 `return null` 是禁忌，必须重抛或转 BizError。
+- **严禁使用 `sql` 模板或原生 SQL 字符串**拼接业务查询（方言耦合，换库即失效），例外见 §4.12。
 
 ### 4.15 测试规范
 
@@ -385,6 +390,7 @@ const list = await db.select().from(users).where(where).limit(20);
 | 字符串错误码 `"A0001"`                               | youlai-boot  | `as const` 字面量联合               |
 | `is_deleted: tinyint`                                | youlai-boot  | `delete_time: timestamp NULL`       |
 | `process.env.XXX` 直接读                             | —            | 走 `src/config/` 的 zod schema      |
+| `` sql`DATE(...)` `` / 原生 SQL 字符串拼接           | —            | Drizzle 类型安全 API 或应用层聚合（例外见 §4.12） |
 
 ## 6. 借鉴清单（要抄的）
 

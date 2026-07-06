@@ -120,14 +120,13 @@
 - `src/modules/oper-log/routes.ts`(新)
 
 **接口**:
-- `GET /oper-logs`(权限 `sys:oper-log:query`):query page / pageSize / username / module / status / startTime / endTime,排序 `createTime DESC`
-- `DELETE /oper-logs/:id`(权限 `sys:oper-log:delete`)
-- `POST /oper-logs/batch-delete`(权限 `sys:oper-log:delete`,body.beforeTime 批量按 `createTime < beforeTime` 清理)
+- `GET /logs/`(权限 `sys:oper-log:query`):query page / pageSize / keywords / module / status / createTime,排序 `createTime DESC`
+- `GET /logs/analytics/trend`(权限 `sys:oper-log:query`):访问趋势统计(按日期分组 PV/UV)
+- `GET /logs/analytics/overview`(权限 `sys:oper-log:query`):访问概览统计(今日/累计 PV UV + 增长率)
 
 **验收**:
-- [x] 列表支持多条件搜索(username 模糊 / module 精确 / status / 时间范围)
-- [x] DELETE 单条生效(硬删)
-- [x] `POST /batch-delete` 批量按时间清理
+- [x] 列表支持多条件搜索(keywords 模糊 / module 精确 / status / 时间范围)
+- [x] 物理删除(不走软删,定时任务批量清理,删除接口未实现)
 - [x] 权限 macro 生效(无 token → 401；403 待权限种子/普通用户补测)
 - [x] 按 `createTime DESC` 返回
 
