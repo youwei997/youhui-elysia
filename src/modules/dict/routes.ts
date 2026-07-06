@@ -81,7 +81,10 @@ export const dictRoutes = new Elysia({ prefix: "/api/v1/dicts" })
 	.get(
 		"/options",
 		async () => {
-			const dicts = await findDicts({ pageNum: 1, pageSize: 1000 }, db);
+			const dicts = await findDicts(
+			{ status: 1, pageNum: 1, pageSize: 1000 },
+			db,
+		);
 			return dicts.list.map((d) => ({ value: d.type, label: d.name }));
 		},
 		{
