@@ -56,7 +56,7 @@ youhui-elysia/
 │   │   │   ├── routes.ts         # Elysia plugin + 路由
 │   │   │   └── queries.ts        # 纯函数 CRUD
 │   │   ├── user/  role/  menu/  dept/  dict/
-│   │   ├── oper-log/  login-log/  online/
+│   │   ├── oper-log/  online/
 │   │   └── job/  storage/  codegen/
 │   ├── plugins/                  # 横切关注点 = Elysia plugin
 │   │   ├── error-handler.ts      # onError 全局

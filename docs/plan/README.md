@@ -28,7 +28,7 @@
 
 
 ### 已实现模块的契约差异
-- **log**：路径 `/logs` vs `/oper-logs`+`/login-logs` + 缺 analytics
+- **log**：路径 `/logs`（包含 analytics/trend 和 analytics/overview），无 login-logs
 - **user**：`findUsers` 已返回 deptName / roleNames；profile / 手机号 / 邮箱 ✅；仍缺导入导出
 - **dict**：✅ 已完全对齐前端契约（14 接口 + remark/dictCode/tagType/options/pagination）
 
