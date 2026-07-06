@@ -1,1 +1,0 @@
-ALTER TABLE "sys_role" ADD COLUMN "remark" varchar(255);

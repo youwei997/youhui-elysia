@@ -1,11 +1,17 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "94191374-7365-44be-aacf-08a63a0924bd",
+  "id": "a8c8dc11-ed99-46e0-8931-f621ec76c61a",
   "prevIds": [
-    "52c1b729-5d1e-40c9-8768-263b6e8fd3ea"
+    "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
+    {
+      "isRlsEnabled": false,
+      "name": "sys_config",
+      "entityType": "tables",
+      "schema": "public"
+    },
     {
       "isRlsEnabled": false,
       "name": "sys_dept",
@@ -83,6 +89,145 @@
       "name": "sys_user",
       "entityType": "tables",
       "schema": "public"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": {
+        "type": "byDefault",
+        "name": "sys_config_id_seq",
+        "increment": "1",
+        "startWith": "1",
+        "minValue": "1",
+        "maxValue": "9223372036854775807",
+        "cache": 1,
+        "cycle": false
+      },
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "config_name",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "config_key",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "varchar(2000)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "config_value",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "''",
+      "generated": null,
+      "identity": null,
+      "name": "remark",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "created_by",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "updated_by",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "deleted_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_config"
     },
     {
       "type": "bigint",
@@ -337,6 +482,19 @@
       "table": "sys_dict_item"
     },
     {
+      "type": "varchar(8)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'N'",
+      "generated": null,
+      "identity": null,
+      "name": "tag_type",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_dict_item"
+    },
+    {
       "type": "bigint",
       "typeSchema": null,
       "notNull": false,
@@ -458,6 +616,19 @@
       "generated": null,
       "identity": null,
       "name": "status",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sys_dict"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "''",
+      "generated": null,
+      "identity": null,
+      "name": "remark",
       "entityType": "columns",
       "schema": "public",
       "table": "sys_dict"
@@ -1787,7 +1958,7 @@
       "table": "sys_user"
     },
     {
-      "type": "varchar(100)",
+      "type": "varchar(255)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -2198,6 +2369,16 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "sys_config_pkey",
+      "schema": "public",
+      "table": "sys_config",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "sys_dept_pkey",
       "schema": "public",
       "table": "sys_dept",
@@ -2303,6 +2484,17 @@
       "entityType": "uniques",
       "schema": "public",
       "table": "sys_dict"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "config_key"
+      ],
+      "nullsNotDistinct": false,
+      "name": "sys_config_config_key_key",
+      "schema": "public",
+      "table": "sys_config",
+      "entityType": "uniques"
     },
     {
       "nameExplicit": false,
