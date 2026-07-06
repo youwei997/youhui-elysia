@@ -37,9 +37,9 @@ export const findOperLogs = async (
 	}
 	if (query.createTime) {
 		const [start, end] = query.createTime;
-		where.push(gte(sysOperLog.createTime, start));
-		// end 是日期字符串（YYYY-MM-DD），延至当天 23:59:59 包含整天
-		where.push(lte(sysOperLog.createTime, `${end} 23:59:59`));
+		// 统一 UTC 比较，与 getVisitOverview/getVisitTrend 保持一致
+		where.push(gte(sysOperLog.createTime, `${start}T00:00:00.000Z`));
+		where.push(lte(sysOperLog.createTime, `${end}T23:59:59.999Z`));
 	}
 
 	const whereClause = where.length > 0 ? and(...where) : undefined;
