@@ -13,6 +13,7 @@
 | 5 · 进阶辅助模块 | ⭐⭐⭐ | 4-5d | 🟡 进行中 | [stage-5-modules.md](./stage-5-modules.md) |
 | 6 · 代码生成器 | ⭐⭐⭐⭐ | 5-6d | ⬜ 未开始 | [stage-6-codegen.md](./stage-6-codegen.md) |
 | 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
+| 8 · 补充模块（计划外新增） | ⭐⭐ | — | 🟡 进行中 | [stage-8-supplement-modules.md](./stage-8-supplement-modules.md) |
 
 > 状态标记：⬜ 未开始 · 🟡 进行中 · ✅ 已完成 · ⚠️ 受阻
 
@@ -29,7 +30,7 @@
 
 ### 已实现模块的契约差异
 - **log**：路径 `/logs`（包含 analytics/trend 和 analytics/overview），无 login-logs
-- **user**：`findUsers` 已返回 deptName / roleNames；profile / 手机号 / 邮箱 ✅；仍缺导入导出
+- **user**：`findUsers` 已返回 deptName / roleNames；profile / 手机号 / 邮箱 ✅（导入导出见 stage-8）
 - **dict**：✅ 已完全对齐前端契约（14 接口 + remark/dictCode/tagType/options/pagination）
 
 ### 阶段 5 计划内未完成子任务
@@ -37,10 +38,7 @@
 - 文件存储 S3 driver（5.4.5，可推迟）
 
 ### 新增模块（项目从未规划过）
-- 个人中心（profile / password / mobile / email） ✅
-- 用户导入导出（template / import / export）
-- 系统配置（sys_config）
-- 通知公告（sys_notice + sys_user_notice）
+详细任务清单、接口契约、验收标准见 [stage-8-supplement-modules.md](./stage-8-supplement-modules.md)。
 
 ### 待确认
 - **tenant / tenant-plan**：前端有完整模块，受 `tenantEnabled` 开关控制。是否启用待定。
@@ -109,4 +107,5 @@ Elysia 范式吃透 █████████ 25%
 [2026-07-04] 阶段 5.3a 接口补齐：新增 5 个接口——GET /options 字典类型下拉、GET /:id/form 表单回填、DELETE /:id 批量删除（合并单条/批量）、GET /:id/items/options 字典项下拉、DELETE /:id/items/:itemId 批量删除（合并单条/批量）。dict 模块接口数从 10 增至 14。
 [2026-07-04] 阶段 5.3a 后续修复：补充 remark 字段（sys_dict.remark + DictCreateBody/DictUpdateBody）、修复 dictCode 修改不生效（updateDict 支持 type 更新 + 唯一性检查）、修复 POST /:id/items 兼容 dictCode 路径参数、修复创建字典时 remark 不传递、补齐 createDictItem/updateDictItem 的 tagType 类型声明。
 [2026-07-04] 阶段 5 契约微调：dept 响应补充 treePath、menu 响应补充 scope、oper-log 响应 id 保持 number 类型，对齐前端类型声明。
+[2026-07-07] 新增阶段 8：把原本散落在本文档"新增模块"一节的计划外补充模块（个人中心/用户导入导出/系统配置/通知公告）集中到 stage-8-supplement-modules.md，含各自接口契约、表结构草案、验收清单，与其他阶段文档结构对齐。本文档该节改为纯链接引用。
 ```
