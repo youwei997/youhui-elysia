@@ -64,10 +64,10 @@ interface ExcelResult {
 **早已确认（实现时决策）**：
 - Excel 库：`xlsx`（已安装）
 - 模板文件：运行时生成
-- 导入校验：用户名和密码必填，超长跳过；重复用户名由 DB 唯一约束报错（`C0342`）；非法行不中断整体导入，收集到 `messageList`
+- 导入校验：用户名和密码必填，超长跳过；重复用户名由逐行 insert 感知，写入 `messageList`；非法行不中断整体导入，收集到 `messageList`
 
 **验收**：
-- [x] 模板下载可用 Excel 打开，字段与 `UserForm` 对应
+- [x] 模板含核心身份字段 7 列（用户名/密码/昵称/性别/手机号/邮箱/状态），部门与角色需导入后界面分配（已知缺口）
 - [x] 导出遵循当前查询参数（keywords/status/deptId）
 - [x] 导入返回 `validCount`/`invalidCount`/`messageList`，非法行不中断整体导入
 - [x] `bun run check` + `bun run tsc` 通过
