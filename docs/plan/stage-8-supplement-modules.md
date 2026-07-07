@@ -72,6 +72,14 @@ interface ExcelResult {
 - [x] 导入返回 `validCount`/`invalidCount`/`messageList`，非法行不中断整体导入
 - [x] `bun run check` + `bun run tsc` 通过
 
+**前端对齐验证**（参照 `vue3-element-admin-v4.6.0`）：
+- 接口契约：3 个接口路径、方法、`responseType: blob` 均与前端 `UserAPI` 一致
+- 模板列：7 列与前端 `UserForm` 字段对应（avatar/remark 不导出，前端同样不包含）
+- 导出列：8 列覆盖前端 `UserItem` 全部业务字段
+- 导入结果：`ExcelResult`（code/validCount/invalidCount/messageList）与前端 `common.ts` 定义完全匹配
+- 编码映射：gender（男=1/女=2/空=0）、status（正常=1/禁用=0）前后端一致
+- 已知差异：前端文件限制 1MB < 后端 50MB（前端校验更严格，不触发后端限制）；导入用户无部门/角色为设计意图
+
 ---
 
 ### 8.3 系统配置 (sys_config) ✅ 已完成

@@ -110,4 +110,5 @@ Elysia 范式吃透 █████████ 25%
 [2026-07-07] 新增阶段 8：把原本散落在本文档"新增模块"一节的计划外补充模块（个人中心/用户导入导出/系统配置/通知公告）集中到 stage-8-supplement-modules.md，含各自接口契约、表结构草案、验收清单，与其他阶段文档结构对齐。本文档该节改为纯链接引用。
 |[2026-07-07] 阶段 8.3 系统配置模块完成。schema + types/errors/redis-keys + zod DTO + queries + 单测 + routes(6接口) + 种子数据 → 端到端验证通过。withCache 不接入（管理端 CRUD）。已提交。
 |[2026-07-07] 阶段 8.2 用户导入导出完成。3 接口（GET /template / GET /export / POST /import），xlsx 库。已提交。
+[2026-07-08] 阶段 8.2 代码清理：移除 as never 类型断言，新增 UserListFilter 类型从 schema 派生；导入改为逐行 insert，within-file 同名不整批回滚；导出补 user 空守卫。对齐 vue3-element-admin-v4.6.0 前端契约验证通过。
 ```
