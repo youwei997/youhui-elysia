@@ -441,12 +441,9 @@ export const importUsers = async (
 		try {
 			await db.insert(sysUser).values(dbValues);
 			created++;
-		} catch (err) {
-			const reason =
-				err && (err as { code?: string }).code === "23505"
-					? "用户名已存在"
-					: "写入失败";
-			messages.push(`第 ${u.rowNum} 行：${reason}`);
+		} catch {
+			// 预校验已保证必填/长度；唯一约束仅 username，故逐行失败即用户名冲突
+			messages.push(`第 ${u.rowNum} 行：用户名已存在`);
 		}
 	}
 	return { created, messages };
