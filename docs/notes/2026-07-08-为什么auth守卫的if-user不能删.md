@@ -28,7 +28,7 @@ const handler = async ({ user }) => {
 };
 ```
 
-实测中这行 `if (!user) throw` 容易被当成"冗余守卫 / 死代码"误删（§4.11 红线语境下），**删了之后 `tsc` 会报一堆 `user.sub` / `user.xxx` 类型错误**。本文解释为什么它必须留着。
+实测中这行 `if (!user) throw` 容易被当成"冗余守卫 / 死代码"误删（§4.14 红线语境下），**删了之后 `tsc` 会报一堆 `user.sub` / `user.xxx` 类型错误**。本文解释为什么它必须留着。
 
 ## 机制：运行时拦截 ≠ 编译期收窄
 
@@ -59,15 +59,15 @@ const handler = async ({ user }) => {
 
 ## 误删的后果（血泪现场）
 
-第四轮 review 时曾把 `/export` 路由的 `if (!user) throw` 当成 §4.11 死代码红线要求删除，结果 `tsc` 在 `user.sub` / `user.xxx` 上炸出一堆类型错误——因为 `beforeHandle` 的运行时拦截并没让 TS 把 `user` 当作非空。删掉 handler 内的守卫 = 同时删掉了唯一的类型收窄手段。
+第四轮 review 时曾把 `/export` 路由的 `if (!user) throw` 当成 §4.14 死代码红线要求删除，结果 `tsc` 在 `user.sub` / `user.xxx` 上炸出一堆类型错误——因为 `beforeHandle` 的运行时拦截并没让 TS 把 `user` 当作非空。删掉 handler 内的守卫 = 同时删掉了唯一的类型收窄手段。
 
-## 与 §4.11 死代码红线的边界
+## 与 §4.14 死代码红线的边界
 
-§4.11 / §4.14 反对的是"auth: true 已保证 user 存在、所以守卫多余"这种**错误前提**下的删除。事实相反：
+§4.14 反对的是"auth: true 已保证 user 存在、所以守卫多余"这种**错误前提**下的删除。事实相反：
 
 - `auth: true` 保证的是**运行时**请求到不了 handler；
 - 但它**不保证编译期** `user` 类型非空；
-- 所以 `if (!user) throw` 是**类型收窄必需品**，不是 §4.11 说的"auth 已保证存在所以冗余的空判断"。
+- 所以 `if (!user) throw` 是**类型收窄必需品**，不是 §4.14 说的"auth 已保证存在所以冗余的空判断"。
 
 判据一句话：**凡是 `auth: true` 路由里用到 `user.sub` / `user.xxx` 的 handler，顶部的 `if (!user) throw` 一律保留，禁止以死代码为由删除。**
 
@@ -75,5 +75,5 @@ const handler = async ({ user }) => {
 
 - `auth` plugin：`derive` 注入可空 `user`（不抛错）+ `auth: true` macro 用 `beforeHandle` 运行时拦截。
 - handler 内 `if (!user) throw` = 类型收窄，必须保留，不是死代码。
-- 不要把"运行时拦截"和"编译期收窄"混为一谈，也不要用 §4.11 红线去删它。
+- 不要把"运行时拦截"和"编译期收窄"混为一谈，也不要用 §4.14 红线去删它。
 - 若需要测试"未登录被拦截"，应验证 `beforeHandle` 抛 401，而非在 handler 里依赖那个守卫做业务逻辑（守卫只负责收窄类型 + 兜底，真正的门卫在 macro）。
