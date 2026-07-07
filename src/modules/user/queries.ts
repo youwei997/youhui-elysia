@@ -423,26 +423,33 @@ export const exportUsers = async (
 	}));
 };
 
-/** 批量创建用户（导入用，密码已由调用方哈希，不创建角色关联） */
+/** 逐行创建用户（导入用，密码已由调用方哈希）。逐行 insert 而非批量，
+ * 使得 within-file 同名用户不会导致整批回滚，非法行写入 messageList。 */
 export const importUsers = async (
 	users: Array<{
 		username: string;
-		nickname?: string | undefined;
 		password: string;
+		nickname?: string | undefined;
 		gender?: number | undefined;
 		status?: number | undefined;
 		mobile?: string | undefined;
 		email?: string | undefined;
-		deptId?: number | undefined;
 	}>,
 	db: DB,
-): Promise<number> => {
-	if (users.length === 0) return 0;
-	const result = await db
-		.insert(sysUser)
-		.values(users)
-		.returning({ id: sysUser.id });
-	return result.length;
+): Promise<{ created: number; messages: string[] }> => {
+	let created = 0;
+	const messages: string[] = [];
+	for (const u of users) {
+		try {
+			await db.insert(sysUser).values(u);
+			created++;
+		} catch (err) {
+			messages.push(
+				`第 ${created + messages.length + 2} 行：${(err as Error)?.message ?? "写入失败"}`,
+			);
+		}
+	}
+	return { created, messages };
 };
 
 /** 更新手机号 */

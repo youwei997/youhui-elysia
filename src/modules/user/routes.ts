@@ -616,9 +616,15 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				});
 			}
 
-			const created = await importUsers(valid as never, db).catch(() => 0);
-			const invalidCount = rawRows.length - valid.length;
-			return { validCount: created, invalidCount, messageList: messages };
+			const { created, messages: importMessages } = await importUsers(
+				valid as never,
+				db,
+			);
+			return {
+				validCount: created,
+				invalidCount: rawRows.length - valid.length,
+				messageList: [...messages, ...importMessages],
+			};
 		},
 		{
 			auth: true,
