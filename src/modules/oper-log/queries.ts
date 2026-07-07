@@ -1,4 +1,15 @@
-import { and, count, countDistinct, desc, eq, gte, like, lt, lte, or } from "drizzle-orm";
+import {
+	and,
+	count,
+	countDistinct,
+	desc,
+	eq,
+	gte,
+	like,
+	lt,
+	lte,
+	or,
+} from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { escapeLike } from "@/db/helpers/like";
 import { sysOperLog } from "@/db/schema/system/oper-log";
@@ -82,7 +93,9 @@ export const getVisitOverview = async (
 }> => {
 	const now = new Date();
 	// 以 UTC 零点对齐"今日"窗口
-	const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+	const todayStart = new Date(
+		Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+	);
 	const todayEnd = new Date(todayStart.getTime() + 86_400_000);
 	const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
 	const yesterdayEnd = todayStart;
@@ -94,7 +107,12 @@ export const getVisitOverview = async (
 			uv: countDistinct(sysOperLog.username),
 		})
 		.from(sysOperLog)
-		.where(and(gte(sysOperLog.createTime, todayStart.toISOString()), lt(sysOperLog.createTime, todayEnd.toISOString())));
+		.where(
+			and(
+				gte(sysOperLog.createTime, todayStart.toISOString()),
+				lt(sysOperLog.createTime, todayEnd.toISOString()),
+			),
+		);
 
 	// 累计 PV/UV
 	const totalStats = await db
@@ -128,10 +146,16 @@ export const getVisitOverview = async (
 	return {
 		todayUvCount: todayUv,
 		totalUvCount: totalUv,
-		uvGrowthRate: yesterdayUv > 0 ? Math.round((todayUv - yesterdayUv) / yesterdayUv * 100) : null,
+		uvGrowthRate:
+			yesterdayUv > 0
+				? Math.round(((todayUv - yesterdayUv) / yesterdayUv) * 100)
+				: null,
 		todayPvCount: todayPv,
 		totalPvCount: totalPv,
-		pvGrowthRate: yesterdayPv > 0 ? Math.round((todayPv - yesterdayPv) / yesterdayPv * 100) : null,
+		pvGrowthRate:
+			yesterdayPv > 0
+				? Math.round(((todayPv - yesterdayPv) / yesterdayPv) * 100)
+				: null,
 	};
 };
 
@@ -157,7 +181,12 @@ export const getVisitTrend = async (
 			username: sysOperLog.username,
 		})
 		.from(sysOperLog)
-		.where(and(gte(sysOperLog.createTime, start.toISOString()), lte(sysOperLog.createTime, end.toISOString())));
+		.where(
+			and(
+				gte(sysOperLog.createTime, start.toISOString()),
+				lte(sysOperLog.createTime, end.toISOString()),
+			),
+		);
 
 	const dateMap = new Map<string, { pv: number; uv: Set<string> }>();
 	for (const row of rows) {
@@ -191,4 +220,3 @@ export const getVisitTrend = async (
 
 	return { dates, pvList, uvList };
 };
-

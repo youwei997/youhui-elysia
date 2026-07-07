@@ -12,7 +12,7 @@ export const findConfigs = async (
 	query: {
 		pageNum: number;
 		pageSize: number;
-		keywords?: string;
+		keywords?: string | undefined;
 	},
 	db: DB,
 ): Promise<PageResult<ConfigRecord>> => {
@@ -69,7 +69,9 @@ export const findConfigByKey = async (
 	const [config] = await db
 		.select()
 		.from(sysConfig)
-		.where(and(eq(sysConfig.configKey, configKey), isNull(sysConfig.deleteTime)));
+		.where(
+			and(eq(sysConfig.configKey, configKey), isNull(sysConfig.deleteTime)),
+		);
 	return config;
 };
 
@@ -130,4 +132,3 @@ export const softDeleteConfig = async (
 		.where(and(eq(sysConfig.id, id), isNull(sysConfig.deleteTime)));
 	return true;
 };
-

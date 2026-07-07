@@ -1,11 +1,7 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { authPlugin } from "@/plugins/auth";
-import {
-	findOperLogs,
-	getVisitOverview,
-	getVisitTrend,
-} from "./queries";
+import { findOperLogs, getVisitOverview, getVisitTrend } from "./queries";
 import {
 	AnalyticsTrendQuery,
 	OperLogListQuery,

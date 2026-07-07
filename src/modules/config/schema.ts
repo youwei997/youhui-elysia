@@ -7,7 +7,10 @@ import { pageFields } from "@/lib/pagination";
 export const ConfigListQuery = z
 	.object({
 		...pageFields,
-		keywords: z.string().optional().describe("搜索关键词（模糊匹配 configName/configKey）"),
+		keywords: z
+			.string()
+			.optional()
+			.describe("搜索关键词（模糊匹配 configName/configKey）"),
 	})
 	.describe("配置列表查询参数");
 

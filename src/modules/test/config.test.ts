@@ -109,11 +109,7 @@ describe("config 模块查询", () => {
 	test("updateConfig 修改 configKey 时检查重复", async () => {
 		let threw = false;
 		try {
-			await updateConfig(
-				TEST_CONFIG_ID,
-				{ configKey: "site.title.dup" },
-				db,
-			);
+			await updateConfig(TEST_CONFIG_ID, { configKey: "site.title.dup" }, db);
 		} catch (e) {
 			threw = true;
 			expect((e as Error).message).toBe("CONFIG_KEY_DUPLICATE");

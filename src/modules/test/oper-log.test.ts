@@ -102,7 +102,9 @@ describe("oper-log 模块", () => {
 		);
 		expect(res.status).toBe(200);
 
-		const json = await res.json() as { data: { list: Array<{ createTime: string }>; total: number } };
+		const json = (await res.json()) as {
+			data: { list: Array<{ createTime: string }>; total: number };
+		};
 		expect(json.data.list.length).toBe(seedData.length);
 		expect(json.data.total).toBe(seedData.length);
 
@@ -137,7 +139,9 @@ describe("oper-log 模块", () => {
 		);
 		expect(res.status).toBe(200);
 
-		const json = await res.json() as { data: { list: Array<{ status: number }>; total: number } };
+		const json = (await res.json()) as {
+			data: { list: Array<{ status: number }>; total: number };
+		};
 		expect(json.data.total).toBe(1);
 		expect(json.data.list[0]?.status).toBe(0);
 	});
@@ -149,7 +153,7 @@ describe("oper-log 模块", () => {
 		);
 		expect(res.status).toBe(200);
 
-		const json = await res.json() as { data: { total: number } };
+		const json = (await res.json()) as { data: { total: number } };
 		// 7月5日有 2 条记录（create + update）
 		expect(json.data.total).toBe(2);
 	});
@@ -161,7 +165,7 @@ describe("oper-log 模块", () => {
 		);
 		expect(res.status).toBe(200);
 
-		const json = await res.json() as {
+		const json = (await res.json()) as {
 			data: {
 				list: Array<Record<string, unknown>>;
 			};
@@ -218,7 +222,13 @@ describe("oper-log 模块", () => {
 		expect(typeof json.data.todayUvCount).toBe("number");
 		expect(typeof json.data.totalPvCount).toBe("number");
 		expect(json.data.totalPvCount).toBeGreaterThanOrEqual(seedData.length);
-		expect(json.data.pvGrowthRate === null || typeof json.data.pvGrowthRate === "number").toBe(true);
-		expect(json.data.uvGrowthRate === null || typeof json.data.uvGrowthRate === "number").toBe(true);
+		expect(
+			json.data.pvGrowthRate === null ||
+				typeof json.data.pvGrowthRate === "number",
+		).toBe(true);
+		expect(
+			json.data.uvGrowthRate === null ||
+				typeof json.data.uvGrowthRate === "number",
+		).toBe(true);
 	});
 });
