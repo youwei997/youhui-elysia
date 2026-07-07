@@ -380,6 +380,71 @@ export const updateUserPassword = async (
 	return updated;
 };
 
+/** 导出用户列表（按查询参数，返回所有匹配用户） */
+export const exportUsers = async (
+	query: {
+		keywords?: string;
+		status?: number;
+		deptId?: number;
+	},
+	ctx: DataScopeContext,
+	db: DB,
+): Promise<UserListRecord[]> => {
+	const where = [isNull(sysUser.deleteTime)];
+	if (query.keywords) {
+		const kw = or(
+			like(sysUser.username, `%${escapeLike(query.keywords)}%`),
+			like(sysUser.nickname, `%${escapeLike(query.keywords)}%`),
+		);
+		if (kw) where.push(kw);
+	}
+	if (query.status !== undefined) {
+		where.push(eq(sysUser.status, query.status));
+	}
+	if (query.deptId !== undefined) {
+		where.push(eq(sysUser.deptId, query.deptId));
+	}
+	const scopeFilter = dataScopeFilter(ctx, { user: sysUser, dept: sysDept });
+	if (scopeFilter) where.push(scopeFilter);
+
+	const list = await db
+		.select({ ...getColumns(sysUser), deptName: sysDept.name })
+		.from(sysUser)
+		.leftJoin(sysDept, eq(sysUser.deptId, sysDept.id))
+		.where(and(...where));
+
+	const roleNameMap = await batchFindUserRoleNames(
+		list.map((u) => u.id),
+		db,
+	);
+	return list.map((u) => ({
+		...u,
+		roleNames: roleNameMap.get(u.id) ?? null,
+	}));
+};
+
+/** 批量创建用户（导入用，密码已由调用方哈希，不创建角色关联） */
+export const importUsers = async (
+	users: Array<{
+		username: string;
+		nickname?: string | undefined;
+		password: string;
+		gender?: number | undefined;
+		status?: number | undefined;
+		mobile?: string | undefined;
+		email?: string | undefined;
+		deptId?: number | undefined;
+	}>,
+	db: DB,
+): Promise<number> => {
+	if (users.length === 0) return 0;
+	const result = await db
+		.insert(sysUser)
+		.values(users)
+		.returning({ id: sysUser.id });
+	return result.length;
+};
+
 /** 更新手机号 */
 export const updateUserMobile = async (
 	userId: number,

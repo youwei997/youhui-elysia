@@ -1,4 +1,5 @@
-import { Elysia } from "elysia";
+import { Elysia, t } from "elysia";
+import * as XLSX from "xlsx";
 import { db } from "@/db/client";
 import { buildDataScopeContext } from "@/db/helpers/data-scope";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
@@ -8,11 +9,13 @@ import { authPlugin } from "@/plugins/auth";
 import {
 	batchSoftDeleteUsers,
 	createUser,
+	exportUsers,
 	findUserById,
 	findUserFormData,
 	findUserOptions,
 	findUserProfileDetail,
 	findUsers,
+	importUsers,
 	resetUserPassword,
 	softDeleteUser,
 	updateUser,
@@ -474,6 +477,159 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				summary: "删除用户（软删，支持批量）",
 				description:
 					"单条：DELETE /api/v1/users/1；批量：DELETE /api/v1/users/1,2,3",
+			},
+		},
+	)
+	// ── 导入导出 ──
+	.get(
+		"/template",
+		async () => {
+			const wb = XLSX.utils.book_new();
+			const ws = XLSX.utils.aoa_to_sheet([
+				["用户名", "昵称", "密码", "性别", "手机号", "邮箱", "状态"],
+				[
+					"zhangsan",
+					"张三",
+					"123456",
+					"男",
+					"18812345678",
+					"zhangsan@test.com",
+					"正常",
+				],
+			]);
+			XLSX.utils.book_append_sheet(wb, ws, "用户数据");
+			const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+			return new Response(buf, {
+				headers: {
+					"Content-Type":
+						"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+					"Content-Disposition": 'attachment; filename="user-template.xlsx"',
+				},
+			});
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:user:import"],
+			detail: {
+				tags: ["User"],
+				summary: "下载用户导入模板",
+				description: "返回 xlsx 文件，含表头行和示例数据",
+			},
+		},
+	)
+	.get(
+		"/export",
+		async ({ user, query }) => {
+			if (!user)
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			const dataScopeCtx = await buildDataScopeContext(
+				Number(user.sub),
+				user.dataScopes,
+				db,
+			);
+			// ponytail: export ignores pagination, uses same filter params as list
+			const users = await exportUsers(query as never, dataScopeCtx, db);
+			const ws = XLSX.utils.json_to_sheet(
+				users.map((u) => ({
+					用户名: u.username,
+					昵称: u.nickname ?? "",
+					性别: u.gender === 1 ? "男" : u.gender === 2 ? "女" : "保密",
+					手机号: u.mobile ?? "",
+					邮箱: u.email ?? "",
+					状态: u.status === 1 ? "正常" : "禁用",
+					部门: u.deptName ?? "",
+					角色: u.roleNames ?? "",
+				})),
+			);
+			const wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "用户数据");
+			const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+			return new Response(buf, {
+				headers: {
+					"Content-Type":
+						"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+					"Content-Disposition": 'attachment; filename="users.xlsx"',
+				},
+			});
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:user:list"],
+			query: UserListQuery,
+			detail: {
+				tags: ["User"],
+				summary: "导出用户列表",
+				description: "按当前查询条件导出用户数据为 xlsx 文件",
+			},
+		},
+	)
+	.post(
+		"/import",
+		async ({ body }) => {
+			const file = body.file;
+			// ponytail: expect Buffer from multipart, 50MB ceiling from storage matches
+			const buf = Buffer.from(await file.arrayBuffer());
+			const wb = XLSX.read(buf, { type: "buffer" });
+			const name = wb.SheetNames[0];
+			if (!name)
+				throw new BizError(
+					ERR_CODE.USER_REQUEST_PARAMETER_ERROR,
+					"文件无工作表",
+				);
+			const ws = wb.Sheets[name]!;
+			const rawRows: Record<string, string>[] = XLSX.utils.sheet_to_json(ws);
+			if (rawRows.length === 0)
+				throw new BizError(
+					ERR_CODE.USER_REQUEST_PARAMETER_ERROR,
+					"文件无有效数据",
+				);
+
+			const valid: Array<Record<string, unknown>> = [];
+			const messages: string[] = [];
+			for (const r of rawRows) {
+				const rowNum = valid.length + messages.length + 2;
+				if (!r["用户名"] || !r["密码"]) {
+					messages.push(`第 ${rowNum} 行：用户名和密码为必填项`);
+					continue;
+				}
+				const uname = String(r["用户名"]);
+				const pwd = String(r["密码"]);
+				if (uname.length > 64 || pwd.length > 255) {
+					messages.push(`第 ${rowNum} 行：用户名或密码超长`);
+					continue;
+				}
+				// ponytail: hash per-row in loop, acceptable for import batch
+				const hashed = await Bun.password.hash(pwd);
+				const nickname = r["昵称"] ? String(r["昵称"]) : undefined;
+				const mobile = r["手机号"] ? String(r["手机号"]) : undefined;
+				const email = r["邮箱"] ? String(r["邮箱"]) : undefined;
+				const gender = r["性别"] === "男" ? 1 : r["性别"] === "女" ? 2 : 0;
+				const status = r["状态"] === "禁用" ? 0 : 1;
+				valid.push({
+					username: uname,
+					password: hashed,
+					nickname,
+					gender,
+					status,
+					mobile,
+					email,
+				});
+			}
+
+			const created = await importUsers(valid as never, db);
+			const invalidCount = rawRows.length - valid.length;
+			return { validCount: created, invalidCount, messageList: messages };
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:user:import"],
+			audit: "user:import",
+			body: t.Object({ file: t.File({ maxSize: 50 * 1024 * 1024 }) }),
+			detail: {
+				tags: ["User"],
+				summary: "导入用户",
+				description:
+					"上传 xlsx 文件批量创建用户，返回 validCount / invalidCount / messageList",
 			},
 		},
 	);
