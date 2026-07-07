@@ -622,7 +622,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			);
 			return {
 				validCount: created,
-				invalidCount: rawRows.length - valid.length,
+				invalidCount: rawRows.length - created,
 				messageList: [...messages, ...importMessages],
 			};
 		},
