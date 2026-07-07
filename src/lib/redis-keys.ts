@@ -61,18 +61,7 @@ export const redisKeys = {
 		return `dict:${type}`;
 	},
 
-	/**
-	 * 系统配置缓存
-	 * withCache 写入，configKey 维度；写操作（增改删/手动刷新）时主动失效
-	 */
-	configCache: (configKey: string): string => {
-		return `config:${configKey}`;
-	},
-
-	/**
-	 * 限流计数器：按 IP + 路由隔离
-	 * 每次请求 +1，超限返回 429
-	 */
+	/** 限流计数器：按 IP + 路由隔离，超限返回 429 */
 	rateLimit: (ip: string, path: string): string => {
 		return `ratelimit:${ip}:${path}`;
 	},

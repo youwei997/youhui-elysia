@@ -74,7 +74,7 @@ interface ExcelResult {
 
 ---
 
-### 8.3 系统配置 (sys_config) ⬜ 未开始
+### 8.3 系统配置 (sys_config) ✅ 已完成
 
 **前端契约**（`src/api/system/config/`）：
 - `GET /configs`：分页
@@ -87,16 +87,18 @@ interface ExcelResult {
 **表结构（草案）**：`sys_config`
 - `id` / `configName` / `configKey`（唯一索引）/ `configValue` / `remark` + `auditColumns`（软删）
 
-**涉及文件（待建）**：`src/db/schema/system/config.ts` + `src/modules/config/{schema,queries,routes}.ts`
+**涉及文件（已建）**：`src/db/schema/system/config.ts` + `src/modules/config/{schema,queries,routes,types}.ts` + `src/modules/test/config.test.ts`
 
-**关键设计点（待落实）**：
-- `configKey` 唯一性校验（新增/更新时）
-- 是否复用 `withCache`（`lib/cache.ts`）做读缓存，`PUT /configs/refresh` 主动失效
+**关键设计点**：
+- `configKey` 唯一性校验（新增/更新时）✅
+- `withCache` ❌ 不接入——6 个接口均为管理端 CRUD（有 auth+perm），低频操作不值得缓存层；`PUT /configs/refresh` 保留作前端契约占位，当前为 no-op
 
 **验收**：
-- [ ] 5 个 CRUD 接口 + 1 个刷新接口对齐前端契约
-- [ ] configKey 唯一性冲突返回明确错误码
-- [ ] `bun run check` + `bun run tsc` 通过
+- [x] 5 个 CRUD 接口 + 1 个刷新接口对齐前端契约
+- [x] configKey 唯一性冲突返回 `A0481`
+- [x] `bun run check` + `bun run tsc` 通过
+- [x] 单测 `config.test.ts` 5 例 PASS
+- [x] 种子数据：菜单 260 + 按钮 2601-2604，已挂 ADMIN 角色
 
 ---
 
@@ -135,7 +137,7 @@ interface ExcelResult {
 
 - [x] 8.1 个人中心
 - [ ] 8.2 用户导入导出
-- [ ] 8.3 系统配置
+- [x] 8.3 系统配置
 - [ ] 8.4 通知公告
 
 ## 本阶段收获（完成后填写）
