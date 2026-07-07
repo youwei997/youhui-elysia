@@ -528,7 +528,15 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				db,
 			);
 			// ponytail: export ignores pagination, uses same filter params as list
-			const users = await exportUsers(query as never, dataScopeCtx, db);
+			const users = await exportUsers(
+				{
+					keywords: query.keywords,
+					status: query.status,
+					deptId: query.deptId,
+				},
+				dataScopeCtx,
+				db,
+			);
 			const ws = XLSX.utils.json_to_sheet(
 				users.map((u) => ({
 					用户名: u.username,
@@ -584,7 +592,15 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 					"文件无有效数据",
 				);
 
-			const valid: Array<Record<string, unknown>> = [];
+			const valid: Array<{
+				username: string;
+				password: string;
+				nickname?: string | undefined;
+				gender?: number | undefined;
+				status?: number | undefined;
+				mobile?: string | undefined;
+				email?: string | undefined;
+			}> = [];
 			const messages: string[] = [];
 			for (const r of rawRows) {
 				const rowNum = valid.length + messages.length + 2;
@@ -617,7 +633,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			}
 
 			const { created, messages: importMessages } = await importUsers(
-				valid as never,
+				valid,
 				db,
 			);
 			return {
