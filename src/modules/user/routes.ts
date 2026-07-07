@@ -6,6 +6,7 @@ import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { verifyPassword } from "@/lib/password";
 import { findUserPerms, findUserRoles } from "@/modules/auth/queries";
 import type { UserListFilter } from "@/modules/user/schema";
+import type { UserImportRow } from "@/modules/user/types";
 import { authPlugin } from "@/plugins/auth";
 import {
 	batchSoftDeleteUsers,
@@ -113,7 +114,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			const userId = Number(user.sub);
 			const updated = await updateUserProfile(userId, body, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return { ...UserResponse.parse(updated), id: String(updated.id) };
+			return parseUser(updated);
 		},
 		{
 			auth: true,
@@ -177,7 +178,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const updated = await updateUserMobile(userId, body.mobile, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return { ...UserResponse.parse(updated), id: String(updated.id) };
+			return parseUser(updated);
 		},
 		{
 			auth: true,
@@ -206,7 +207,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const updated = await updateUserMobile(userId, null, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return { ...UserResponse.parse(updated), id: String(updated.id) };
+			return parseUser(updated);
 		},
 		{
 			auth: true,
@@ -250,7 +251,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const updated = await updateUserEmail(userId, body.email, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return { ...UserResponse.parse(updated), id: String(updated.id) };
+			return parseUser(updated);
 		},
 		{
 			auth: true,
@@ -279,7 +280,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const updated = await updateUserEmail(userId, null, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return { ...UserResponse.parse(updated), id: String(updated.id) };
+			return parseUser(updated);
 		},
 		{
 			auth: true,
@@ -598,16 +599,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 					"文件无有效数据",
 				);
 
-			const valid: Array<{
-				username: string;
-				password: string;
-				rowNum: number;
-				nickname?: string | undefined;
-				gender?: number | undefined;
-				status?: number | undefined;
-				mobile?: string | undefined;
-				email?: string | undefined;
-			}> = [];
+			const valid: UserImportRow[] = [];
 			const messages: string[] = [];
 			for (const r of rawRows) {
 				const rowNum = valid.length + messages.length + 2;

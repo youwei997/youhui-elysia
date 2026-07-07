@@ -18,3 +18,37 @@ export type UserListRecord = UserRecord & {
 export type UserFormData = UserRecord & {
 	roleIds: number[];
 };
+
+/**
+ * 导入用户的单行数据
+ * routes 预校验后组装 → importUsers 入参，两处共用（rowNum 仅用于错误定位，入库前剥离）。
+ */
+export type UserImportRow = {
+	username: string;
+	password: string;
+	rowNum: number;
+	nickname?: string | undefined;
+	gender?: number | undefined;
+	status?: number | undefined;
+	mobile?: string | undefined;
+	email?: string | undefined;
+};
+
+/**
+ * 个人中心详情：从 UserRecord 取展示字段 + 部门名/角色名聚合。
+ * 用 Pick 派生而非重列字段，字段类型与表定义保持同步。
+ */
+export type UserProfileDetail = Pick<
+	UserRecord,
+	| "id"
+	| "username"
+	| "nickname"
+	| "avatar"
+	| "gender"
+	| "mobile"
+	| "email"
+	| "createTime"
+> & {
+	deptName: string | null;
+	roleNames: string | null;
+};

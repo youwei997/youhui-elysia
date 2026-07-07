@@ -23,7 +23,13 @@ import { incrementTokenVersion } from "@/lib/login-lock";
 import type { PageResult } from "@/lib/pagination";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import type { UserCreateBody, UserListFilter, UserUpdateBody } from "./schema";
-import type { UserFormData, UserListRecord, UserRecord } from "./types";
+import type {
+	UserFormData,
+	UserImportRow,
+	UserListRecord,
+	UserProfileDetail,
+	UserRecord,
+} from "./types";
 
 /**
  * 批量查询用户角色名
@@ -276,21 +282,7 @@ export const resetUserPassword = async (
 export const findUserProfileDetail = async (
 	userId: number,
 	db: DB,
-): Promise<
-	| {
-			id: number;
-			username: string;
-			nickname: string | null;
-			avatar: string | null;
-			gender: number | null;
-			mobile: string | null;
-			email: string | null;
-			deptName: string | null;
-			roleNames: string | null;
-			createTime: string | null;
-	  }
-	| undefined
-> => {
+): Promise<UserProfileDetail | undefined> => {
 	const user = await findUserById(userId, db);
 	if (!user) return undefined;
 
@@ -422,16 +414,7 @@ export const exportUsers = async (
 /** 逐行创建用户（导入用，密码已由调用方哈希）。逐行 insert 而非批量，
  * 使得 within-file 同名用户不会导致整批回滚，非法行写入 messageList。 */
 export const importUsers = async (
-	users: Array<{
-		username: string;
-		password: string;
-		rowNum: number;
-		nickname?: string | undefined;
-		gender?: number | undefined;
-		status?: number | undefined;
-		mobile?: string | undefined;
-		email?: string | undefined;
-	}>,
+	users: UserImportRow[],
 	db: DB,
 ): Promise<{ created: number; messages: string[] }> => {
 	let created = 0;
