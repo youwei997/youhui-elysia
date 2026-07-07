@@ -23,6 +23,7 @@ export const findConfigs = async (
 			like(sysConfig.configName, `%${escapeLike(query.keywords)}%`),
 			like(sysConfig.configKey, `%${escapeLike(query.keywords)}%`),
 		);
+		// drizzle 的 or(...) 这里会被推成 SQL | undefined，需要先收窄类型再 push
 		if (kwCond) where.push(kwCond);
 	}
 
@@ -129,3 +130,4 @@ export const softDeleteConfig = async (
 		.where(and(eq(sysConfig.id, id), isNull(sysConfig.deleteTime)));
 	return true;
 };
+
