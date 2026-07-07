@@ -520,21 +520,16 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.get(
 		"/export",
 		async ({ user, query }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
 			const dataScopeCtx = await buildDataScopeContext(
 				Number(user.sub),
 				user.dataScopes,
 				db,
 			);
 			// ponytail: export ignores pagination, uses same filter params as list
-			const users = await exportUsers(
-				{
-					keywords: query.keywords,
-					status: query.status,
-					deptId: query.deptId,
-				},
-				dataScopeCtx,
-				db,
-			);
+			const users = await exportUsers(query as never, dataScopeCtx, db);
 			const ws = XLSX.utils.json_to_sheet(
 				users.map((u) => ({
 					用户名: u.username,
@@ -582,7 +577,12 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 					ERR_CODE.USER_REQUEST_PARAMETER_ERROR,
 					"文件无工作表",
 				);
-			const ws = wb.Sheets[name]!;
+			const ws = wb.Sheets[name];
+			if (!ws)
+				throw new BizError(
+					ERR_CODE.USER_REQUEST_PARAMETER_ERROR,
+					"工作表数据异常",
+				);
 			const rawRows: Record<string, string>[] = XLSX.utils.sheet_to_json(ws);
 			if (rawRows.length === 0)
 				throw new BizError(
