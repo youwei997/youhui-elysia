@@ -520,8 +520,6 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	.get(
 		"/export",
 		async ({ user, query }) => {
-			if (!user)
-				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			const dataScopeCtx = await buildDataScopeContext(
 				Number(user.sub),
 				user.dataScopes,
@@ -595,6 +593,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			const valid: Array<{
 				username: string;
 				password: string;
+				rowNum: number;
 				nickname?: string | undefined;
 				gender?: number | undefined;
 				status?: number | undefined;
@@ -624,6 +623,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				valid.push({
 					username: uname,
 					password: hashed,
+					rowNum,
 					nickname,
 					gender,
 					status,
