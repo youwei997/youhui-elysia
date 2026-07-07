@@ -38,7 +38,7 @@ export const findDicts = async (
 	}
 
 	// where 为空时传 undefined，Drizzle 会跳过 WHERE 子句
-	const whereClause = where.length > 0 ? and(...where) : undefined;
+	const whereClause = and(...where);
 
 	const list = await db
 		.select()
@@ -190,7 +190,7 @@ export const findDictItems = async (
 	}
 
 	// where 为空时传 undefined，Drizzle 会跳过 WHERE 子句
-	const whereClause = where.length > 0 ? and(...where) : undefined;
+	const whereClause = and(...where);
 
 	const list = await db
 		.select()
@@ -323,3 +323,4 @@ export const findDictItemByDictIdAndValue = async (
 		);
 	return item;
 };
+

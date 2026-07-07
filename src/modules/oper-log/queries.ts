@@ -42,7 +42,7 @@ export const findOperLogs = async (
 		where.push(lte(sysOperLog.createTime, `${end}T23:59:59.999Z`));
 	}
 
-	const whereClause = where.length > 0 ? and(...where) : undefined;
+	const whereClause = and(...where);
 
 	const list = await db
 		.select()
@@ -191,3 +191,4 @@ export const getVisitTrend = async (
 
 	return { dates, pvList, uvList };
 };
+

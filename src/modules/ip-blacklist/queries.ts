@@ -18,7 +18,7 @@ export const findIpBlacklists = async (
 		where.push(like(sysIpBlacklist.ip, `%${escapeLike(query.ip)}%`));
 	}
 
-	const whereClause = where.length > 0 ? and(...where) : undefined;
+	const whereClause = and(...where);
 
 	const list = await db
 		.select()
@@ -89,3 +89,4 @@ export const removeIpFromBlacklist = async (
 	}
 	return item;
 };
+
