@@ -2,6 +2,7 @@ import { openapi } from "@elysia/openapi";
 import { staticPlugin } from "@elysia/static";
 import { Elysia } from "elysia";
 import { authRoutes } from "@/modules/auth/routes";
+import { configRoutes } from "@/modules/config/routes";
 import { deptRoutes } from "@/modules/dept/routes";
 import { dictRoutes } from "@/modules/dict/routes";
 import { ipBlacklistRoutes } from "@/modules/ip-blacklist/routes";
@@ -43,6 +44,7 @@ export const app = new Elysia()
 					{ name: "OperLog", description: "操作日志" },
 					{ name: "Online", description: "在线用户" },
 					{ name: "Dict", description: "字典管理" },
+					{ name: "Config", description: "系统配置" },
 					{ name: "File", description: "文件存储" },
 					{ name: "IpBlacklist", description: "IP 黑名单" },
 				],
@@ -77,6 +79,7 @@ export const app = new Elysia()
 	.use(operLogRoutes)
 	.use(onlineRoutes)
 	.use(dictRoutes)
+	.use(configRoutes)
 	.use(ipBlacklistRoutes)
 	.use(storageRoutes)
 	.get("/", () => "Hello Elysia");

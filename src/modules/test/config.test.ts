@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { eq, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { sysConfig } from "@/db/schema/system/config";
+import { BizError } from "@/lib/errors";
 import {
 	createConfig,
 	findConfigById,
@@ -107,14 +108,14 @@ describe("config 模块查询", () => {
 	});
 
 	test("updateConfig 修改 configKey 时检查重复", async () => {
-		let threw = false;
+		let error: unknown;
 		try {
 			await updateConfig(TEST_CONFIG_ID, { configKey: "site.title.dup" }, db);
 		} catch (e) {
-			threw = true;
-			expect((e as Error).message).toBe("CONFIG_KEY_DUPLICATE");
+			error = e;
 		}
-		expect(threw).toBe(true);
+		expect(error).toBeInstanceOf(BizError);
+		expect((error as BizError).code).toBe("A0481");
 	});
 
 	test("softDeleteConfig 软删后不可再查到", async () => {

@@ -2,6 +2,7 @@ import { and, asc, count, eq, isNull, like, or } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { escapeLike } from "@/db/helpers/like";
 import { sysConfig } from "@/db/schema/system/config";
+import { BizError, ERR_CODE } from "@/lib/errors";
 import type { PageResult } from "@/lib/pagination";
 import type { ConfigRecord } from "./types";
 
@@ -107,7 +108,7 @@ export const updateConfig = async (
 	if (data.configKey) {
 		const existing = await findConfigByKey(data.configKey, db);
 		if (existing && existing.id !== id) {
-			throw new Error("CONFIG_KEY_DUPLICATE");
+			throw new BizError(ERR_CODE.CONFIG_KEY_DUPLICATE);
 		}
 	}
 
@@ -126,9 +127,10 @@ export const softDeleteConfig = async (
 	id: number,
 	db: DB,
 ): Promise<boolean> => {
-	await db
+	const result = await db
 		.update(sysConfig)
 		.set({ deleteTime: new Date().toISOString() })
-		.where(and(eq(sysConfig.id, id), isNull(sysConfig.deleteTime)));
-	return true;
+		.where(and(eq(sysConfig.id, id), isNull(sysConfig.deleteTime)))
+		.returning({ id: sysConfig.id });
+	return result.length > 0;
 };
