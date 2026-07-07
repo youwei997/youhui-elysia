@@ -2,7 +2,6 @@ import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { redis } from "@/lib/redis";
-import { redisKeys } from "@/lib/redis-keys";
 import { authPlugin } from "@/plugins/auth";
 import {
 	createConfig,
@@ -33,11 +32,6 @@ const parseConfigList = (row: ConfigListResponseInput) => {
 const parseConfig = (row: ConfigResponseInput) => {
 	const parsed = ConfigResponse.parse(row);
 	return { ...parsed, id: String(parsed.id) };
-};
-
-/** 失效指定 configKey 的缓存（写操作后调用） */
-const invalidateConfigCache = async (configKey: string): Promise<void> => {
-	await redis.del(redisKeys.configCache(configKey));
 };
 
 export const configRoutes = new Elysia({ prefix: "/api/v1/configs" })
@@ -107,7 +101,6 @@ export const configRoutes = new Elysia({ prefix: "/api/v1/configs" })
 			if (!existing) throw notFound(ERR_CODE.CONFIG_NOT_FOUND);
 			const row = await updateConfig(params.id, body, db);
 			if (!row) throw notFound(ERR_CODE.CONFIG_NOT_FOUND);
-			await invalidateConfigCache(existing.configKey);
 			return parseConfig(row);
 		},
 		{
@@ -139,7 +132,6 @@ export const configRoutes = new Elysia({ prefix: "/api/v1/configs" })
 					const existing = await findConfigById(id, db);
 					if (!existing) throw notFound(ERR_CODE.CONFIG_NOT_FOUND);
 					await softDeleteConfig(id, db);
-					await invalidateConfigCache(existing.configKey);
 				}
 				return true;
 			}
@@ -150,7 +142,6 @@ export const configRoutes = new Elysia({ prefix: "/api/v1/configs" })
 			const existing = await findConfigById(id, db);
 			if (!existing) throw notFound(ERR_CODE.CONFIG_NOT_FOUND);
 			await softDeleteConfig(id, db);
-			await invalidateConfigCache(existing.configKey);
 			return true;
 		},
 		{
