@@ -22,7 +22,7 @@ import { sysUser } from "@/db/schema/system/user";
 import { incrementTokenVersion } from "@/lib/login-lock";
 import type { PageResult } from "@/lib/pagination";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import type { UserCreateBody, UserUpdateBody } from "./schema";
+import type { UserCreateBody, UserListFilter, UserUpdateBody } from "./schema";
 import type { UserFormData, UserListRecord, UserRecord } from "./types";
 
 /**
@@ -382,11 +382,7 @@ export const updateUserPassword = async (
 
 /** 导出用户列表（按查询参数，返回所有匹配用户） */
 export const exportUsers = async (
-	query: {
-		keywords?: string;
-		status?: number;
-		deptId?: number;
-	},
+	query: UserListFilter,
 	ctx: DataScopeContext,
 	db: DB,
 ): Promise<UserListRecord[]> => {

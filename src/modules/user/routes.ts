@@ -5,6 +5,7 @@ import { buildDataScopeContext } from "@/db/helpers/data-scope";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { verifyPassword } from "@/lib/password";
 import { findUserPerms, findUserRoles } from "@/modules/auth/queries";
+import type { UserListFilter } from "@/modules/user/schema";
 import { authPlugin } from "@/plugins/auth";
 import {
 	batchSoftDeleteUsers,
@@ -528,8 +529,15 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				user.dataScopes,
 				db,
 			);
-			// ponytail: export ignores pagination, uses same filter params as list
-			const users = await exportUsers(query as never, dataScopeCtx, db);
+			// ponytail: export ignores pagination, uses same filter params as list。
+			// query 类型为 createListQuery 推断（仅含 pageFields key），业务字段运行时存在，
+			// 显式标注为 UserListFilter 后解构传递。
+			const { keywords, status, deptId } = query as UserListFilter;
+			const users = await exportUsers(
+				{ keywords, status, deptId },
+				dataScopeCtx,
+				db,
+			);
 			const ws = XLSX.utils.json_to_sheet(
 				users.map((u) => ({
 					用户名: u.username,
