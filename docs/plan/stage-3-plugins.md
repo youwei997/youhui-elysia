@@ -138,7 +138,7 @@
 
 - ❌ **不要**写 `class AuthGuard implements ElysiaGuard`（Elysia 没这玩意儿，别造概念）
 - ❌ **不要**用 reflect-metadata（这是 NestJS 的死路）
-- ❌ **不要**在路由 handler 里手动 `if (!ctx.user) throw 401`，用 `auth: true` macro
+- ❌ **不要**用 handler 内的 `if (!user) throw` **替代** `auth: true` macro 做认证拦截；`auth: true` 负责运行时 401，handler 内的守卫仅用于 TS 类型收窄（见 `architecture.md` §4.2 与 `docs/notes/2026-07-08-为什么auth守卫的if-user不能删.md`）
 - ❌ **不要**把 i18n 文案写死在 throw 处，throw 错误码、序列化时再翻译
 - ❌ **不要**把 `password` 字段返回到响应里（schema.ts 里就 `t.Omit` 掉）
 - ⚠️ JWT secret 不准 hardcode，必须走 env

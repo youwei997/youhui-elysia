@@ -4,10 +4,17 @@
 
 `src/plugins/auth.ts` 用两层结构实现登录态注入与拦截：
 
+> 以下两段为**示意伪代码**，真实实现见 `src/plugins/auth.ts`；要点在类型机制而非逐字写法。
+
 ```ts
 .derive({ as: "global" }, async ({ headers }) => {
 	// 缺 token / 格式错 / 验签失败 → 一律返回 { user: null }
-	const payload = await verifyToken(token).catch(() => null);
+	let payload: JwtPayload | null = null;
+	try {
+		payload = await verifyToken(token);
+	} catch {
+		payload = null;   // 验签失败降级为未登录，不抛错
+	}
 	return { user: payload };   // user 的类型是 JwtPayload | null
 })
 .macro({
@@ -23,12 +30,13 @@ handler 里常见写法（如 `/me`、`/export`、`/profile`）：
 
 ```ts
 const handler = async ({ user }) => {
-	if (!user) throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401); // ← 这行
-	return db.user.findUnique({ where: { id: user.sub } });  // user 已被收窄为 JwtPayload
+	if (!user) throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401); // ← 类型收窄，必须保留
+	// user 已被收窄为 JwtPayload，下方可安全使用 user.sub
+	// 示意：按 user.sub 查询当前用户（真实为 Drizzle 查询，见各 routes.ts）
 };
 ```
 
-实测中这行 `if (!user) throw` 容易被当成"冗余守卫 / 死代码"误删（§4.14 红线语境下），**删了之后 `tsc` 会报一堆 `user.sub` / `user.xxx` 类型错误**。本文解释为什么它必须留着。
+实测中这行 `if (!user) throw` 容易被当成"冗余守卫 / 死代码"误删（常因把 `AGENTS.md` 的 `INSERT ... RETURNING` 死代码 guard 规则过度泛化到 auth 场景），**删了之后 `tsc` 会报一堆 `user.sub` / `user.xxx` 类型错误**。本文解释为什么它必须留着。
 
 ## 机制：运行时拦截 ≠ 编译期收窄
 
@@ -62,6 +70,8 @@ const handler = async ({ user }) => {
 第四轮 review 时曾把 `/export` 路由的 `if (!user) throw` 当成 §4.14 死代码红线要求删除，结果 `tsc` 在 `user.sub` / `user.xxx` 上炸出一堆类型错误——因为 `beforeHandle` 的运行时拦截并没让 TS 把 `user` 当作非空。删掉 handler 内的守卫 = 同时删掉了唯一的类型收窄手段。
 
 ## 与 §4.14 死代码红线的边界
+
+> 误删最常见的诱因，是把 `AGENTS.md` 里「`INSERT ... RETURNING` 成功后不在 routes 层写 `if (!xxx) throw` 死代码 guard」这条**数据库查询语境**的规则，错误泛化到了 auth 场景。两者语境不同：前者针对 DB 返回记录非空、guard 确实冗余；后者针对 `user` 类型收窄、guard 必需。本 notes 的"死代码"论述，特指不要在 auth 场景套用那条 DB 规则，而非指 §4.14 早有通用死代码红线（§4.14 的"禁止删除 auth 守卫"条目本身由本轮回合补充）。
 
 §4.14 反对的是"auth: true 已保证 user 存在、所以守卫多余"这种**错误前提**下的删除。事实相反：
 
