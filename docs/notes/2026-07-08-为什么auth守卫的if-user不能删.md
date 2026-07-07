@@ -67,7 +67,7 @@ const handler = async ({ user }) => {
 
 ## 误删的后果（血泪现场）
 
-第四轮 review 时曾把 `/export` 路由的 `if (!user) throw` 当成 §4.14 死代码红线要求删除，结果 `tsc` 在 `user.sub` / `user.xxx` 上炸出一堆类型错误——因为 `beforeHandle` 的运行时拦截并没让 TS 把 `user` 当作非空。删掉 handler 内的守卫 = 同时删掉了唯一的类型收窄手段。
+第四轮 review 时曾把 `/export` 路由的 `if (!user) throw` 当成死代码要求删除（实为把 `AGENTS.md` 的 `INSERT ... RETURNING` 死代码 guard 规则误套到 auth 场景），结果 `tsc` 在 `user.sub` / `user.xxx` 上炸出一堆类型错误——因为 `beforeHandle` 的运行时拦截并没让 TS 把 `user` 当作非空。删掉 handler 内的守卫 = 同时删掉了唯一的类型收窄手段。
 
 ## 与 §4.14 死代码红线的边界
 
@@ -79,7 +79,7 @@ const handler = async ({ user }) => {
 - 但它**不保证编译期** `user` 类型非空；
 - 所以 `if (!user) throw` 是**类型收窄必需品**，不是 §4.14 说的"auth 已保证存在所以冗余的空判断"。
 
-判据一句话：**凡是 `auth: true` 路由里用到 `user.sub` / `user.xxx` 的 handler，顶部的 `if (!user) throw` 一律保留，禁止以死代码为由删除。**
+判据一句话：**凡是 `auth: true` 路由，顶部的 `if (!user) throw` 一律保留（项目惯例即使当前未用到 `user` 字段也保留），禁止以死代码为由删除。**
 
 ## 结论
 
