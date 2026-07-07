@@ -136,6 +136,8 @@ modules/  → lib/ 和 db/，不依赖 plugins/
 - **路由声明权限用 macro**：`requirePerm: ['sys:user:create']`，不要写装饰器风格。
 - **禁止装饰器、DI 容器等魔法机制**，详见 §4.14 项目红线。
 
+**auth 守卫的 `if (!user) throw` 不能删**：`auth` plugin 用「全局 `derive` 注入可空 `user`（失败返回 `null`，不抛错）+ `auth: true` macro 在 `beforeHandle` 运行时抛 401」两层实现。`beforeHandle` 只做**运行时**拦截，**编译期** `ctx.user` 仍是 `JwtPayload | null`，handler 里必须保留 `if (!user) throw` 做类型收窄（否则 `user.sub` 等报类型错误）。它不是 §4.11 的死代码，禁止以"冗余守卫"为由删除（机制与误删后果见 `docs/notes/2026-07-08-为什么auth守卫的if-user不能删.md`）。
+
 ### 4.2.1 请求追踪（reqId）与日志体系
 
 **reqId 是什么**：每次 HTTP 请求进来时临时生成的 uuid（v4），生命周期 = 一次请求从进来到响应发出。**不存任何数据库表**，只挂在内存的 ctx 和 store 上，请求结束即销毁。
@@ -357,6 +359,7 @@ const list = await db.select().from(users).where(where).limit(20);
 - **禁止 `as any` / `as never`** 击穿类型推导。
 - **禁止静默吞错**：catch 后只 `console.log` 或 `return null` 是禁忌，必须重抛或转 BizError。
 - **严禁使用 `sql` 模板或原生 SQL 字符串**拼接业务查询（方言耦合，换库即失效），例外见 §4.12。
+- **禁止删除 `auth` 守卫的类型收窄**：`auth: true` 路由 handler 顶部的 `if (!user) throw ...` 是 `JwtPayload | null` 收窄成非空的必需手段（`beforeHandle` 只做运行时拦截，不影响编译期类型），**不是死代码**，禁止以"auth 已保证存在"为由删除，详解见 `docs/notes/2026-07-08-为什么auth守卫的if-user不能删.md`。
 
 ### 4.15 测试规范
 
