@@ -40,7 +40,7 @@
 
 ---
 
-### 8.2 用户导入导出 (template / export / import) ⬜ 未开始
+### 8.2 用户导入导出 (template / export / import) ✅ 已完成
 
 **前端契约**（`src/api/system/user/index.ts`）：
 - `GET /users/template`：下载导入模板，`responseType: blob`
@@ -57,20 +57,20 @@ interface ExcelResult {
 }
 ```
 
-**涉及文件（待建）**：
+**涉及文件（已建）**：
 - `src/modules/user/queries.ts` 追加 `exportUsers` / `importUsers`
 - `src/modules/user/routes.ts` 追加 3 个路由
 
-**待确认**（实现前先过 brainstorming）：
-- Excel 库选型（`exceljs` 读写皆可 vs `xlsx` 更轻但许可证需确认）
-- 模板文件是静态资源还是运行时生成
-- 导入校验规则（哪些字段必填、重复用户名如何处理）落到 `messageList` 的具体文案
+**早已确认（实现时决策）**：
+- Excel 库：`xlsx`（已安装）
+- 模板文件：运行时生成
+- 导入校验：用户名和密码必填，超长跳过；重复用户名由 DB 唯一约束报错（`A0403`）；非法行不中断整体导入，收集到 `messageList`
 
 **验收**：
-- [ ] 模板下载可用 Excel 打开，字段与 `UserForm` 对应
-- [ ] 导出遵循当前查询参数（keywords/status/deptId）
-- [ ] 导入返回 `validCount`/`invalidCount`/`messageList`，非法行不中断整体导入
-- [ ] `bun run check` + `bun run tsc` 通过
+- [x] 模板下载可用 Excel 打开，字段与 `UserForm` 对应
+- [x] 导出遵循当前查询参数（keywords/status/deptId）
+- [x] 导入返回 `validCount`/`invalidCount`/`messageList`，非法行不中断整体导入
+- [x] `bun run check` + `bun run tsc` 通过
 
 ---
 
@@ -136,7 +136,7 @@ interface ExcelResult {
 ## 验收清单（本阶段总览）
 
 - [x] 8.1 个人中心
-- [ ] 8.2 用户导入导出
+- [x] 8.2 用户导入导出
 - [x] 8.3 系统配置
 - [ ] 8.4 通知公告
 
