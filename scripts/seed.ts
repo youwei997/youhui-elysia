@@ -608,8 +608,79 @@ const main = async () => {
 			updatedBy: 1,
 			updateTime: NOW,
 		},
+		// ── 系统配置 ──
+		{
+			id: 260,
+			parentId: 1,
+			treePath: "0,1",
+			type: "M",
+			name: "系统配置",
+			routeName: "Config",
+			routePath: "config",
+			component: "system/config/index",
+			icon: "setting",
+			sort: 6,
+			visible: 1,
+			keepAlive: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2601,
+			parentId: 260,
+			treePath: "0,1,260",
+			type: "B",
+			name: "配置查询",
+			perm: "sys:config:list",
+			sort: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2602,
+			parentId: 260,
+			treePath: "0,1,260",
+			type: "B",
+			name: "配置新增",
+			perm: "sys:config:create",
+			sort: 2,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2603,
+			parentId: 260,
+			treePath: "0,1,260",
+			type: "B",
+			name: "配置编辑",
+			perm: "sys:config:update",
+			sort: 3,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2604,
+			parentId: 260,
+			treePath: "0,1,260",
+			type: "B",
+			name: "配置删除",
+			perm: "sys:config:delete",
+			sort: 4,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
 	]);
-	console.log("  ✅ 菜单表：33 条（1 目录 + 5 菜单 + 27 按钮 + 1 隐藏菜单 + 4 隐藏按钮）");
+	console.log("  ✅ 菜单表：38 条（1 目录 + 6 菜单 + 31 按钮 + 1 隐藏菜单 + 4 隐藏按钮）");
 
 	// ==========================================
 	// 3. 角色表（sys_role）—— dataScope：1=全部 2=部门及子部门 3=本部门 4=本人 5=自定义
@@ -856,6 +927,7 @@ const main = async () => {
 		50, 51, // 文件存储按钮
 		250, 2501, 2502, 2503, 2504, // 字典管理
 		251, 2511, 2512, 2513, 2514, // 字典项（隐藏）
+		260, 2601, 2602, 2603, 2604, // 系统配置
 	];
 	await db.insert(sysRoleMenu).values(
 		adminMenuIds.map((menuId) => ({ roleId: 2, menuId })),
