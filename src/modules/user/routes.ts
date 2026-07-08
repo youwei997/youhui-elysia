@@ -93,7 +93,8 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			const userId = Number(user.sub);
 			const detail = await findUserProfileDetail(userId, db);
 			if (!detail) throw notFound(ERR_CODE.USER_NOT_FOUND);
-			return detail;
+			// 对齐 §4.11：id 统一转 string，与其它经 parseUser 的接口契约一致
+			return { ...detail, id: String(detail.id) };
 		},
 		{
 			auth: true,
