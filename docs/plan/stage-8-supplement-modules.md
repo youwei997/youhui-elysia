@@ -110,34 +110,82 @@ interface ExcelResult {
 
 ---
 
-### 8.4 通知公告 (sys_notice + sys_user_notice) ⬜ 未开始
+### 8.4 通知公告 (sys_notice + sys_user_notice) 🟡 进行中
 
-**前端契约**（`src/api/system/notice/`），比 8.3 复杂，多一层状态机 + 用户关联表：
-- `GET /notices`：分页（支持 `title`/`publishStatus`/`isRead` 过滤）
-- `GET /notices/:id/form`：表单数据
-- `POST /notices`：新增
-- `PUT /notices/:id`：更新
-- `DELETE /notices/:ids`：批量删除（逗号分隔）
-- `PUT /notices/:id/publish`：发布（状态机：草稿→已发布）
-- `PUT /notices/:id/revoke`：撤回（已发布→已撤回）
-- `GET /notices/:id/detail`：查看详情
-- `PUT /notices/read-all`：全部已读
-- `GET /notices/my`：我的通知分页
+> 比 8.3 复杂：多一层状态机 + 双表关联 + 发布 fan-out 物化。
+> **拆批原则**：任务细颗粒，一个任务只动 2-3 个文件、对应一次聚焦 commit。
+> **先做第一批纯 CRUD（草稿态闭环），再做第二批状态机/物化/JOIN。**
 
-**表结构（草案）**：
-- `sys_notice`：公告本体，`status`（0 草稿 / 1 已发布 / 2 已撤回）+ `type` + `level` + `targetType` + `targetUsers` + `auditColumns`
-- `sys_user_notice`：用户已读关联表（`userId` + `noticeId` + `readTime`）
+**接口清单（10 个，路径与前端一致）**：
 
-**待确认（实现前先过 brainstorming）**：
-- `发布`/`撤回` 是否需要写操作日志（涉及状态机变更，审计意义大）
-- `targetType=全部` 时是否需要为每个用户写一条 `sys_user_notice`，还是查询时按"未读记录不存在即视为未读"处理（后者更省写入，但要注意历史用户/新增用户的语义一致性）
-- `read-all` 的"全部"范围：当前用户可见的全部通知，还是只针对某次分页结果
+| 批次 | 方法 | 路径 | 说明 |
+|---|---|---|---|
+| 一 | GET | `/notices` | 管理端分页（JOIN sys_user 取 publisherName） |
+| 一 | POST | `/notices` | 新增（默认草稿 publishStatus=0） |
+| 一 | GET | `/notices/:id/form` | 表单回填 |
+| 一 | PUT | `/notices/:id` | 编辑 |
+| 一 | DELETE | `/notices/:ids` | 批量删（逗号分隔，连带删 user_notice） |
+| 二 | PUT | `/notices/:id/publish` | 发布（事务 fan-out 物化 user_notice） |
+| 二 | PUT | `/notices/:id/revoke` | 撤回（删该 notice 的 user_notice） |
+| 二 | GET | `/notices/:id/detail` | 详情（顺带置已读） |
+| 二 | PUT | `/notices/read-all` | 全部已读 |
+| 二 | GET | `/notices/my` | 我的通知（INNER JOIN user_notice，带 isRead） |
 
-**验收**：
-- [ ] 状态机三态（草稿/已发布/已撤回）流转正确，非法流转（如撤回草稿）拒绝
-- [ ] `read-all` 与详情查看（`GET /:id/detail`）都能正确置已读
-- [ ] `GET /notices/my` 只返回当前用户可见范围
-- [ ] `bun run check` + `bun run tsc` 通过
+**表结构（定稿，参照原 Java 运行时 + 前端实际代码）**：
+
+`sys_notice`：
+- `id` / `title` / `content` / `type`(int) / `publisherId`(bigint, 发布时写) / `level`(varchar, L/M/H)
+- `targetType`(int, **1=全部 / 2=指定**) / `targetUserIds`(varchar, 逗号串，草稿暂存)
+- `publishStatus`(int, **0=草稿 / 1=已发布 / -1=已撤回**) / `publishTime` / `revokeTime`
+- `+ auditColumns`（软删）
+
+`sys_user_notice`：
+- `id` / `noticeId` / `userId` / `isRead`(int, 0/1) / `readTime` + `auditColumns`（软删）
+
+> **状态码定稿说明**：撤回态用 **`-1`**（前端 `system/notice/index.vue` 实际代码为准：查询下拉、列表标签、按钮显隐判断全用 `-1`；types.ts 注释写 `2` 是错的，忽略）。targetType `1=全部/2=指定`（前端提交逻辑 `targetType === 2 ? targetUsers : []` 佐证）。
+
+---
+
+#### 第一批 · 纯 CRUD（草稿态闭环）
+
+- [ ] **T1 建表** — `src/db/schema/system/notice.ts`（sysNotice + sysUserNotice 两表同文件）+ drizzle 生成迁移。_文件：schema 1 + 迁移 1_
+- [ ] **T2 DTO/类型** — `src/modules/notice/schema.ts`（Zod：ListQuery/CreateBody/UpdateBody/Response/ParamsWithId）+ `types.ts`（$inferSelect 派生）。_文件：2_
+- [ ] **T3 queries** — `src/modules/notice/queries.ts`（findNotices 分页含 publisherName join / findNoticeById / createNotice / updateNotice / batchSoftDeleteNotices）。_文件：1_
+- [ ] **T4 routes + 注册** — `src/modules/notice/routes.ts`（5 个 CRUD 路由）+ `src/app.ts`（挂 noticeRoutes）。_文件：2_
+- [ ] **T5 测试** — `src/modules/test/notice.test.ts`（5 CRUD 用例：新增草稿/列表/表单回填/编辑/批量删）。_文件：1_
+- [ ] **T6 种子 + 菜单** — `scripts/seed.ts`（通知菜单 + 按钮 perm，挂 ADMIN）。_文件：1_
+
+**第一批验收**：
+- [ ] 5 个 CRUD 接口对齐前端契约（路径/方法/字段）
+- [ ] 新增默认存草稿（publishStatus=0），列表返回 publisherName
+- [ ] 批量删除逗号分隔，软删；`:ids` 解析健壮
+- [ ] `bun run check` + `bun run tsc` 通过 + 单测 PASS
+
+---
+
+#### 第二批 · 状态机 + 物化 + JOIN（先过 brainstorming）
+
+> 前置：第一批已合并。动手前用 brainstorming 敲定下面 3 个论点。
+
+**待确认论点**：
+- 发布/撤回是否写操作日志（原 Java `@Log` 有标；建议接入阶段 5.1 audit-log plugin）
+- `targetType=全部` 落库策略（原 Java：**发布时物化**给每个用户插一条 user_notice；发布后新增用户看不到旧通知，属可接受快照语义，用 `ponytail:` 标天花板）
+- `read-all` 范围（原 Java：当前用户所有未读记录 update，与分页无关）
+
+- [ ] **T7 发布/撤回 queries** — 发布 fan-out（事务：删旧 user_notice → 按 targetType 捞用户 → 批量插）+ 撤回（改状态 + 删 user_notice）。_文件：queries 1_
+- [ ] **T8 发布/撤回 routes + 状态机** — 2 路由 + 三态流转校验（已发布不能重发、只有已发布能撤回）+ 错误码。_文件：routes 1（+ errors 1）_
+- [ ] **T9 已读 queries + routes** — 详情置已读 / read-all / 我的通知 JOIN 查询。_文件：queries 1 + routes 1_
+- [ ] **T10 第二批测试** — 状态机流转、fan-out 物化、已读、我的通知。_文件：test 1_
+
+**第二批验收**：
+- [ ] 状态机三态流转正确，非法流转（如撤回草稿）拒绝
+- [ ] 发布 fan-out：全部/指定两种 targetType 均正确物化 user_notice
+- [ ] `read-all` 与详情查看都能正确置已读
+- [ ] `GET /notices/my` 只返回当前用户可见范围（INNER JOIN + publishStatus=1）
+- [ ] `bun run check` + `bun run tsc` 通过 + 单测 PASS
+
+**范围外（不做）**：
+- SSE 实时推送（原 Java 发布/撤回时 `sseService.sendToUser` 推 notice/notice-revoke）。前端 REST 与 SSE 解耦，无 SSE 通知仍可正常收发，仅缺实时弹窗 + 控制台有连接失败日志。SSE 是横跨 dict 同步/在线数/通知的独立实时体系，另立任务，不并入 8.4。
 
 ---
 
@@ -146,6 +194,6 @@ interface ExcelResult {
 - [x] 8.1 个人中心
 - [x] 8.2 用户导入导出
 - [x] 8.3 系统配置
-- [ ] 8.4 通知公告
+- [ ] 8.4 通知公告（🟡 第一批 CRUD 待做 / 第二批状态机待做）
 
 ## 本阶段收获（完成后填写）

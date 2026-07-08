@@ -181,6 +181,24 @@
 
 ---
 
+## config · 系统配置
+
+| 方法 | 路径 | 权限 | 说明 |
+|---|---|---|---|
+| GET | `/configs/` | `sys:config:list` | 配置列表（分页，支持 keywords 模糊搜索 configName/configKey） |
+| GET | `/configs/:id/form` | `sys:config:list` | 配置表单数据（编辑回填） |
+| POST | `/configs/` | `sys:config:create` | 创建配置（configKey 全局唯一，冲突返回 `A0481`） |
+| PUT | `/configs/:id` | `sys:config:update` | 更新配置 |
+| DELETE | `/configs/:id` | `sys:config:delete` | 删除配置（支持单条 ID 或逗号分隔批量，软删） |
+| PUT | `/configs/refresh` | `sys:config:update` | 刷新配置缓存（清空 `config:*` 缓存 key，当前为占位） |
+
+**关键设计：**
+- 配置存 `sys_config` 表，`configKey` 全局唯一
+- 写操作接入 audit-log（create/update/delete/refresh）
+- 未接入 withCache：均为管理端低频 CRUD；`/refresh` 保留作前端契约占位
+
+---
+
 ## 公共查询参数
 
 列表类接口统一支持以下分页参数：
