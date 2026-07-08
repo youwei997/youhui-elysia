@@ -3,14 +3,26 @@ import { z } from "zod";
 import { sysNotice } from "@/db/schema/system/notice";
 import { createListQuery } from "@/lib/crud-dto";
 
+/** 发布状态枚举约束：0=草稿 1=已发布 -1=已撤回 */
+const publishStatusSchema = z.coerce
+	.number()
+	.int()
+	.refine((v) => v === 0 || v === 1 || v === -1, {
+		message: "发布状态必须是 0、1 或 -1",
+	});
+
+/** 目标类型枚举约束：1=全部 2=指定 */
+const targetTypeSchema = z.coerce
+	.number()
+	.int()
+	.refine((v) => v === 1 || v === 2, {
+		message: "目标类型必须是 1（全部）或 2（指定）",
+	});
+
 /** 通知列表查询参数（支持标题模糊搜索、按发布状态/类型过滤） */
 export const NoticeListQuery = createListQuery(sysNotice, {
 	title: z.string().optional().describe("标题关键词（模糊匹配）"),
-	publishStatus: z.coerce
-		.number()
-		.int()
-		.optional()
-		.describe("发布状态：0-草稿 1-已发布 -1-已撤回"),
+	publishStatus: publishStatusSchema.optional().describe("发布状态"),
 	type: z.coerce.number().int().optional().describe("通知类型"),
 }).describe("通知列表查询参数");
 
@@ -26,20 +38,16 @@ export const NoticeResponse = createSelectSchema(sysNotice)
 /** NoticeResponse.parse 的输入类型 */
 export type NoticeResponseInput = z.input<typeof NoticeResponse>;
 
-/** 新增通知请求体（默认草稿，publisherId 由路由从 JWT 写入） */
+/** 新增通知请求体（默认草稿，发布人/发布时间在发布动作中写入） */
 export const NoticeCreateBody = z
 	.object({
 		title: z.string().min(1).max(128).describe("公告标题"),
 		content: z.string().min(1).max(5000).describe("公告内容"),
 		type: z.coerce.number().int().default(0).describe("公告类型"),
-		level: z.enum(["L", "M", "H"]).default("M").describe("公告等级：L/M/H"),
-		targetType: z.coerce
-			.number()
-			.int()
-			.default(1)
-			.describe("目标类型：1-全部 2-指定"),
+		level: z.enum(["L", "M", "H"]).default("L").describe("公告等级：L/M/H"),
+		targetType: targetTypeSchema.default(1).describe("目标类型"),
 		targetUserIds: z
-			.array(z.coerce.number())
+			.array(z.coerce.number().int())
 			.optional()
 			.describe(
 				"指定用户 ID 数组（targetType=2 时传，queries 层 join 为逗号串入库）",
@@ -54,13 +62,9 @@ export const NoticeUpdateBody = z
 		content: z.string().min(1).max(5000).optional().describe("公告内容"),
 		type: z.coerce.number().int().optional().describe("公告类型"),
 		level: z.enum(["L", "M", "H"]).optional().describe("公告等级"),
-		targetType: z.coerce
-			.number()
-			.int()
-			.optional()
-			.describe("目标类型：1-全部 2-指定"),
+		targetType: targetTypeSchema.optional().describe("目标类型"),
 		targetUserIds: z
-			.array(z.coerce.number())
+			.array(z.coerce.number().int())
 			.optional()
 			.describe("指定用户 ID 数组（queries 层 join 为逗号串入库）"),
 	})
