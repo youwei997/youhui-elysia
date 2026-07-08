@@ -74,7 +74,7 @@ interface ExcelResult {
 
 **前端对齐验证**（参照 `vue3-element-admin-v4.6.0`）：
 - 接口契约：3 个接口路径、方法、`responseType: blob` 均与前端 `UserAPI` 一致
-- 模板列：7 列与前端 `UserForm` 字段对应（avatar/remark 不导出，前端同样不包含）
+- 模板列：7 列与前端 `UserForm` 字段对应（avatar/remark 不导出，前端同样不包含；**dept/role 为已知缺口，见上方验收项**）
 - 导出列：8 列覆盖前端 `UserItem` 全部业务字段
 - 导入结果：`ExcelResult`（code/validCount/invalidCount/messageList）与前端 `common.ts` 定义完全匹配
 - 编码映射：gender（男=1/女=2/空=0）、status（正常=1/禁用=0）前后端一致
@@ -99,7 +99,7 @@ interface ExcelResult {
 
 **关键设计点**：
 - `configKey` 唯一性校验（新增/更新时）✅
-- `withCache` ❌ 不接入——6 个接口均为管理端 CRUD（有 auth+perm），低频操作不值得缓存层；`PUT /configs/refresh` 保留作前端契约占位，当前为 no-op
+- `withCache` ❌ 不接入——6 个接口均为管理端 CRUD（有 auth+perm），低频操作不值得缓存层；`PUT /configs/refresh` 主动清空 `config:*` 缓存 key，因模块未接入 withCache 故当前无缓存可清（等效 no-op，保留作前端契约占位）
 
 **验收**：
 - [x] 5 个 CRUD 接口 + 1 个刷新接口对齐前端契约
