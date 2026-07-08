@@ -5,8 +5,7 @@ import { buildDataScopeContext } from "@/db/helpers/data-scope";
 import { BizError, ERR_CODE, notFound } from "@/lib/errors";
 import { verifyPassword } from "@/lib/password";
 import { findUserPerms, findUserRoles } from "@/modules/auth/queries";
-import type { UserListFilter } from "@/modules/user/schema";
-import type { UserImportRow } from "@/modules/user/types";
+import type { UserImportRow, UserListFilter } from "@/modules/user/types";
 import { authPlugin } from "@/plugins/auth";
 import {
 	batchSoftDeleteUsers,

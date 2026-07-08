@@ -34,18 +34,6 @@ export const UserListQuery = createListQuery(sysUser, {
 }).describe("用户列表查询参数");
 
 /**
- * 用户列表过滤字段（不含分页），用于导出等场景。
- * 不从 UserListQuery 派生：createListQuery 的泛型签名仅保留 pageFields key，业务字段被吞掉。
- * status 取值与 statusSchema 一致（0 | 1）。
- * 可选属性显式带 | undefined，兼容 tsconfig exactOptionalPropertyTypes。
- */
-export type UserListFilter = {
-	keywords?: string | undefined;
-	status?: 0 | 1 | undefined;
-	deptId?: number | undefined;
-};
-
-/**
  * 创建用户请求体
  * - 排除 id（主键，由 DB 生成；seed 脚本走 db.insert 不经此 schema，不受影响）
  * - 排除审计列（服务端控制，前端不可注入）

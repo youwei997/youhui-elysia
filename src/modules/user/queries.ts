@@ -22,10 +22,11 @@ import { sysUser } from "@/db/schema/system/user";
 import { incrementTokenVersion } from "@/lib/login-lock";
 import type { PageResult } from "@/lib/pagination";
 import { hashPassword, verifyPassword } from "@/lib/password";
-import type { UserCreateBody, UserListFilter, UserUpdateBody } from "./schema";
+import type { UserCreateBody, UserUpdateBody } from "./schema";
 import type {
 	UserFormData,
 	UserImportRow,
+	UserListFilter,
 	UserListRecord,
 	UserProfileDetail,
 	UserRecord,

@@ -20,6 +20,18 @@ export type UserFormData = UserRecord & {
 };
 
 /**
+ * 用户列表过滤字段（不含分页），用于导出等场景。
+ * 不从 UserListQuery 派生：createListQuery 的泛型签名仅保留 pageFields key，业务字段被吞掉。
+ * status 取值与 statusSchema 一致（0 | 1）。
+ * 可选属性显式带 | undefined，兼容 tsconfig exactOptionalPropertyTypes。
+ */
+export type UserListFilter = {
+	keywords?: string | undefined;
+	status?: 0 | 1 | undefined;
+	deptId?: number | undefined;
+};
+
+/**
  * 导入用户的单行数据
  * routes 预校验后组装 → importUsers 入参，两处共用（rowNum 仅用于错误定位，入库前剥离）。
  */
