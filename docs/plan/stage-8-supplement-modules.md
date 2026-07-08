@@ -148,7 +148,7 @@ interface ExcelResult {
 
 #### 第一批 · 纯 CRUD（草稿态闭环）
 
-- [ ] **T1 建表** — `src/db/schema/system/notice.ts`（sysNotice + sysUserNotice 两表同文件）+ drizzle 生成迁移。_文件：schema 1 + 迁移 1_
+- [x] **T1 建表** — `src/db/schema/system/notice.ts`（sysNotice + sysUserNotice 两表同文件）+ drizzle 生成迁移。_文件：schema 1 + 迁移 1_
 - [ ] **T2 DTO/类型** — `src/modules/notice/schema.ts`（Zod：ListQuery/CreateBody/UpdateBody/Response/ParamsWithId）+ `types.ts`（$inferSelect 派生）。_文件：2_
 - [ ] **T3 queries** — `src/modules/notice/queries.ts`（findNotices 分页含 publisherName join / findNoticeById / createNotice / updateNotice / batchSoftDeleteNotices）。_文件：1_
 - [ ] **T4 routes + 注册** — `src/modules/notice/routes.ts`（5 个 CRUD 路由）+ `src/app.ts`（挂 noticeRoutes）。_文件：2_
