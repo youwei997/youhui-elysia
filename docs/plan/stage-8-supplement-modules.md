@@ -143,6 +143,8 @@ interface ExcelResult {
 - `id` / `noticeId` / `userId` / `isRead`(int, 0/1) / `readTime` + `auditColumns`（软删）
 
 > **状态码定稿说明**：撤回态用 **`-1`**（前端 `system/notice/index.vue` 实际代码为准：查询下拉、列表标签、按钮显隐判断全用 `-1`；types.ts 注释写 `2` 是错的，忽略）。targetType `1=全部/2=指定`（前端提交逻辑 `targetType === 2 ? targetUsers : []` 佐证）。
+>
+> **编辑约定**：第一版对齐前端行为（已发布编辑 / 删除两点与 Java 原版偏离）：已发布（`publishStatus=1`）不允许编辑 / 删除 / 重复发布，只允许撤回；草稿（`publishStatus=0`）和已撤回（`publishStatus=-1`）允许编辑 / 删除 / 发布。发布时先清理该 notice 旧的 `sys_user_notice`，再按最新内容和目标用户重新物化。
 
 ---
 
