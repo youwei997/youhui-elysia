@@ -22,8 +22,8 @@ export const sysNotice = pgTable("sys_notice", {
 	type: smallint("type").default(0).notNull(),
 	/** 发布人 ID */
 	publisherId: bigint("publisher_id", { mode: "number" }),
-	/** 公告等级：L/M/H */
-	level: varchar("level", { length: 1 }).default("M").notNull(),
+	/** 公告等级：L/M/H（默认 L，与前端新增表单默认值一致） */
+	level: varchar("level", { length: 1 }).default("L").notNull(),
 	/** 目标类型：1=全部 2=指定 */
 	targetType: smallint("target_type").default(1).notNull(),
 	/** 指定用户 ID 列表，草稿期暂存逗号串 */

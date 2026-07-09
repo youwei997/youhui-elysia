@@ -26,12 +26,16 @@ export const NoticeListQuery = createListQuery(sysNotice, {
 	type: z.coerce.number().int().optional().describe("通知类型"),
 }).describe("通知列表查询参数");
 
-/** 通知响应（ omit 审计字段 + 发布人/时间由业务层按需填充） */
+/** 通知响应（ omit 审计字段 + publisherName 由 JOIN sys_user 派生，列表/详情/我的通知共用） */
 export const NoticeResponse = createSelectSchema(sysNotice)
 	.omit({
 		createdBy: true,
 		updatedBy: true,
 		deleteTime: true,
+	})
+	.extend({
+		/** 发布人昵称（LEFT JOIN sys_user.nickname，草稿态发布人为空时为 null） */
+		publisherName: z.string().nullable().optional(),
 	})
 	.describe("通知详情");
 
@@ -55,7 +59,7 @@ export const NoticeCreateBody = z
 	})
 	.describe("创建通知请求体");
 
-/** 更新通知请求体（仅草稿态可编辑） */
+/** 更新通知请求体（仅已发布态 publishStatus=1 不可编辑，草稿/已撤回可编辑，与前端 index.vue `publishStatus != 1` 一致） */
 export const NoticeUpdateBody = z
 	.object({
 		title: z.string().min(1).max(128).optional().describe("公告标题"),

@@ -144,7 +144,11 @@ interface ExcelResult {
 
 > **状态码定稿说明**：撤回态用 **`-1`**（前端 `system/notice/index.vue` 实际代码为准：查询下拉、列表标签、按钮显隐判断全用 `-1`；types.ts 注释写 `2` 是错的，忽略）。targetType `1=全部/2=指定`（前端提交逻辑 `targetType === 2 ? targetUsers : []` 佐证）。
 >
-> **编辑约定**：第一版对齐前端行为（已发布编辑 / 删除两点与 Java 原版偏离）：已发布（`publishStatus=1`）不允许编辑 / 删除 / 重复发布，只允许撤回；草稿（`publishStatus=0`）和已撤回（`publishStatus=-1`）允许编辑 / 删除 / 发布。发布时先清理该 notice 旧的 `sys_user_notice`，再按最新内容和目标用户重新物化。
+> **编辑/删除/状态约定**（严格对齐前端 `system/notice/index.vue` 实际发出的请求，非 Java 原版、非 UI 想当然）：
+> - **编辑**：前端对已发布行隐藏编辑入口且无批量编辑（`v-if="publishStatus != 1"`）→ 已发布编辑请求永不发出。**后端不设硬守卫**，`updateNotice` 保持纯数据操作（源头已挡，且 `NoticeUpdateBody` 不含 `publishStatus`，无法借编辑改状态）。
+> - **删除**：前端行内删对已发布隐藏，但**工具栏批量删的勾选框不限制状态**（无 `:selectable`），已发布可经批量删发出。**后端允许删任意状态**（与 Java 原版一致），软删 + 事务级联软删 `sys_user_notice`。⚠️ 不要加"已发布不可删"守卫——那会打断前端"草稿+已发布混选批量删"这条不可改的合法路径。
+> - **状态守卫只在 publish / revoke**（T8）：已发布不可重发（`NOTICE_ALREADY_PUBLISHED`）、仅已发布可撤回（`NOTICE_NOT_PUBLISHED`）；前端按钮显隐已保证不发非法流转，后端守卫为防御式加固，不与任何前端路径冲突。
+> - 发布时先清理该 notice 旧的 `sys_user_notice`，再按最新内容和目标用户重新物化。
 
 ---
 
