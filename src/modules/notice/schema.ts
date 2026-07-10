@@ -79,7 +79,11 @@ export const NoticeParamsWithId = z
 	.object({ id: z.coerce.number() })
 	.describe("通知 ID");
 
-/** 通知 ID 批量路径参数（逗号分隔） */
+/** 通知 ID 批量路径参数（逗号分隔的纯数字串，非法段整串拒绝，不静默过滤） */
 export const NoticeParamsWithCommaIds = z
-	.object({ ids: z.string() })
+	.object({
+		ids: z
+			.string()
+			.regex(/^\d+(,\d+)*$/, "ids 必须是逗号分隔的数字（如 1 或 1,2,3）"),
+	})
 	.describe("通知 ID（逗号分隔批量）");

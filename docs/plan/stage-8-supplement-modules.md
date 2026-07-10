@@ -157,15 +157,15 @@ interface ExcelResult {
 - [x] **T1 建表** — `src/db/schema/system/notice.ts`（sysNotice + sysUserNotice 两表同文件）+ drizzle 生成迁移。_文件：schema 1 + 迁移 1_
 - [x] **T2 DTO/类型** — `src/modules/notice/schema.ts`（Zod：ListQuery/CreateBody/UpdateBody/Response/ParamsWithId）+ `types.ts`（$inferSelect 派生）。_文件：2_
 - [x] **T3 queries** — `src/modules/notice/queries.ts`（findNotices 分页含 publisherName join / findNoticeById / createNotice / updateNotice / batchSoftDeleteNotices）。_文件：1_
-- [ ] **T4 routes + 注册** — `src/modules/notice/routes.ts`（5 个 CRUD 路由）+ `src/app.ts`（挂 noticeRoutes）。_文件：2_
-- [ ] **T5 测试** — `src/modules/test/notice.test.ts`（5 CRUD 用例：新增草稿/列表/表单回填/编辑/批量删）。_文件：1_
-- [ ] **T6 种子 + 菜单** — `scripts/seed.ts`（通知菜单 + 按钮 perm，挂 ADMIN）。_文件：1_
+- [x] **T4 routes + 注册** — `src/modules/notice/routes.ts`（5 个 CRUD 路由）+ `src/app.ts`（挂 noticeRoutes）。_文件：2_
+- [x] **T5 测试** — `src/modules/test/notice.test.ts`（5 CRUD 用例：新增草稿/列表/表单回填/编辑/批量删）。_文件：1_
+- [x] **T6 种子 + 菜单** — `scripts/seed.ts`（通知菜单 270 + 按钮 2701-2704，挂 ADMIN）。_文件：1_
 
 **第一批验收**：
-- [ ] 5 个 CRUD 接口对齐前端契约（路径/方法/字段）
-- [ ] 新增默认存草稿（publishStatus=0），列表返回 publisherName
-- [ ] 批量删除逗号分隔，软删；`:ids` 解析健壮
-- [ ] `bun run check` + `bun run tsc` 通过 + 单测 PASS
+- [x] 5 个 CRUD 接口对齐前端契约（路径/方法/字段）
+- [x] 新增默认存草稿（publishStatus=0），列表返回 publisherName
+- [x] 批量删除逗号分隔，软删；`:ids` 解析健壮
+- [x] `bun run check` + `bun run tsc` 通过 + 单测 PASS
 
 ---
 
@@ -200,6 +200,6 @@ interface ExcelResult {
 - [x] 8.1 个人中心
 - [x] 8.2 用户导入导出
 - [x] 8.3 系统配置
-- [ ] 8.4 通知公告（🟡 第一批 CRUD 待做 / 第二批状态机待做）
+- [ ] 8.4 通知公告（🟡 第一批 CRUD ✅ 完成 / 第二批状态机待做）
 
 ## 本阶段收获（完成后填写）

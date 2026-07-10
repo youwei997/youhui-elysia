@@ -64,6 +64,8 @@ export const ERR_CODE = {
 	/** A048x Config 模块业务错误 */
 	CONFIG_NOT_FOUND: "A0480", // 配置不存在
 	CONFIG_KEY_DUPLICATE: "A0481", // 配置键已存在
+	/** A049x Notice 模块业务错误 */
+	NOTICE_NOT_FOUND: "A0490", // 通知公告不存在
 	/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
 	/** A047x File 模块业务错误 */
@@ -121,6 +123,7 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.DICT_ITEM_VALUE_DUPLICATE]: "字典项值已存在",
 	[ERR_CODE.CONFIG_NOT_FOUND]: "配置不存在",
 	[ERR_CODE.CONFIG_KEY_DUPLICATE]: "配置键已存在",
+	[ERR_CODE.NOTICE_NOT_FOUND]: "通知公告不存在",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.FILE_NOT_FOUND]: "文件不存在",
 	[ERR_CODE.FILE_UPLOAD_FAILED]: "文件上传失败",

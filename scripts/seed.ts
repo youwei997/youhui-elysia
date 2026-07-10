@@ -679,6 +679,77 @@ const main = async () => {
 			updatedBy: 1,
 			updateTime: NOW,
 		},
+		// ── 通知公告 ──
+		{
+			id: 270,
+			parentId: 1,
+			treePath: "0,1",
+			type: "M",
+			name: "通知公告",
+			routeName: "Notice",
+			routePath: "notice",
+			component: "system/notice/index",
+			icon: "message",
+			sort: 7,
+			visible: 1,
+			keepAlive: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2701,
+			parentId: 270,
+			treePath: "0,1,270",
+			type: "B",
+			name: "通知查询",
+			perm: "sys:notice:list",
+			sort: 1,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2702,
+			parentId: 270,
+			treePath: "0,1,270",
+			type: "B",
+			name: "通知新增",
+			perm: "sys:notice:create",
+			sort: 2,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2703,
+			parentId: 270,
+			treePath: "0,1,270",
+			type: "B",
+			name: "通知编辑",
+			perm: "sys:notice:update",
+			sort: 3,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2704,
+			parentId: 270,
+			treePath: "0,1,270",
+			type: "B",
+			name: "通知删除",
+			perm: "sys:notice:delete",
+			sort: 4,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
 	]);
 	console.log("  ✅ 菜单表：38 条（1 目录 + 6 菜单 + 31 按钮 + 1 隐藏菜单 + 4 隐藏按钮）");
 
@@ -928,6 +999,7 @@ const main = async () => {
 		250, 2501, 2502, 2503, 2504, // 字典管理
 		251, 2511, 2512, 2513, 2514, // 字典项（隐藏）
 		260, 2601, 2602, 2603, 2604, // 系统配置
+		270, 2701, 2702, 2703, 2704, // 通知公告
 	];
 	await db.insert(sysRoleMenu).values(
 		adminMenuIds.map((menuId) => ({ roleId: 2, menuId })),

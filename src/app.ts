@@ -7,6 +7,7 @@ import { deptRoutes } from "@/modules/dept/routes";
 import { dictRoutes } from "@/modules/dict/routes";
 import { ipBlacklistRoutes } from "@/modules/ip-blacklist/routes";
 import { menuRoutes } from "@/modules/menu/routes";
+import { noticeRoutes } from "@/modules/notice/routes";
 import { onlineRoutes } from "@/modules/online/routes";
 import { operLogRoutes } from "@/modules/oper-log/routes";
 import { roleRoutes } from "@/modules/role/routes";
@@ -45,6 +46,7 @@ export const app = new Elysia()
 					{ name: "Online", description: "在线用户" },
 					{ name: "Dict", description: "字典管理" },
 					{ name: "Config", description: "系统配置" },
+					{ name: "Notice", description: "通知公告" },
 					{ name: "File", description: "文件存储" },
 					{ name: "IpBlacklist", description: "IP 黑名单" },
 				],
@@ -80,6 +82,7 @@ export const app = new Elysia()
 	.use(onlineRoutes)
 	.use(dictRoutes)
 	.use(configRoutes)
+	.use(noticeRoutes)
 	.use(ipBlacklistRoutes)
 	.use(storageRoutes)
 	.get("/", () => "Hello Elysia");
