@@ -57,7 +57,14 @@ export const NoticeCreateBody = z
 				"指定用户 ID 数组（targetType=2 时传，queries 层 join 为逗号串入库）",
 			),
 	})
-	.describe("创建通知请求体");
+	.describe("创建通知请求体")
+	.refine(
+		(v) => v.targetType !== 2 || (v.targetUserIds != null && v.targetUserIds.length > 0),
+		{
+			message: "targetType=2（指定）时 targetUserIds 不能为空",
+			path: ["targetUserIds"],
+		},
+	);
 
 /** 更新通知请求体（仅已发布态 publishStatus=1 不可编辑，草稿/已撤回可编辑，与前端 index.vue `publishStatus != 1` 一致） */
 export const NoticeUpdateBody = z

@@ -65,7 +65,7 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 		},
 		{
 			auth: true,
-			requirePerm: ["sys:notice:list"],
+			requirePerm: ["sys:notice:update"],
 			params: NoticeParamsWithId,
 			detail: {
 				tags: ["Notice"],
