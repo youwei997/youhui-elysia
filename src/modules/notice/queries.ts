@@ -195,7 +195,7 @@ export const publishNotice = async (
 				publishTime: now,
 				revokeTime: null,
 			})
-			.where(eq(sysNotice.id, id))
+			.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)))
 			.returning();
 		return updated as NoticeRecord;
 	});

@@ -8,6 +8,8 @@ import {
 	createNotice,
 	findNoticeById,
 	findNotices,
+	publishNotice,
+	revokeNotice,
 	updateNotice,
 } from "@/modules/notice/queries";
 import { NoticeParamsWithCommaIds } from "@/modules/notice/schema";
@@ -18,12 +20,20 @@ const LIST_PUBLISHED_ID = 9002; // 已发布（publisherId 指向真实用户 �
 const UPDATE_ID = 9003; // 编辑目标
 const DELETE_ID_A = 9004; // 批量删目标
 const DELETE_ID_B = 9005; // 批量删目标（带 user_notice 验级联）
+const PUBLISH_ALL_ID = 9006; // 发布目标：targetType=1（全部）
+const PUBLISH_TARGETED_ID = 9007; // 发布目标：targetType=2（指定）
+const REPUBLISH_ID = 9008; // 重新发布：验证旧 user_notice 软删 + revokeTime 清空
+const REVOKE_ID = 9009; // 撤回目标
 const ALL_IDS = [
 	LIST_DRAFT_ID,
 	LIST_PUBLISHED_ID,
 	UPDATE_ID,
 	DELETE_ID_A,
 	DELETE_ID_B,
+	PUBLISH_ALL_ID,
+	PUBLISH_TARGETED_ID,
+	REPUBLISH_ID,
+	REVOKE_ID,
 ];
 
 // 发布人取库中任一真实用户，避免耦合具体 seed ID
@@ -111,10 +121,70 @@ describe("notice 模块查询", () => {
 				publishTime: now,
 				...audit,
 			},
+			{
+				id: PUBLISH_ALL_ID,
+				title: "测试通知待发布(全部)",
+				content: "待发布内容",
+				type: 1,
+				level: "L",
+				targetType: 1,
+				publishStatus: 0,
+				...audit,
+			},
+			{
+				id: PUBLISH_TARGETED_ID,
+				title: "测试通知待发布(指定)",
+				content: "待发布内容",
+				type: 1,
+				level: "L",
+				targetType: 2,
+				targetUserIds: String(publisherId),
+				publishStatus: 0,
+				...audit,
+			},
+			{
+				id: REPUBLISH_ID,
+				title: "测试通知重新发布",
+				content: "已撤回待重发",
+				type: 1,
+				level: "L",
+				targetType: 1,
+				publishStatus: -1,
+				publisherId,
+				publishTime: now,
+				revokeTime: now,
+				...audit,
+			},
+			{
+				id: REVOKE_ID,
+				title: "测试通知待撤回",
+				content: "已发布待撤回",
+				type: 1,
+				level: "L",
+				targetType: 1,
+				publishStatus: 1,
+				publisherId,
+				publishTime: now,
+				...audit,
+			},
 		]);
 		// DELETE_ID_B 物化一条 user_notice，用于验证批量删的级联软删
 		await db.insert(sysUserNotice).values({
 			noticeId: DELETE_ID_B,
+			userId: publisherId,
+			isRead: 0,
+			...audit,
+		});
+		// REPUBLISH_ID 遗留一条撤回前的旧快照（未软删），用于验证重新发布会先软删旧记录
+		await db.insert(sysUserNotice).values({
+			noticeId: REPUBLISH_ID,
+			userId: publisherId,
+			isRead: 0,
+			...audit,
+		});
+		// REVOKE_ID 物化一条 user_notice，用于验证撤回会级联软删
+		await db.insert(sysUserNotice).values({
+			noticeId: REVOKE_ID,
 			userId: publisherId,
 			isRead: 0,
 			...audit,
@@ -229,5 +299,82 @@ describe("notice 模块查询", () => {
 		expect(NoticeParamsWithCommaIds.safeParse({ ids: "1," }).success).toBe(
 			false,
 		);
+	});
+
+	test("publishNotice targetType=1（全部）物化给所有未软删用户", async () => {
+		const totalUsers = await db
+			.select({ id: sysUser.id })
+			.from(sysUser)
+			.where(isNull(sysUser.deleteTime));
+
+		const updated = await publishNotice(PUBLISH_ALL_ID, publisherId, db);
+		expect(updated?.publishStatus).toBe(1);
+		expect(updated?.publisherId).toBe(publisherId);
+		expect(updated?.publishTime).not.toBeNull();
+
+		const materialized = await db
+			.select({ userId: sysUserNotice.userId })
+			.from(sysUserNotice)
+			.where(
+				and(
+					eq(sysUserNotice.noticeId, PUBLISH_ALL_ID),
+					isNull(sysUserNotice.deleteTime),
+				),
+			);
+		// 不按 status 过滤，与 Java 原版一致：物化数量等于全体未软删用户数
+		expect(materialized).toHaveLength(totalUsers.length);
+	});
+
+	test("publishNotice targetType=2（指定）仅物化给 targetUserIds", async () => {
+		const updated = await publishNotice(PUBLISH_TARGETED_ID, publisherId, db);
+		expect(updated?.publishStatus).toBe(1);
+
+		const materialized = await db
+			.select({ userId: sysUserNotice.userId })
+			.from(sysUserNotice)
+			.where(
+				and(
+					eq(sysUserNotice.noticeId, PUBLISH_TARGETED_ID),
+					isNull(sysUserNotice.deleteTime),
+				),
+			);
+		expect(materialized).toHaveLength(1);
+		expect(materialized[0]?.userId).toBe(publisherId);
+	});
+
+	test("publishNotice 重新发布：软删旧 user_notice 快照 + 重新物化 + 清空 revokeTime", async () => {
+		const updated = await publishNotice(REPUBLISH_ID, publisherId, db);
+		expect(updated?.publishStatus).toBe(1);
+		expect(updated?.revokeTime).toBeNull();
+
+		// 撤回前遗留的旧快照应被软删
+		const stale = await db
+			.select({ id: sysUserNotice.id })
+			.from(sysUserNotice)
+			.where(
+				and(
+					eq(sysUserNotice.noticeId, REPUBLISH_ID),
+					isNull(sysUserNotice.deleteTime),
+				),
+			);
+		// targetType=1 全部用户重新物化，数量应等于全体未软删用户数（非 0）
+		expect(stale.length).toBeGreaterThan(0);
+	});
+
+	test("revokeNotice 已发布→已撤回 + 清空对应 user_notice", async () => {
+		const updated = await revokeNotice(REVOKE_ID, db);
+		expect(updated?.publishStatus).toBe(-1);
+		expect(updated?.revokeTime).not.toBeNull();
+
+		const alive = await db
+			.select({ id: sysUserNotice.id })
+			.from(sysUserNotice)
+			.where(
+				and(
+					eq(sysUserNotice.noticeId, REVOKE_ID),
+					isNull(sysUserNotice.deleteTime),
+				),
+			);
+		expect(alive).toHaveLength(0);
 	});
 });
