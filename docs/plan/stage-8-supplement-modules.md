@@ -110,7 +110,7 @@ interface ExcelResult {
 
 ---
 
-### 8.4 通知公告 (sys_notice + sys_user_notice) 🟡 进行中
+### 8.4 通知公告 (sys_notice + sys_user_notice) ✅ 已完成
 
 > 比 8.3 复杂：多一层状态机 + 双表关联 + 发布 fan-out 物化。
 > **拆批原则**：任务细颗粒，一个任务只动 2-3 个文件、对应一次聚焦 commit。
@@ -178,17 +178,17 @@ interface ExcelResult {
 - `targetType=全部` 落库策略（原 Java：**发布时物化**给每个用户插一条 user_notice；发布后新增用户看不到旧通知，属可接受快照语义，用 `ponytail:` 标天花板）
 - `read-all` 范围（原 Java：当前用户所有未读记录 update，与分页无关）
 
-- [ ] **T7 发布/撤回 queries** — 发布 fan-out（事务：删旧 user_notice → 按 targetType 捞用户 → 批量插）+ 撤回（改状态 + 删 user_notice）。_文件：queries 1_
-- [ ] **T8 发布/撤回 routes + 状态机** — 2 路由 + 三态流转校验（已发布不能重发、只有已发布能撤回）+ 错误码。_文件：routes 1（+ errors 1）_
-- [ ] **T9 已读 queries + routes** — 详情置已读 / read-all / 我的通知 JOIN 查询。_文件：queries 1 + routes 1_
-- [ ] **T10 第二批测试** — 状态机流转、fan-out 物化、已读、我的通知。_文件：test 1_
+- [x] **T7 发布/撤回 queries** — 发布 fan-out（事务：删旧 user_notice → 按 targetType 捞用户 → 批量插）+ 撤回（改状态 + 删 user_notice）。_文件：queries 1_
+- [x] **T8 发布/撤回 routes + 状态机** — 2 路由 + 三态流转校验（已发布不能重发、只有已发布能撤回）+ 错误码。_文件：routes 1（+ errors 1）_
+- [x] **T9 已读 queries + routes** — 详情置已读 / read-all / 我的通知 JOIN 查询。_文件：queries 1 + routes 1_
+- [x] **T10 第二批测试** — 状态机流转、fan-out 物化、已读、我的通知。_文件：test 1_（随 T7/T8/T9 TDD 流程一并完成，18/18 PASS）
 
 **第二批验收**：
-- [ ] 状态机三态流转正确，非法流转（如撤回草稿）拒绝
-- [ ] 发布 fan-out：全部/指定两种 targetType 均正确物化 user_notice
-- [ ] `read-all` 与详情查看都能正确置已读
-- [ ] `GET /notices/my` 只返回当前用户可见范围（INNER JOIN + publishStatus=1）
-- [ ] `bun run check` + `bun run tsc` 通过 + 单测 PASS
+- [x] 状态机三态流转正确，非法流转（如撤回草稿）拒绝
+- [x] 发布 fan-out：全部/指定两种 targetType 均正确物化 user_notice
+- [x] `read-all` 与详情查看都能正确置已读
+- [x] `GET /notices/my` 只返回当前用户可见范围（INNER JOIN + publishStatus=1）
+- [x] `bun run check` + `bun run tsc` 通过 + 单测 PASS
 
 **范围外（不做）**：
 - SSE 实时推送（原 Java 发布/撤回时 `sseService.sendToUser` 推 notice/notice-revoke）。前端 REST 与 SSE 解耦，无 SSE 通知仍可正常收发，仅缺实时弹窗 + 控制台有连接失败日志。SSE 是横跨 dict 同步/在线数/通知的独立实时体系，另立任务，不并入 8.4。
@@ -200,6 +200,12 @@ interface ExcelResult {
 - [x] 8.1 个人中心
 - [x] 8.2 用户导入导出
 - [x] 8.3 系统配置
-- [ ] 8.4 通知公告（🟡 第一批 CRUD ✅ 完成 / 第二批状态机待做）
+- [x] 8.4 通知公告
 
-## 本阶段收获（完成后填写）
+## 本阶段收获
+
+- 双表设计：sys_notice 存内容与状态机，sys_user_notice 作物化快照（fan-out），职责分离清晰。
+- 三态状态机（草稿 0 → 已发布 1 → 已撤回 -1）仅在 publish/revoke 路由设守卫，不在 CRUD 层限制，与前端按钮显隐逻辑配合，避免"已发布混选批量删"被误阻。
+- 发布事务：先软删旧 user_notice 快照，再按最新 targetType 重新物化，保证重新发布时一致性。
+- 路由顺序是 Elysia 的关键细节：静态路径（`/my`、`/read-all`）必须在动态参数（`/:id`）之前注册。
+- T10 随 T7/T8/T9 TDD 流程一并完成，实践了"测试随实现走"而非单独补测试批次的节奏。

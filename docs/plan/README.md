@@ -13,7 +13,7 @@
 | 5 · 进阶辅助模块 | ⭐⭐⭐ | 4-5d | 🟡 进行中 | [stage-5-modules.md](./stage-5-modules.md) |
 | 6 · 代码生成器 | ⭐⭐⭐⭐ | 5-6d | ⬜ 未开始 | [stage-6-codegen.md](./stage-6-codegen.md) |
 | 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
-| 8 · 补充模块（计划外新增） | ⭐⭐ | — | 🟡 进行中 | [stage-8-supplement-modules.md](./stage-8-supplement-modules.md) |
+| 8 · 补充模块（计划外新增） | ⭐⭐ | — | ✅ 已完成 | [stage-8-supplement-modules.md](./stage-8-supplement-modules.md) |
 
 > 状态标记：⬜ 未开始 · 🟡 进行中 · ✅ 已完成 · ⚠️ 受阻
 
@@ -111,4 +111,5 @@ Elysia 范式吃透 █████████ 25%
 |[2026-07-07] 阶段 8.3 系统配置模块完成。schema + types/errors/redis-keys + zod DTO + queries + 单测 + routes(6接口) + 种子数据 → 端到端验证通过。withCache 不接入（管理端 CRUD）。已提交。
 |[2026-07-07] 阶段 8.2 用户导入导出完成。3 接口（GET /template / GET /export / POST /import），xlsx 库。已提交。
 [2026-07-08] 阶段 8.2 代码清理：移除 as never 类型断言，新增 UserListFilter 类型从 schema 派生；导入改为逐行 insert，within-file 同名不整批回滚；导出补 user 空守卫。对齐 vue3-element-admin-v4.6.0 前端契约验证通过。
+[2026-07-12] 阶段 8.4 通知公告完成（T1-T10 全部）。双表设计（sys_notice 状态机 + sys_user_notice 物化快照）、三态状态机（0/1/-1）、发布 fan-out 事务、路由静态/动态顺序保证、T9 已读/我的通知 JOIN 查询。TDD 全程覆盖，18/18 PASS。阶段 8 全部完成。
 ```
