@@ -356,7 +356,7 @@ src/
 - [x] Storage 接口已定义
 - [x] local-fs driver 可用（s3 driver 占位 12 行，未接通）
 - [x] env 切 driver 不改业务代码
-- [ ] 预签名上传可工作（前端用 PUT 直传）
+- ~~预签名上传（已废弃——前端用 axios multipart 流走后端，不改组件）~~
 - [x] 文件元数据登记到 DB
 - [x] 删除时同步删存储侧
 
