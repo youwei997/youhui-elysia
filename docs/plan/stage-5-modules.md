@@ -162,7 +162,7 @@
 `db/schema/system/login-log.ts`：
 - 字段：userId / username / ip / ipRegion / userAgent / browser / os / status（'success' | 'fail'）/ errorMsg / created_at
 
-`modules/login-log/`：列表查询。
+`modules/auth/`：登录成功/失败时在 auth routes 中记录 loginLog（非独立模块）
 
 `modules/online/`：
 - 登录成功时往 Redis `online:user:{id}` 存：username / loginAt / ip / userAgent，TTL = access token 过期时间
@@ -291,16 +291,15 @@ src/
 - macro `rateLimit: '60:100'`（60 秒内 100 次）
 - Redis INCR + EXPIRE 实现
 - 触发时返回 429 + Retry-After header
+- 黑名单 IP 检查（`redis.get(redisKeys.ipBlacklist(ip))` → 403）
 
 `db/schema/system/ip-blacklist.ts`：
 - ip / reason / expireAt / createdBy + auditColumns
 
-`src/plugins/ip-blacklist.ts`：
-- 全局 plugin，onRequest 阶段检查 ip
-- 命中 → 直接 403
-- 缓存 ip → expireAt 进 Redis（避免每次查 DB）
+`modules/ip-blacklist/`：
+- 列表查询 + 手动移除
 
-登录失败联动：阶段 3 的失败计数超过阈值时自动入 ip 黑名单一段时间。
+登录失败联动：auth routes 在登录失败超限时自动调用 `addIpToBlacklist` 入黑名单。
 
 ## 学习重点
 
@@ -313,7 +312,7 @@ src/
 ### ⚡ 直接给 AI 做（你只看结果）
 
 - **登录日志 + 在线用户**：标准 CRUD，`/online` 列表 + `DELETE /:userId` 强制下线，无设计决策
-- **文件存储抽象**：`Storage` 接口 `{ put, get, delete, presignedPutUrl, presignedGetUrl }`，`local-fs` / `s3` driver 实现——**标准工厂模式**
+- **文件存储抽象**：`Storage` 接口 `{ put, delete }`（2 方法），`local-fs` / `s3` driver 实现——**标准工厂模式**
 - **限流 + IP 黑名单**：`rateLimit: '60:100'` macro（`INCR + EXPIRE`），**标准实现**
 
 ## 避雷
@@ -323,7 +322,7 @@ src/
 - ❌ password / token 字段必须脱敏
 - ❌ withCache 不要无 TTL（永久缓存等于内存泄漏）
 - ❌ withCache 写完缓存忘记主动失效
-- ❌ 文件存储**不要把文件流过后端**，用预签名上传
+- ⚠️ 文件存储**不绕过后端**（前端用 axios multipart 上传，不走预签名）——由前端契约决定
 - ❌ `Bun.cron` handler 不要同步阻塞，用 async/await
 - ❌ 限流 key 不要只用 IP（CDN 后所有请求同 IP），加上 userId / route
 - ⚠️ 字典缓存的 TTL 不要太长（5-10 分钟），写入主动失效
@@ -333,12 +332,12 @@ src/
 ## 验收清单
 
 ### 操作日志
-- [ ] sys_oper_log 表已建，字段完整
-- [ ] 路由 `audit: "模块:动作"` 声明后才记录
-- [ ] 异步落库不阻塞响应
-- [ ] password / token 字段脱敏
-- [ ] 大 body 截断
-- [ ] 失败请求也被记录（onError 路径）
+- [x] sys_oper_log 表已建，字段完整
+- [x] 路由 `audit: "模块:动作"` 声明后才记录
+- [x] 异步落库不阻塞响应
+- [x] password / token 字段脱敏
+- [x] 大 body 截断
+- [x] 失败请求也被记录（onError 路径）
 
 ### 登录日志 + 在线用户
 - [x] sys_login_log 表已建，登录成功/失败都记录
@@ -354,12 +353,12 @@ src/
 - [ ] 缓存击穿测试：并发 100 个请求同一 key，DB 只被打 1 次
 
 ### 文件存储
-- [ ] Storage 接口已定义
-- [ ] local-fs / s3 两 driver 都可用
-- [ ] env 切 driver 不改业务代码
+- [x] Storage 接口已定义
+- [x] local-fs driver 可用（s3 driver 占位 12 行，未接通）
+- [x] env 切 driver 不改业务代码
 - [ ] 预签名上传可工作（前端用 PUT 直传）
-- [ ] 文件元数据登记到 DB
-- [ ] 删除时同步删存储侧
+- [x] 文件元数据登记到 DB
+- [x] 删除时同步删存储侧
 
 ### 定时任务
 - [ ] `Bun.cron` 注册成功，启动日志可见
@@ -367,11 +366,11 @@ src/
 - [ ] `bun run tsc` + `bun run check` 通过
 
 ### 限流 + IP 黑名单
-- [ ] rateLimit macro 可声明在路由
-- [ ] 触发返回 429 + Retry-After
-- [ ] sys_ip_blacklist 表已建
-- [ ] 登录失败联动入黑名单
-- [ ] 黑名单 IP 直接 403
+- [x] rateLimit macro 可声明在路由
+- [x] 触发返回 429 + Retry-After
+- [x] sys_ip_blacklist 表已建
+- [x] 登录失败联动入黑名单
+- [x] 黑名单 IP 直接 403
 
 ### 整体
 - [x] `bun run check` 通过
