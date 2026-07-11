@@ -24,6 +24,11 @@ export const NoticeListQuery = createListQuery(sysNotice, {
 	title: z.string().optional().describe("标题关键词（模糊匹配）"),
 	publishStatus: publishStatusSchema.optional().describe("发布状态"),
 	type: z.coerce.number().int().optional().describe("通知类型"),
+	isRead: z.coerce
+		.number()
+		.int()
+		.optional()
+		.describe("是否已读（0=未读 1=已读，仅 /my 接口使用）"),
 }).describe("通知列表查询参数");
 
 /** 通知响应（ omit 审计字段 + publisherName 由 JOIN sys_user 派生，列表/详情/我的通知共用） */
@@ -59,7 +64,9 @@ export const NoticeCreateBody = z
 	})
 	.describe("创建通知请求体")
 	.refine(
-		(v) => v.targetType !== 2 || (v.targetUserIds != null && v.targetUserIds.length > 0),
+		(v) =>
+			v.targetType !== 2 ||
+			(v.targetUserIds != null && v.targetUserIds.length > 0),
 		{
 			message: "targetType=2（指定）时 targetUserIds 不能为空",
 			path: ["targetUserIds"],
@@ -82,7 +89,8 @@ export const NoticeUpdateBody = z
 	.describe("更新通知请求体")
 	.refine(
 		(v) =>
-			v.targetType !== 2 || (v.targetUserIds != null && v.targetUserIds.length > 0),
+			v.targetType !== 2 ||
+			(v.targetUserIds != null && v.targetUserIds.length > 0),
 		{
 			message: "targetType=2（指定）时 targetUserIds 不能为空",
 			path: ["targetUserIds"],

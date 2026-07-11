@@ -6,8 +6,12 @@ import { sysUser } from "@/db/schema/system/user";
 import {
 	batchSoftDeleteNotices,
 	createNotice,
+	findMyNotices,
 	findNoticeById,
+	findNoticeDetailById,
 	findNotices,
+	markAllNoticesAsRead,
+	markNoticeAsRead,
 	publishNotice,
 	revokeNotice,
 	updateNotice,
@@ -24,6 +28,11 @@ const PUBLISH_ALL_ID = 9006; // 发布目标：targetType=1（全部）
 const PUBLISH_TARGETED_ID = 9007; // 发布目标：targetType=2（指定）
 const REPUBLISH_ID = 9008; // 重新发布：验证旧 user_notice 软删 + revokeTime 清空
 const REVOKE_ID = 9009; // 撤回目标
+const MARK_READ_ID = 9010; // 验证 markNoticeAsRead（已发布，有 user_notice isRead=0）
+const READ_ALL_ID_A = 9011; // 验证 markAllNoticesAsRead（未读 A）
+const READ_ALL_ID_B = 9012; // 验证 markAllNoticesAsRead（未读 B）
+const MY_NOTICE_ID_A = 9013; // 验证 findMyNotices（未读）
+const MY_NOTICE_ID_B = 9014; // 验证 findMyNotices（已读，用于 isRead=0 反向过滤）
 const ALL_IDS = [
 	LIST_DRAFT_ID,
 	LIST_PUBLISHED_ID,
@@ -34,6 +43,11 @@ const ALL_IDS = [
 	PUBLISH_TARGETED_ID,
 	REPUBLISH_ID,
 	REVOKE_ID,
+	MARK_READ_ID,
+	READ_ALL_ID_A,
+	READ_ALL_ID_B,
+	MY_NOTICE_ID_A,
+	MY_NOTICE_ID_B,
 ];
 
 // 发布人取库中任一真实用户，避免耦合具体 seed ID
@@ -189,6 +203,82 @@ describe("notice 模块查询", () => {
 			isRead: 0,
 			...audit,
 		});
+		// T9 测试数据：5 条已发布通知 + 对应 user_notice
+		await db.insert(sysNotice).values([
+			{
+				id: MARK_READ_ID,
+				title: "测试置已读通知",
+				content: "内容",
+				type: 1,
+				level: "L",
+				targetType: 1,
+				publishStatus: 1,
+				publisherId,
+				publishTime: now,
+				...audit,
+			},
+			{
+				id: READ_ALL_ID_A,
+				title: "测试全部已读A",
+				content: "内容",
+				type: 1,
+				level: "L",
+				targetType: 1,
+				publishStatus: 1,
+				publisherId,
+				publishTime: now,
+				...audit,
+			},
+			{
+				id: READ_ALL_ID_B,
+				title: "测试全部已读B",
+				content: "内容",
+				type: 1,
+				level: "L",
+				targetType: 1,
+				publishStatus: 1,
+				publisherId,
+				publishTime: now,
+				...audit,
+			},
+			{
+				id: MY_NOTICE_ID_A,
+				title: "测试我的通知未读",
+				content: "内容",
+				type: 1,
+				level: "L",
+				targetType: 1,
+				publishStatus: 1,
+				publisherId,
+				publishTime: now,
+				...audit,
+			},
+			{
+				id: MY_NOTICE_ID_B,
+				title: "测试我的通知已读",
+				content: "内容",
+				type: 1,
+				level: "L",
+				targetType: 1,
+				publishStatus: 1,
+				publisherId,
+				publishTime: now,
+				...audit,
+			},
+		]);
+		await db.insert(sysUserNotice).values([
+			{ noticeId: MARK_READ_ID, userId: publisherId, isRead: 0, ...audit },
+			{ noticeId: READ_ALL_ID_A, userId: publisherId, isRead: 0, ...audit },
+			{ noticeId: READ_ALL_ID_B, userId: publisherId, isRead: 0, ...audit },
+			{ noticeId: MY_NOTICE_ID_A, userId: publisherId, isRead: 0, ...audit },
+			{
+				noticeId: MY_NOTICE_ID_B,
+				userId: publisherId,
+				isRead: 1,
+				readTime: now,
+				...audit,
+			},
+		]);
 	});
 
 	afterAll(async () => {
@@ -380,5 +470,88 @@ describe("notice 模块查询", () => {
 				),
 			);
 		expect(alive).toHaveLength(0);
+	});
+
+	// ── T9 已读 / 我的通知 ──────────────────────────────────────────────
+
+	test("findNoticeDetailById 返回含 publisherName 的通知详情", async () => {
+		const row = await findNoticeDetailById(LIST_PUBLISHED_ID, db);
+		expect(row?.title).toBe("测试通知已发布");
+		expect(row?.publisherName).toBe(publisherName);
+
+		// 不存在 / 软删后查不到
+		const miss = await findNoticeDetailById(999999, db);
+		expect(miss).toBeUndefined();
+	});
+
+	test("markNoticeAsRead 将 user_notice 置为已读（isRead=1 + readTime 非空）", async () => {
+		await markNoticeAsRead(MARK_READ_ID, publisherId, db);
+
+		const [row] = await db
+			.select({
+				isRead: sysUserNotice.isRead,
+				readTime: sysUserNotice.readTime,
+			})
+			.from(sysUserNotice)
+			.where(
+				and(
+					eq(sysUserNotice.noticeId, MARK_READ_ID),
+					eq(sysUserNotice.userId, publisherId),
+					isNull(sysUserNotice.deleteTime),
+				),
+			);
+		expect(row?.isRead).toBe(1);
+		expect(row?.readTime).not.toBeNull();
+	});
+
+	test("markNoticeAsRead 对无 user_notice 记录的用户为空操作（不报错）", async () => {
+		await expect(
+			markNoticeAsRead(MARK_READ_ID, 999999, db),
+		).resolves.toBeUndefined();
+	});
+
+	test("findMyNotices 返回当前用户可见通知并携带 isRead", async () => {
+		const result = await findMyNotices(
+			{ pageNum: 1, pageSize: 50 },
+			publisherId,
+			db,
+		);
+		const noticeA = result.list.find((n) => n.id === MY_NOTICE_ID_A);
+		const noticeB = result.list.find((n) => n.id === MY_NOTICE_ID_B);
+		expect(noticeA).toBeDefined();
+		expect(noticeA?.isRead).toBe(0);
+		expect(noticeB).toBeDefined();
+		expect(noticeB?.isRead).toBe(1);
+		// 草稿/撤回态不在 /my 结果里
+		expect(result.list.find((n) => n.id === LIST_DRAFT_ID)).toBeUndefined();
+	});
+
+	test("findMyNotices isRead=0 过滤只返回未读", async () => {
+		const result = await findMyNotices(
+			{ pageNum: 1, pageSize: 50, isRead: 0 },
+			publisherId,
+			db,
+		);
+		const ids = result.list.map((n) => n.id);
+		expect(ids).toContain(MY_NOTICE_ID_A);
+		expect(ids).not.toContain(MY_NOTICE_ID_B);
+	});
+
+	// markAllNoticesAsRead 放最后，它会把所有未读改为已读，影响后续断言
+	test("markAllNoticesAsRead 将当前用户全部未读 user_notice 置为已读", async () => {
+		await markAllNoticesAsRead(publisherId, db);
+
+		const unread = await db
+			.select({ id: sysUserNotice.id })
+			.from(sysUserNotice)
+			.where(
+				and(
+					inArray(sysUserNotice.noticeId, [READ_ALL_ID_A, READ_ALL_ID_B]),
+					eq(sysUserNotice.userId, publisherId),
+					eq(sysUserNotice.isRead, 0),
+					isNull(sysUserNotice.deleteTime),
+				),
+			);
+		expect(unread).toHaveLength(0);
 	});
 });

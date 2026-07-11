@@ -13,7 +13,7 @@ import { escapeLike } from "@/db/helpers/like";
 import { sysNotice, sysUserNotice } from "@/db/schema/system/notice";
 import { sysUser } from "@/db/schema/system/user";
 import type { PageResult } from "@/lib/pagination";
-import type { NoticeListRecord, NoticeRecord } from "./types";
+import type { MyNoticeRecord, NoticeListRecord, NoticeRecord } from "./types";
 
 /**
  * 通知公告列表查询（分页，软删过滤）
@@ -161,10 +161,7 @@ export const publishNotice = async (
 
 		const targetUserIds =
 			notice.targetType === 2
-				? notice.targetUserIds
-						.split(",")
-						.filter(Boolean)
-						.map(Number)
+				? notice.targetUserIds.split(",").filter(Boolean).map(Number)
 				: undefined;
 
 		const targetUsers = await tx
@@ -257,4 +254,117 @@ export const batchSoftDeleteNotices = async (
 			.returning({ id: sysNotice.id });
 		return result.length;
 	});
+};
+
+/**
+ * 按 ID 查通知详情（LEFT JOIN sys_user 取发布人名称，软删过滤）
+ *
+ * 用于 GET /:id/detail 路由，返回含 publisherName 的完整详情。
+ */
+export const findNoticeDetailById = async (
+	id: number,
+	db: DB,
+): Promise<NoticeListRecord | undefined> => {
+	const [row] = await db
+		.select({ ...getColumns(sysNotice), publisherName: sysUser.nickname })
+		.from(sysNotice)
+		.leftJoin(sysUser, eq(sysNotice.publisherId, sysUser.id))
+		.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)));
+	return row;
+};
+
+/**
+ * 置单条通知已读（更新 isRead=1 + readTime）
+ *
+ * 当前用户对该通知无 user_notice 记录时 UPDATE 影响 0 行，安全空操作。
+ */
+export const markNoticeAsRead = async (
+	noticeId: number,
+	userId: number,
+	db: DB,
+): Promise<void> => {
+	const now = new Date().toISOString();
+	await db
+		.update(sysUserNotice)
+		.set({ isRead: 1, readTime: now })
+		.where(
+			and(
+				eq(sysUserNotice.noticeId, noticeId),
+				eq(sysUserNotice.userId, userId),
+				isNull(sysUserNotice.deleteTime),
+			),
+		);
+};
+
+/**
+ * 全部已读（当前用户所有未读 user_notice 一次性置 isRead=1）
+ *
+ * 对齐原 Java read-all 语义：与分页无关，直接更新当前用户全部未读记录。
+ */
+export const markAllNoticesAsRead = async (
+	userId: number,
+	db: DB,
+): Promise<void> => {
+	const now = new Date().toISOString();
+	await db
+		.update(sysUserNotice)
+		.set({ isRead: 1, readTime: now })
+		.where(
+			and(
+				eq(sysUserNotice.userId, userId),
+				eq(sysUserNotice.isRead, 0),
+				isNull(sysUserNotice.deleteTime),
+			),
+		);
+};
+
+/**
+ * 我的通知分页（INNER JOIN user_notice + LEFT JOIN sys_user，仅返回已发布通知）
+ *
+ * - INNER JOIN user_notice：只有物化给当前用户的通知才出现
+ * - publishStatus=1 过滤：撤回/草稿对用户不可见
+ * - 支持 isRead 过滤（0=未读 1=已读）和 title 模糊搜索
+ */
+export const findMyNotices = async (
+	query: { pageNum: number; pageSize: number; title?: string; isRead?: number },
+	userId: number,
+	db: DB,
+): Promise<PageResult<MyNoticeRecord>> => {
+	const where = [
+		eq(sysUserNotice.userId, userId),
+		isNull(sysUserNotice.deleteTime),
+		eq(sysNotice.publishStatus, 1),
+		isNull(sysNotice.deleteTime),
+	];
+
+	if (query.title) {
+		where.push(like(sysNotice.title, `%${escapeLike(query.title)}%`));
+	}
+	if (query.isRead !== undefined) {
+		where.push(eq(sysUserNotice.isRead, query.isRead));
+	}
+
+	const whereClause = and(...where);
+
+	const list = await db
+		.select({
+			...getColumns(sysNotice),
+			publisherName: sysUser.nickname,
+			isRead: sysUserNotice.isRead,
+		})
+		.from(sysUserNotice)
+		.innerJoin(sysNotice, eq(sysUserNotice.noticeId, sysNotice.id))
+		.leftJoin(sysUser, eq(sysNotice.publisherId, sysUser.id))
+		.where(whereClause)
+		.orderBy(desc(sysUserNotice.id))
+		.limit(query.pageSize)
+		.offset((query.pageNum - 1) * query.pageSize);
+
+	const [{ total = 0 } = {}] = await db
+		.select({ total: count() })
+		.from(sysUserNotice)
+		.innerJoin(sysNotice, eq(sysUserNotice.noticeId, sysNotice.id))
+		.where(whereClause);
+
+	return { list, total };
 };

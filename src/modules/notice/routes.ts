@@ -5,8 +5,12 @@ import { authPlugin } from "@/plugins/auth";
 import {
 	batchSoftDeleteNotices,
 	createNotice,
+	findMyNotices,
 	findNoticeById,
+	findNoticeDetailById,
 	findNotices,
+	markAllNoticesAsRead,
+	markNoticeAsRead,
 	publishNotice,
 	revokeNotice,
 	updateNotice,
@@ -36,8 +40,34 @@ const parseNotice = (row: NoticeResponseInput) => {
 	};
 };
 
+const parseMyNotice = (row: NoticeResponseInput & { isRead: number }) => ({
+	...parseNotice(row),
+	isRead: row.isRead,
+});
+
 export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 	.use(authPlugin)
+	.get(
+		"/my",
+		async ({ query, user }) => {
+			if (!user) throw unauthorized();
+			const result = await findMyNotices(query, Number(user.sub), db);
+			return {
+				...result,
+				list: result.list.map((n) => parseMyNotice(n)),
+			};
+		},
+		{
+			auth: true,
+			query: NoticeListQuery,
+			detail: {
+				tags: ["Notice"],
+				summary: "我的通知（分页）",
+				description:
+					"仅返回已发布且物化给当前用户的通知，支持 isRead 过滤和 title 模糊搜索",
+			},
+		},
+	)
 	.get(
 		"/",
 		async ({ query }) => {
@@ -76,6 +106,26 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
+	.get(
+		"/:id/detail",
+		async ({ params, user }) => {
+			if (!user) throw unauthorized();
+			const row = await findNoticeDetailById(params.id, db);
+			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+			await markNoticeAsRead(params.id, Number(user.sub), db);
+			return parseNotice(row);
+		},
+		{
+			auth: true,
+			params: NoticeParamsWithId,
+			detail: {
+				tags: ["Notice"],
+				summary: "查看通知详情（顺带置已读）",
+				description:
+					"返回含发布人名称的详情；当前用户有对应 user_notice 时自动置 isRead=1",
+			},
+		},
+	)
 	.post(
 		"/",
 		async ({ body }) => {
@@ -92,6 +142,23 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 				summary: "创建通知公告",
 				description:
 					"默认存草稿（publishStatus=0），发布人/发布时间由发布动作写入",
+			},
+		},
+	)
+	.put(
+		"/read-all",
+		async ({ user }) => {
+			if (!user) throw unauthorized();
+			await markAllNoticesAsRead(Number(user.sub), db);
+			return true;
+		},
+		{
+			auth: true,
+			audit: "notice:read-all",
+			detail: {
+				tags: ["Notice"],
+				summary: "全部已读",
+				description: "将当前用户所有未读 user_notice 置 isRead=1",
 			},
 		},
 	)
