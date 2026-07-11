@@ -1,4 +1,4 @@
-import { and, asc, count, eq, isNull, like } from "drizzle-orm";
+import { and, asc, count, eq, gt, isNull, like, or } from "drizzle-orm";
 import type { DB } from "@/db/client";
 import { escapeLike } from "@/db/helpers/like";
 import { sysIpBlacklist } from "@/db/schema/system/ip-blacklist";
@@ -7,12 +7,20 @@ import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
 import type { IpBlacklistRecord } from "./types";
 
-/** IP 黑名单列表（分页，软删过滤） */
+/** IP 黑名单列表（分页，软删过滤 + 过期过滤）
+ *
+ * 过滤规则：未软删 AND（永久封禁 OR 尚未到期）。
+ * expireAt 已过但 deleteTime 仍为 null 的记录（Redis key 已自然失效）不再出现在列表中。
+ */
 export const findIpBlacklists = async (
 	query: { pageNum: number; pageSize: number; ip?: string },
 	db: DB,
 ): Promise<PageResult<IpBlacklistRecord>> => {
-	const where = [isNull(sysIpBlacklist.deleteTime)];
+	const now = new Date().toISOString();
+	const where = [
+		isNull(sysIpBlacklist.deleteTime),
+		or(isNull(sysIpBlacklist.expireAt), gt(sysIpBlacklist.expireAt, now)),
+	];
 
 	if (query.ip) {
 		where.push(like(sysIpBlacklist.ip, `%${escapeLike(query.ip)}%`));
