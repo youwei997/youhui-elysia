@@ -750,8 +750,34 @@ const main = async () => {
 			updatedBy: 1,
 			updateTime: NOW,
 		},
+		{
+			id: 2705,
+			parentId: 270,
+			treePath: "0,1,270",
+			type: "B",
+			name: "通知发布",
+			perm: "sys:notice:publish",
+			sort: 5,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
+		{
+			id: 2706,
+			parentId: 270,
+			treePath: "0,1,270",
+			type: "B",
+			name: "通知撤回",
+			perm: "sys:notice:revoke",
+			sort: 6,
+			createdBy: 1,
+			createTime: NOW,
+			updatedBy: 1,
+			updateTime: NOW,
+		},
 	]);
-	console.log("  ✅ 菜单表：38 条（1 目录 + 6 菜单 + 31 按钮 + 1 隐藏菜单 + 4 隐藏按钮）");
+	console.log("  ✅ 菜单表：40 条（1 目录 + 6 菜单 + 33 按钮 + 1 隐藏菜单 + 4 隐藏按钮）");
 
 	// ==========================================
 	// 3. 角色表（sys_role）—— dataScope：1=全部 2=部门及子部门 3=本部门 4=本人 5=自定义
@@ -999,7 +1025,7 @@ const main = async () => {
 		250, 2501, 2502, 2503, 2504, // 字典管理
 		251, 2511, 2512, 2513, 2514, // 字典项（隐藏）
 		260, 2601, 2602, 2603, 2604, // 系统配置
-		270, 2701, 2702, 2703, 2704, // 通知公告
+		270, 2701, 2702, 2703, 2704, 2705, 2706, // 通知公告
 	];
 	await db.insert(sysRoleMenu).values(
 		adminMenuIds.map((menuId) => ({ roleId: 2, menuId })),

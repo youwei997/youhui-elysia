@@ -131,6 +131,105 @@ export const updateNotice = async (
 };
 
 /**
+ * 发布通知公告（事务：先软删旧 user_notice 快照，再按最新内容重新物化）
+ *
+ * 对齐原 Java NoticeServiceImpl#publishNotice：
+ * - targetType=1（全部）→ 物化给所有未软删用户（不按 status 过滤，与 Java 版一致）
+ * - targetType=2（指定）→ 物化给 targetUserIds 解析出的用户
+ * 状态流转校验（已发布不可重发）由 routes 层前置把关，本函数只做发布动作。
+ */
+export const publishNotice = async (
+	id: number,
+	publisherId: number,
+	db: DB,
+): Promise<NoticeRecord | undefined> => {
+	return await db.transaction(async (tx) => {
+		const now = new Date().toISOString();
+
+		await tx
+			.update(sysUserNotice)
+			.set({ deleteTime: now })
+			.where(
+				and(eq(sysUserNotice.noticeId, id), isNull(sysUserNotice.deleteTime)),
+			);
+
+		const [notice] = await tx
+			.select()
+			.from(sysNotice)
+			.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)));
+		if (!notice) return undefined;
+
+		const targetUserIds =
+			notice.targetType === 2
+				? notice.targetUserIds
+						.split(",")
+						.filter(Boolean)
+						.map(Number)
+				: undefined;
+
+		const targetUsers = await tx
+			.select({ id: sysUser.id })
+			.from(sysUser)
+			.where(
+				and(
+					isNull(sysUser.deleteTime),
+					...(targetUserIds ? [inArray(sysUser.id, targetUserIds)] : []),
+				),
+			);
+
+		if (targetUsers.length > 0) {
+			await tx.insert(sysUserNotice).values(
+				targetUsers.map((u) => ({
+					noticeId: id,
+					userId: u.id,
+					isRead: 0,
+				})),
+			);
+		}
+
+		const [updated] = await tx
+			.update(sysNotice)
+			.set({
+				publishStatus: 1,
+				publisherId,
+				publishTime: now,
+				revokeTime: null,
+			})
+			.where(eq(sysNotice.id, id))
+			.returning();
+		return updated as NoticeRecord;
+	});
+};
+
+/**
+ * 撤回通知公告（事务：软删该 notice 的 user_notice + 状态改为已撤回）
+ *
+ * 状态流转校验（仅已发布可撤回）由 routes 层前置把关，本函数只做撤回动作。
+ */
+export const revokeNotice = async (
+	id: number,
+	db: DB,
+): Promise<NoticeRecord | undefined> => {
+	return await db.transaction(async (tx) => {
+		const now = new Date().toISOString();
+
+		await tx
+			.update(sysUserNotice)
+			.set({ deleteTime: now })
+			.where(
+				and(eq(sysUserNotice.noticeId, id), isNull(sysUserNotice.deleteTime)),
+			);
+
+		const [updated] = await tx
+			.update(sysNotice)
+			.set({ publishStatus: -1, revokeTime: now })
+			.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)))
+			.returning();
+		return updated as NoticeRecord | undefined;
+	});
+};
+
+/**
  * 批量软删通知公告（事务：连带软删关联的 sys_user_notice）
  *
  * 返回实际软删的通知条数。草稿态尚无物化的 user_notice，连带删对其为空操作，

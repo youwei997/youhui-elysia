@@ -79,7 +79,15 @@ export const NoticeUpdateBody = z
 			.optional()
 			.describe("指定用户 ID 数组（queries 层 join 为逗号串入库）"),
 	})
-	.describe("更新通知请求体");
+	.describe("更新通知请求体")
+	.refine(
+		(v) =>
+			v.targetType !== 2 || (v.targetUserIds != null && v.targetUserIds.length > 0),
+		{
+			message: "targetType=2（指定）时 targetUserIds 不能为空",
+			path: ["targetUserIds"],
+		},
+	);
 
 /** 通知 ID 路径参数 */
 export const NoticeParamsWithId = z

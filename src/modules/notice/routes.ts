@@ -1,12 +1,14 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
-import { ERR_CODE, notFound } from "@/lib/errors";
+import { BizError, ERR_CODE, notFound, unauthorized } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import {
 	batchSoftDeleteNotices,
 	createNotice,
 	findNoticeById,
 	findNotices,
+	publishNotice,
+	revokeNotice,
 	updateNotice,
 } from "./queries";
 import {
@@ -112,6 +114,56 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 				tags: ["Notice"],
 				summary: "更新通知公告",
 				description: "仅草稿/已撤回态可编辑，前端对已发布行隐藏编辑入口",
+			},
+		},
+	)
+	.put(
+		"/:id/publish",
+		async ({ params, user }) => {
+			if (!user) throw unauthorized();
+			const existing = await findNoticeById(params.id, db);
+			if (!existing) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+			if (existing.publishStatus === 1) {
+				throw new BizError(ERR_CODE.NOTICE_ALREADY_PUBLISHED);
+			}
+			const row = await publishNotice(params.id, Number(user.sub), db);
+			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+			return parseNotice(row);
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:notice:publish"],
+			audit: "notice:publish",
+			params: NoticeParamsWithId,
+			detail: {
+				tags: ["Notice"],
+				summary: "发布通知公告",
+				description:
+					"已发布不可重发；按 targetType 物化 sys_user_notice（全部/指定用户）",
+			},
+		},
+	)
+	.put(
+		"/:id/revoke",
+		async ({ params }) => {
+			const existing = await findNoticeById(params.id, db);
+			if (!existing) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+			if (existing.publishStatus !== 1) {
+				throw new BizError(ERR_CODE.NOTICE_NOT_PUBLISHED);
+			}
+			const row = await revokeNotice(params.id, db);
+			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+			return parseNotice(row);
+		},
+		{
+			auth: true,
+			requirePerm: ["sys:notice:revoke"],
+			audit: "notice:revoke",
+			params: NoticeParamsWithId,
+			detail: {
+				tags: ["Notice"],
+				summary: "撤回通知公告",
+				description: "仅已发布可撤回；撤回后清空对应 sys_user_notice",
 			},
 		},
 	)
