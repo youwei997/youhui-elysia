@@ -305,7 +305,7 @@ src/
 
 ### 🔍 值得认真学（架构师亲自看）
 
-- **操作日志**：`onAfterHandle` 的 `WeakMap` 生命周期、`onError` 与 `errorHandler` 的执行顺序、`setImmediate` 的异步落库时序——**这三个决定日志系统是否可靠**
+- **操作日志**：`onAfterResponse` 的 `WeakMap` 生命周期、`onError` 与 `errorHandler` 的执行顺序、`setImmediate` 的异步落库时序——**这三个决定日志系统是否可靠**
 - **缓存防击穿**：`withCache` 的双重检查锁 + 分布式锁（`SET NX EX`）、写入后 **主动失效** 的时序——**这是通用知识，不只是阶段5**
 - **Bun.cron**：进程内模式使用 UTC、回调完成后才算下次触发（无重叠）——零依赖，`Bun.cron("0 3 * * *", handler)` 即可
 
