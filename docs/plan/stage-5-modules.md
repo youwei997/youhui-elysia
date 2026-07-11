@@ -271,9 +271,19 @@ src/
 
 ### 5.5 定时任务（Bun.cron）(0.5d)
 
-> **设计文档**：[`docs/plan/stage-5.5-cron.md`](./stage-5.5-cron.md)（v1.0）
-> **核心决策**：放弃 pg-boss + sys_job 方案，改用 Bun 内置 `Bun.cron`，零额外依赖。
-> Java 原版无 job 管理模块，前端无对应页面，第一版只做一个任务（清理过期操作日志）。
+> **决策**：放弃 pg-boss + sys_job 方案——Java 原版无 job 管理模块，前端无对应页面；改用 Bun 内置 `Bun.cron`，零额外依赖。
+> IP 黑名单无需定时清理（Redis TTL 自动失效；DB 过期记录显示 bug 已在 `d50ae7d` 修复）。
+
+`src/modules/oper-log/queries.ts`（追加）：
+- `cleanExpiredOperLogs(retentionDays: number, db: DB): Promise<number>`
+- 物理删除 `createTime < now - retentionDays 天` 的记录，返回删除条数（对齐 oper-log 硬删策略）
+
+`src/jobs/index.ts`（新建）：
+- `startJobs()` 集中注册所有 `Bun.cron` 任务
+- 第一版：`Bun.cron("0 3 * * *", async () => cleanExpiredOperLogs(30, db))`（UTC 凌晨 3 点）
+
+`src/index.ts`（追加一行）：
+- `app.listen()` 后调用 `startJobs()`
 
 ### 5.6 限流 + IP 黑名单 (0.5d)
 

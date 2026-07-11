@@ -8,7 +8,7 @@
 
 **技术栈：** Bun 内置 `Bun.cron`（零额外依赖）、Drizzle ORM `delete + lt`、`bun:test`
 
-**设计文档：** [`docs/plan/stage-5.5-cron.md`](./stage-5.5-cron.md)
+**设计文档：** [`docs/plan/stage-5-modules.md`](./stage-5-modules.md) §5.5
 
 ---
 
