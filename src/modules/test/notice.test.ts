@@ -343,12 +343,16 @@ describe("notice 模块查询", () => {
 	});
 
 	test("publishNotice 重新发布：软删旧 user_notice 快照 + 重新物化 + 清空 revokeTime", async () => {
+		const totalUsers = await db
+			.select({ id: sysUser.id })
+			.from(sysUser)
+			.where(isNull(sysUser.deleteTime));
+
 		const updated = await publishNotice(REPUBLISH_ID, publisherId, db);
 		expect(updated?.publishStatus).toBe(1);
 		expect(updated?.revokeTime).toBeNull();
 
-		// 撤回前遗留的旧快照应被软删
-		const stale = await db
+		const alive = await db
 			.select({ id: sysUserNotice.id })
 			.from(sysUserNotice)
 			.where(
@@ -357,8 +361,8 @@ describe("notice 模块查询", () => {
 					isNull(sysUserNotice.deleteTime),
 				),
 			);
-		// targetType=1 全部用户重新物化，数量应等于全体未软删用户数（非 0）
-		expect(stale.length).toBeGreaterThan(0);
+		// 精确匹配全体用户数：若旧快照软删失败，会跟新物化的记录一起存活变成 N+1，此处即可捕获
+		expect(alive).toHaveLength(totalUsers.length);
 	});
 
 	test("revokeNotice 已发布→已撤回 + 清空对应 user_notice", async () => {
