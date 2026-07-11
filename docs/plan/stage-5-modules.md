@@ -269,31 +269,11 @@ src/
 - [x] 边界：空文件 → A0400、超 50MB → A0400、不存在的 url → A0470 (404)
 - [x] `bun run check` + `bun run tsc` 通过
 
-### 5.5 定时任务（pg-boss）(1d)【已推迟】
+### 5.5 定时任务（Bun.cron）(0.5d)
 
-> 已推迟，待核心模块稳定后再投入。以下设计方案保留，届时直接按此实施。
-
-为什么 pg-boss：你已经有 PG，零额外组件，足够这个项目规模。
-
-`src/lib/queue.ts`：
-- 包装 pg-boss 客户端
-- 启动时初始化 schema（pg-boss 自带 migration）
-- 暴露 `enqueue(name, data, opts)` / `schedule(name, cron, data)` / `subscribe(name, handler)`
-
-`db/schema/system/job.ts`：
-- 自定义 sys_job 表（**不依赖 pg-boss 内部表**，元数据 + UI 操作）
-- 字段：id / name / handlerName / cron / args / status / lastRunAt / lastRunResult / createdBy + auditColumns
-
-`modules/job/`：
-- CRUD
-- 启动时把 status='running' 的所有 job 调用 `pgBoss.schedule(...)` 注册
-- 增/改/删时同步更新 pg-boss 调度
-- `POST /jobs/:id/run` 立即触发一次
-- `POST /jobs/:id/pause` / `:id/resume`
-
-handler 注册：
-- `src/jobs/index.ts` 集中注册（一个 handlerName → 一个函数）
-- 第一版可写 2-3 个示例任务（清理过期日志、清理过期黑名单等）
+> **设计文档**：[`docs/plan/stage-5.5-cron.md`](./stage-5.5-cron.md)（v1.0）
+> **核心决策**：放弃 pg-boss + sys_job 方案，改用 Bun 内置 `Bun.cron`，零额外依赖。
+> Java 原版无 job 管理模块，前端无对应页面，第一版只做一个任务（清理过期操作日志）。
 
 ### 5.6 限流 + IP 黑名单 (0.5d)
 
@@ -318,7 +298,7 @@ handler 注册：
 
 - **操作日志**：`onAfterHandle` 的 `WeakMap` 生命周期、`onError` 与 `errorHandler` 的执行顺序、`setImmediate` 的异步落库时序——**这三个决定日志系统是否可靠**
 - **缓存防击穿**：`withCache` 的双重检查锁 + 分布式锁（`SET NX EX`）、写入后 **主动失效** 的时序——**这是通用知识，不只是阶段5**
-- **pg-boss 调度**：`schedule` / `unschedule` 的**先 unschedule 再 schedule** 顺序、`publish` 只触发一次——**这是设计耦合**
+- **Bun.cron**：进程内模式使用 UTC、回调完成后才算下次触发（无重叠）——零依赖，`Bun.cron("0 3 * * *", handler)` 即可
 
 ### ⚡ 直接给 AI 做（你只看结果）
 
@@ -334,7 +314,7 @@ handler 注册：
 - ❌ withCache 不要无 TTL（永久缓存等于内存泄漏）
 - ❌ withCache 写完缓存忘记主动失效
 - ❌ 文件存储**不要把文件流过后端**，用预签名上传
-- ❌ pg-boss 启动时不要重复注册同名 schedule（先 unschedule 再 schedule）
+- ❌ `Bun.cron` handler 不要同步阻塞，用 async/await
 - ❌ 限流 key 不要只用 IP（CDN 后所有请求同 IP），加上 userId / route
 - ⚠️ 字典缓存的 TTL 不要太长（5-10 分钟），写入主动失效
 - ⚠️ 在线用户 Redis key 的 TTL 必须等于 access token 过期时间，避免脏数据
@@ -372,12 +352,9 @@ handler 注册：
 - [ ] 删除时同步删存储侧
 
 ### 定时任务
-- [ ] pg-boss 接入，启动时初始化 schema
-- [ ] sys_job 表与 pg-boss 调度同步
-- [ ] 增/改/删 job 后调度立即生效
-- [ ] 立即触发接口可用
-- [ ] 暂停/恢复可用
-- [ ] 至少 2 个示例任务可工作（如清日志、清过期黑名单）
+- [ ] `Bun.cron` 注册成功，启动日志可见
+- [ ] `cleanExpiredOperLogs` 单测通过（插入 31 天前记录，删后返回 1）
+- [ ] `bun run tsc` + `bun run check` 通过
 
 ### 限流 + IP 黑名单
 - [ ] rateLimit macro 可声明在路由
