@@ -14,7 +14,7 @@
 | 6 · 代码生成器 | ⭐⭐⭐⭐ | 5-6d | ⏭️ 已跳过 | [stage-6-codegen.md](./stage-6-codegen.md) |
 | 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
 | 8 · 补充模块（计划外新增） | ⭐⭐ | — | ✅ 已完成 | [stage-8-supplement-modules.md](./stage-8-supplement-modules.md) |
-| 10 · SSE 实时推送 | ⭐⭐ | 0.5-1d | ⬜ 未开始 | [stage-10-sse.md](./stage-10-sse.md) |
+| 10 · SSE 实时推送 | ⭐⭐ | 0.5-1d | ✅ 已完成 | [stage-10-sse.md](./stage-10-sse.md) |
 
 > 状态标记：⬜ 未开始 · 🟡 进行中 · ✅ 已完成 · ⚠️ 受阻 · ⏭️ 已跳过
 
@@ -113,4 +113,5 @@ Elysia 范式吃透 █████████ 25%
 [2026-07-08] 阶段 8.2 代码清理：移除 as never 类型断言，新增 UserListFilter 类型从 schema 派生；导入改为逐行 insert，within-file 同名不整批回滚；导出补 user 空守卫。对齐 vue3-element-admin-v4.6.0 前端契约验证通过。
 [2026-07-12] 阶段 8.4 通知公告完成（T1-T10 全部）。双表设计（sys_notice 状态机 + sys_user_notice 物化快照）、三态状态机（0/1/-1）、发布 fan-out 事务、路由静态/动态顺序保证、T9 已读/我的通知 JOIN 查询。TDD 全程覆盖，18/18 PASS。阶段 8 全部完成。
 [2026-07-12] 阶段 5.5 完成。Bun.cron 接入（零依赖），cleanExpiredOperLogs 硬删 30 天前操作日志，startJobs 启动时注册。放弃 pg-boss（Java 原版无 job 管理、前端无页面）。阶段 5 全部完成。
+[2026-07-12] 阶段 10 SSE 实时推送完成。Elysia 内置 sse() + async generator 流式推送，内存注册表（Map + 异步可迭代队列），4 类事件跨模块广播（notice 发布/撤回、dict 6 处变更、online-count 连接数）。spike 实测完整插件链通过。7 单测全绿，全量 253 pass 零回归。前端 useSse 单例已可对接。
 ```
