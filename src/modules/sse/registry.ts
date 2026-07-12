@@ -62,10 +62,15 @@ export const startSse = (): void => {
 
 /**
  * 关闭并清空所有连接，用于 gracefulShutdown 进程退出前清理 SSE 流。
+ * 同时停止心跳/在线数周期广播定时器。
  */
 export const closeAllSseConnections = (): void => {
 	for (const conn of connections.values()) {
 		conn.close();
 	}
 	connections.clear();
+	if (sseTimer) {
+		clearInterval(sseTimer);
+		sseTimer = null;
+	}
 };
