@@ -108,8 +108,8 @@ Elysia 范式吃透 █████████ 25%
 [2026-07-04] 阶段 5.3a 后续修复：补充 remark 字段（sys_dict.remark + DictCreateBody/DictUpdateBody）、修复 dictCode 修改不生效（updateDict 支持 type 更新 + 唯一性检查）、修复 POST /:id/items 兼容 dictCode 路径参数、修复创建字典时 remark 不传递、补齐 createDictItem/updateDictItem 的 tagType 类型声明。
 [2026-07-04] 阶段 5 契约微调：dept 响应补充 treePath、menu 响应补充 scope、oper-log 响应 id 保持 number 类型，对齐前端类型声明。
 [2026-07-07] 新增阶段 8：把原本散落在本文档"新增模块"一节的计划外补充模块（个人中心/用户导入导出/系统配置/通知公告）集中到 stage-8-supplement-modules.md，含各自接口契约、表结构草案、验收清单，与其他阶段文档结构对齐。本文档该节改为纯链接引用。
-|[2026-07-07] 阶段 8.3 系统配置模块完成。schema + types/errors/redis-keys + zod DTO + queries + 单测 + routes(6接口) + 种子数据 → 端到端验证通过。withCache 不接入（管理端 CRUD）。已提交。
-|[2026-07-07] 阶段 8.2 用户导入导出完成。3 接口（GET /template / GET /export / POST /import），xlsx 库。已提交。
+[2026-07-07] 阶段 8.3 系统配置模块完成。schema + types/errors/redis-keys + zod DTO + queries + 单测 + routes(6接口) + 种子数据 → 端到端验证通过。withCache 不接入（管理端 CRUD）。已提交。
+[2026-07-07] 阶段 8.2 用户导入导出完成。3 接口（GET /template / GET /export / POST /import），xlsx 库。已提交。
 [2026-07-08] 阶段 8.2 代码清理：移除 as never 类型断言，新增 UserListFilter 类型从 schema 派生；导入改为逐行 insert，within-file 同名不整批回滚；导出补 user 空守卫。对齐 vue3-element-admin-v4.6.0 前端契约验证通过。
 [2026-07-12] 阶段 8.4 通知公告完成（T1-T10 全部）。双表设计（sys_notice 状态机 + sys_user_notice 物化快照）、三态状态机（0/1/-1）、发布 fan-out 事务、路由静态/动态顺序保证、T9 已读/我的通知 JOIN 查询。TDD 全程覆盖，18/18 PASS。阶段 8 全部完成。
 [2026-07-12] 阶段 5.5 完成。Bun.cron 接入（零依赖），cleanExpiredOperLogs 硬删 30 天前操作日志，startJobs 启动时注册。放弃 pg-boss（Java 原版无 job 管理、前端无页面）。阶段 5 全部完成。

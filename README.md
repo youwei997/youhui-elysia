@@ -34,7 +34,7 @@ bun run db:generate && bun run db:migrate && bun run db:seed
 # 启动开发服务器（热重载）
 bun run dev
 
-# 运行迁移工具
+# 数据库浏览 GUI
 bun run db:studio
 ```
 
