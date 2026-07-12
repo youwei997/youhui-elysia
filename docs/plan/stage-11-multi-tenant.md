@@ -117,6 +117,17 @@
   - `sysRoleMenu`：PK 保持 `(roleId, menuId)` 不变（同上，同原版 `uk_roleid_menuid(role_id, menu_id)`）
   - `sysRoleDept`：PK 改为 `(tenantId, roleId, deptId)`（对齐原版 `uk_tenant_roleid_deptid(tenant_id, role_id, dept_id)` 唯一索引**含** tenant_id）
 
+- **`sys_role` / `sys_dept` 主表自身唯一约束：全局 → 租户内复合唯一**（🔴 本轮新增，前九轮漏；不改会导致建租户/建同名角色直接失败）：
+  - **问题**：`role.ts:18/20` 的 `name`/`code`、`dept.ts:15` 的 `code` 现为**全局单列 `.unique()`**；Java 原版是**租户内唯一**（`sql/youlai_admin_tenant.sql:374-375` role `uk_tenant_name`/`uk_tenant_code`、`:43` dept `uk_tenant_code`）。全局唯一下：① `POST /tenants` 给每租户建默认部门（code=tenantCode）/管理员角色时，两租户用相同编码即撞约束、建租户 500；② 两租户各自建同名角色（如都叫"财务"）第二个 500，破坏「租户间独立」。
+  - **改法**：删除 `role.name`/`role.code`/`dept.code` 的单列 `.unique()`，改为表第二参数回调里的复合 `uniqueIndex`：
+    - `role.ts`：`uniqueIndex("uniq_role_tenant_name").on(tenantId, name)` + `uniqueIndex("uniq_role_tenant_code").on(tenantId, code)`
+    - `dept.ts`：`uniqueIndex("uniq_dept_tenant_code").on(tenantId, code)`
+    - **范式**：用 `uniqueIndex(...).on(...)`（对齐本项目现有复合唯一先例 `dict-item.ts:43/48`），不用单列 `.unique()`。
+  - **软删交互（决策）**：原版复合含 `is_deleted`（允许软删后同码重建）；本项目软删用 `deleteTime`（可空 timestamp），且**现有单租户基线本就是 plain `.unique()`（软删行仍占编码、不可同码重建）**。为行为一致 + 不主动优化（AGENTS §3），本次仍用 **plain 复合 `(tenant_id, code)`**，**不**加 `WHERE delete_time IS NULL` 偏索引；「软删后同码重建被占用」是与当前单租户一致的**已知限制**，非多租户引入的回归，未来要放开再评估偏索引。
+  - **连带影响（核实实际代码，修正 reviewer 表述）**：本项目 `saveRole`/`saveDept` **无** app 层「编码已存在」count 查重（唯一性纯靠 DB 约束兜底：role/dept queries 里 `已存在` 零命中、role 仅分页 `count()`、dept 仅一处 `insert`）。故 reviewer 提的「查重 count 须加 tenantEq」在本项目**不适用**——改约束即足够，无需动 queries。（区别于 Java 有 app 层 `count`；未来若补友好冲突提示，记得 beta.22 的 PG 错误码走 `err.cause?.code`。）
+  - **与 username 的区别（勿混）**：username 保持全局唯一是**有意偏离**原版（原版 `sys_user` 亦 `uk_username_tenant`，`:559`），因前端登录不采集 tenantId、需全局消歧（§4 line 153-155）；role/dept 的 code/name 无登录场景、原版明确租户内唯一，两者不可类比。
+
+> `sys_tenant.code` / `sys_tenant_plan.code` **保持全局 `.unique()`**（平台级定义，原版亦全局 `uk_code`：`:797` / `:323`），§3.2 已标 `code unique`，勿误改为租户内。
 > 注：`tenantMenu`（`sys_tenant_menu`）是**新建**表，见 §3.2，不在此列；`relation.ts` 当前仅含 `userRole/roleMenu/roleDept` 三张。
 > `menu / dict / dict-item / config / ip-blacklist` **不加** tenant_id（平台共享，见 1.4）。
 
