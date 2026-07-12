@@ -97,7 +97,9 @@
 
 ### 2.4 前端类型形状（照搬，不重新设计）
 - `TenantInfo { id, name, domain? }`
-- `TenantItem / TenantForm / TenantCreateForm`（name/code/contactName/contactPhone/contactEmail/domain/logo/planId/status/remark/expireTime）
+- `TenantItem`（id/name/code/contactName/contactPhone/contactEmail/domain/logo/planId/status/remark/expireTime/createTime/updateTime）
+- `TenantForm`（编辑，含 `status`）：id/name/code/contactName/contactPhone/contactEmail/domain/logo/planId/status/remark/expireTime
+- `TenantCreateForm`（新增，**无 `status`、含 `adminUsername`**，对齐前端契约 `api/system/tenant/types.ts`）：name/code/contactName/contactPhone/contactEmail/domain/logo/planId/remark/expireTime/**adminUsername**。`adminUsername` 即 §4 创建管理员命名的输入来源（提交 `admin/root` 保留名则拒绝；未提交则按 `t_{code}_admin` 生成）。
 - `TenantCreateResult { tenantId, tenantCode, tenantName, adminUsername, adminInitialPassword, adminRoleCode }`
 - `TenantPlanItem / TenantPlanForm { id, name, code, status, sort, remark }`
 - 分页统一 `{ list, total }`（与本项目现有范式一致）
@@ -204,6 +206,7 @@
 - [ ] `modules/tenant/{schema,types,errors,routes,queries}.ts`：11 个端点全实现
 - [ ] tenant queries 提供 `findActiveTenantById`（存在且 `status=1` 且 `deleteTime IS NULL`），供 `auth/switch-tenant` 与 `tenants/{id}/switch` 状态校验复用（见 Step 2 第四轮 review D）
 - [ ] `POST /tenants` 初始化默认数据（建管理员用户 + 角色 + 默认菜单），返回 `TenantCreateResult`
+  - **默认菜单来源必须是套餐菜单（🟠 本轮 B，对应 Java `TenantServiceImpl:87/327` `resolveNewTenantAdminMenuIds(planId)`）**：新租户的 `sys_tenant_menu(newId)` 与管理员角色的 `sys_role_menu` 菜单**同源，均取自该租户套餐的 `plan_menu`**（`resolveTenantPlanMenuIds(form.planId)`）；**套餐未配置菜单时兜底为全部业务菜单（`scope=2`）**。切勿实现时拍脑袋给全量或给空——给全量会突破套餐约束、给空则新租户无任何菜单。
 - [ ] `/options` `/current` `/{id}/switch` `/{id}/menuIds` `/{id}/menus` `/{id}/status`
 - [ ] **每端点权限码（对齐 Java 原版权限码，逐一显式声明 `requirePerm`，勿凭感觉写）**：
 
@@ -248,6 +251,7 @@
 
   全部 `auth: true` + 仅平台运营角色持有这些 perm（天然绕过 tenant 隔离，普通租户用户不可见套餐管理）。**⚠️ `requirePerm` 是 `user.perms.includes(p)` 的 ANY 匹配**（`src/plugins/permission.ts:55`），故**每个端点只声明自身对应的那一枚权限码**，绝不能把 4 码塞进同一数组（否则有任一权限即能访问全部端点，等于无区分）；**非**前缀/通配，不能写 `sys:tenant-plan:*`（该字面量匹配不到真实按钮权限）；`*:*:*` 仅超管通配短路，与此无关。
 - [ ] `/options` `/{id}/menuIds` `/{id}/menus`
+- [ ] **套餐菜单 `scope=2` 业务菜单校验（🟠 本轮 A，对应 Java `TenantPlanServiceImpl:175-187`）**：`PUT /tenant-plans/{id}/menus` 更新时，校验提交的**所有 `menuId` 必须为业务菜单（`scope=2`）**，否则 400「套餐菜单只能选择业务菜单」。这是**套餐级**上限（限定套餐能纳入哪些菜单），与 Step 5 的**租户级**上限（`menuIds ⊆ 套餐菜单`）是不同层的两道校验，两者都要有。
 - [ ] 单测覆盖
 
 ### Step 7 · 联调 + 验证（0.5d）
