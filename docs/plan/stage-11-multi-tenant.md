@@ -165,11 +165,13 @@
 - [ ] 业务表加 `tenantId` 列；新增 4 张租户表（schema 三件套风格：`db/schema/system/tenant.ts` 等）
 - [ ] `bun run db:push` 同步库
 - [ ] 补种子：租户 0/1、tenant_menu、tenant_plan、现有用户归 tenant 0
+- [ ] **⚠️ seed.ts 扩展量（第四轮 review A）**：当前 `scripts/seed.ts` 仅 6 个业务模块、**无租户管理/套餐管理任何菜单节点**、`sys_role_menu` 仅绑 ADMIN。须按 §3.3 新增「租户管理/套餐管理」目录+页面+按钮节点（perm 对齐权限码表）、新增平台运营角色（非 ROOT）并将其绑定上述节点 + 纳入 `tenant_menu(0)`。此步改动面不小，Step 1 工时预留充足。
 - [ ] 单测：schema 类型推断通过
 
 ### Step 2 · JWT + Auth + switch-tenant（0.5d）
 - [ ] `JwtPayload` 加 `tenantId`；login 解析并写入
 - [ ] 新增 `auth/switch-tenant` 路由（校验 + 重新签发）
+- [ ] **目标租户状态校验（第四轮 review D）**：`auth/switch-tenant` 与 `tenants/{id}/switch` 均须先查目标租户**存在且 `status=1` 且 `deleteTime IS NULL`**，否则 400/404。防平台超管切到已软删/停用租户——`§3.2` 软删不级联、租户行仍可被查到，若不加校验 token 会携带无效 tenantId、后续业务查询全空却不报错。tenant queries 层提供 `findActiveTenantById` 供两路由复用。
 - [ ] 单测：登录带/不带 tenantId；切换后 token 含新 tenantId；越权切换被拒
 
 ### Step 3 · tenant 隔离 plugin + helper（0.5d）
@@ -184,10 +186,16 @@
 - [ ] **`buildDataScopeContext` 改造**：签名增加 `tenantId` 入参；内部查 `sys_user.deptId` 加 `tenantEq(sysUser, tenantId)` 防御（userId 虽全局唯一不会跨租户命中，语义上收紧更安全）
 - [ ] 历史/事件表（oper_log / login_log）insert 在 queries 层**显式传 `tenantId`**，不依赖库 `default(0)`，避免漏传静默归 0
 - [ ] 租户管理模块（tenant/tenant-plan）**不**加过滤
-- [ ] ⛔ **门禁（本步硬卡）**：完成即当跑跨租户隔离单测——seed 租户 0 与租户 1 数据，断言 tenant 0 的查询**看不到** tenant 1 行（user/role/dept/notice/userNotice 等逐一验证）。**特别包含 fan-out 场景**：租户 0 发布一条公告后，断言 `sys_user_notice` 仅含租户 0 用户记录；租户 1 用户查询"我的通知"看不到租户 0 的公告。**未通过不得进入 Step 5**，避免泄漏拖到联调才暴露。
+- [ ] ⛔ **门禁（本步硬卡）**：完成即当跑跨租户隔离单测——seed 租户 0 与租户 1 数据，断言 tenant 0 的查询**看不到** tenant 1 行，**逐场景覆盖**：
+  - **列表类**：user/role/dept/notice/userNotice 逐一验证；
+  - **fan-out 场景**：租户 0 发布一条公告后，断言 `sys_user_notice` 仅含租户 0 用户记录；租户 1 用户查询"我的通知"看不到租户 0 的公告；
+  - **菜单树泄漏（最隐蔽，第四轮 review B）**：租户 0/1 各建**同名角色**并绑定**不同菜单**，断言各自的 `findMenusByRoleCodes` 菜单树**不含**对方租户绑定的菜单 ID——`sys_role_menu` 加 tenant_id 后必须 `tenantEq(sysRoleMenu, tenantId)`，否则可跨租户透出菜单；`sys_role`/`sys_role_menu`/`sys_role_dept` 的 `findRoles`/`findRoleById`/`findRoleMenuIds`/`findRoleDeptIds` 同理须加 `tenantEq`（第四轮 review E：已确认 `findRoles` 当前仅 `isNull(deleteTime)`+keywords+status，漏 tenant 过滤）；
+  - **单条查询按 ID 跨租户（第四轮 review C）**：用租户 0 的 ctx 按租户 1 的用户 ID 查 `findUserById`/`findUserFormData`/`findUserProfileDetail`，断言返回空/404（userId 全局唯一实际不命中，但须**显式验证**隔离契约，而非依赖隐式假设）。
+  **未通过不得进入 Step 5**，避免泄漏拖到联调才暴露。
 
 ### Step 5 · tenant 模块 CRUD（1d）
 - [ ] `modules/tenant/{schema,types,errors,routes,queries}.ts`：11 个端点全实现
+- [ ] tenant queries 提供 `findActiveTenantById`（存在且 `status=1` 且 `deleteTime IS NULL`），供 `auth/switch-tenant` 与 `tenants/{id}/switch` 状态校验复用（见 Step 2 第四轮 review D）
 - [ ] `POST /tenants` 初始化默认数据（建管理员用户 + 角色 + 默认菜单），返回 `TenantCreateResult`
 - [ ] `/options` `/current` `/{id}/switch` `/{id}/menuIds` `/{id}/menus` `/{id}/status`
 - [ ] **每端点权限码（对齐 Java 原版权限码，逐一显式声明 `requirePerm`，勿凭感觉写）**：
