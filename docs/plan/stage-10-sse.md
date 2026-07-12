@@ -71,7 +71,7 @@ src/modules/test/sse.test.ts   # 注册表广播 + sse() 帧格式单测
   - 内部队列 `queue: SseMessage[]` + 一个 `pendingResolve: (() => void) | null`（挂起等待的唤醒器）
   - `next()`：队列有值时 `queue.shift()` 立即返回 `{ value, done: false }`；**队列为空时创建一个 Promise，把它的 resolve 存为 `pendingResolve` 并 `await` 它**——即挂起等待，不返回 `{ done: true }`
   - `push(msg)`：入队 `queue.push(msg)`，若 `pendingResolve` 存在则调用它唤醒（让 `next()` 继续消费）
-  - `close()`：设置 `closed = true`，resolve 所有挂起 Promise，让后续 `next()` 返回 `{ done: true }`
+  - `close()`：设置 `closed = true`，resolve 所有挂起 Promise。任何 `next()` 调用（包括刚被 resolve 唤醒的这次）遇到 `closed` 即返回 `{ done: true }`，`for await` 随之退出
   - 实现 `[Symbol.asyncIterator]` 返回 `{ next }`，让连接端点能用 `for await` 逐条取消息
 - `type SseMessage = { event: string; data: unknown }`
 - `const connections = new Set<SseConnection>()`
