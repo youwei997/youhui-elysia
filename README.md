@@ -28,8 +28,8 @@ bun install
 # 配置环境变量（复制 .env.example 为 .env 并填写）
 cp .env.example .env
 
-# 迁移数据库
-bun run db:generate && bun run db:migrate && bun run db:seed
+# 推送 schema 到数据库
+bun run db:push && bun run db:seed
 
 # 启动开发服务器（热重载）
 bun run dev
