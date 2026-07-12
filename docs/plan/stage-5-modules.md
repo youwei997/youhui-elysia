@@ -375,7 +375,7 @@ src/
 ### 整体
 - [x] `bun run check` 通过
 - [x] `bun run tsc` 通过
-- [ ] `docs/modules.md` 列出本阶段所有新模块及其能力
+- [x] `docs/modules.md` 列出本阶段所有新模块及其能力
 
 ## 本阶段收获
 
