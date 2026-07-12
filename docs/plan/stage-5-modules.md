@@ -361,9 +361,9 @@ src/
 - [x] 删除时同步删存储侧
 
 ### 定时任务
-- [ ] `Bun.cron` 注册成功，启动日志可见
-- [ ] `cleanExpiredOperLogs` 单测通过（插入 31 天前记录，删后返回 1）
-- [ ] `bun run tsc` + `bun run check` 通过
+- [x] `Bun.cron` 注册成功，启动日志可见
+- [x] `cleanExpiredOperLogs` 单测通过（插入 31 天前记录，删后返回 1）
+- [x] `bun run tsc` + `bun run check` 通过
 
 ### 限流 + IP 黑名单
 - [x] rateLimit macro 可声明在路由
@@ -377,4 +377,11 @@ src/
 - [x] `bun run tsc` 通过
 - [ ] `docs/modules.md` 列出本阶段所有新模块及其能力
 
-## 本阶段收获（完成后填写）
+## 本阶段收获
+
+- **操作日志**：`onAfterResponse` + `onError` 双采集点、`setImmediate` 异步落库、WeakMap 临时存储请求体、4KB 截断 + 敏感字段脱敏（完整企业级审计日志）
+- **登录日志 + 在线用户**：登录成功/失败双记录、Redis online:user:{id} 带 TTL、强制下线 = tokenVersion +1 + 删 Redis key、refresh-token 延长 online TTL
+- **字典双表 + 缓存防击穿**：sys_dict + sys_dict_item、14 接口对齐前端契约、withCache 双重检查 + 分布式锁
+- **文件存储抽象**：Storage 接口（2 方法 put/delete）+ local-fs driver + 工厂模式，env 切 driver，不做预签名（前端 axios multipart 不走改）
+- **限流 + IP 黑名单**：rateLimit macro（Redis INCR+EXPIRE）、黑名单 ip 联动 403、登录失败超限自动入黑名单
+- **定时任务**：Bun.cron 进程内模式（零依赖）、UTC 时区、`cleanExpiredOperLogs` 物理硬删 30 天前日志

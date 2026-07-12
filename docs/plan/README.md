@@ -10,7 +10,7 @@
 | 2 · 基础 CRUD | ⭐⭐ | 2-3d | ✅ 已完成 | [stage-2-basic-crud.md](./stage-2-basic-crud.md) |
 | 3 · 横切 Plugin 体系 | ⭐⭐⭐ | 4-5d | ✅ 已完成 | [stage-3-plugins.md](./stage-3-plugins.md) |
 | 4 · 权限核心 | ⭐⭐⭐⭐⭐ | 6-7d | ✅ 已完成 | [stage-4-rbac.md](./stage-4-rbac.md) |
-| 5 · 进阶辅助模块 | ⭐⭐⭐ | 4-5d | 🟡 进行中 | [stage-5-modules.md](./stage-5-modules.md) |
+| 5 · 进阶辅助模块 | ⭐⭐⭐ | 4-5d | ✅ 已完成 | [stage-5-modules.md](./stage-5-modules.md) |
 | 6 · 代码生成器 | ⭐⭐⭐⭐ | 5-6d | ⬜ 未开始 | [stage-6-codegen.md](./stage-6-codegen.md) |
 | 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
 | 8 · 补充模块（计划外新增） | ⭐⭐ | — | ✅ 已完成 | [stage-8-supplement-modules.md](./stage-8-supplement-modules.md) |
@@ -19,7 +19,7 @@
 
 ## 待办清单
 
-> 阶段 5 已完成 6/7 子任务（5.1-5.4、5.6），仅剩 5.5（Bun.cron 定时任务）。
+> 阶段 5 已全部完成。
 > 仅列大模块。详细分析见 `.analysis/`（不纳入版本管理，没有就说明还没做）。
 > 前端不改，缺失全部后端补。youlai-boot 仅作契约参考，技术栈以 ElysiaJS + Bun 为主。
 
@@ -112,4 +112,5 @@ Elysia 范式吃透 █████████ 25%
 |[2026-07-07] 阶段 8.2 用户导入导出完成。3 接口（GET /template / GET /export / POST /import），xlsx 库。已提交。
 [2026-07-08] 阶段 8.2 代码清理：移除 as never 类型断言，新增 UserListFilter 类型从 schema 派生；导入改为逐行 insert，within-file 同名不整批回滚；导出补 user 空守卫。对齐 vue3-element-admin-v4.6.0 前端契约验证通过。
 [2026-07-12] 阶段 8.4 通知公告完成（T1-T10 全部）。双表设计（sys_notice 状态机 + sys_user_notice 物化快照）、三态状态机（0/1/-1）、发布 fan-out 事务、路由静态/动态顺序保证、T9 已读/我的通知 JOIN 查询。TDD 全程覆盖，18/18 PASS。阶段 8 全部完成。
+[2026-07-12] 阶段 5.5 完成。Bun.cron 接入（零依赖），cleanExpiredOperLogs 硬删 30 天前操作日志，startJobs 启动时注册。放弃 pg-boss（Java 原版无 job 管理、前端无页面）。阶段 5 全部完成。
 ```
