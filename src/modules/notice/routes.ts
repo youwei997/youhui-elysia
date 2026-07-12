@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { BizError, ERR_CODE, notFound, unauthorized } from "@/lib/errors";
+import { broadcast } from "@/modules/sse/registry";
 import { authPlugin } from "@/plugins/auth";
 import {
 	batchSoftDeleteNotices,
@@ -195,6 +196,17 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			}
 			const row = await publishNotice(params.id, Number(user.sub), db);
 			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+			// 广播实时通知（broadcast 内部按连接 try/catch 隔离，不会抛错阻断发布结果）
+			// id 统一 String（对齐 notice 前端 id 约定，避免 bigint 精度丢失）；
+			// publishTime 显式 toISOString（timestamptz 回读为 PG 文本格式，非 ISO）
+			broadcast("notice", {
+				id: String(row.id),
+				title: row.title,
+				type: row.type,
+				publishTime: row.publishTime
+					? new Date(row.publishTime).toISOString()
+					: null,
+			});
 			return parseNotice(row);
 		},
 		{
@@ -220,6 +232,8 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			}
 			const row = await revokeNotice(params.id, db);
 			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+			// 广播撤回，前端按 id 从列表移除 + 未读 -1（撤回只关心 id）
+			broadcast("notice-revoke", { id: String(row.id) });
 			return parseNotice(row);
 		},
 		{
