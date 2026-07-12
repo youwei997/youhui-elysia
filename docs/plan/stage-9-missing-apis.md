@@ -130,10 +130,9 @@
 |---|---|---|
 | `POST /auth/login/sms`、`POST /auth/sms/code` | Auth | 第三方短信，前端此版本无入口 |
 | `POST /wxma/auth/*` (3 个) | WxMa | 微信小程序专用 |
-| `PATCH /users/{id}/status` | User | 前端走编辑表单 `update()` |
-| `PUT /roles/{id}/status` | Role | 前端走编辑表单 `update()` |
-| `PATCH /menus/{menuId}` (visible) | Menu | 前端走编辑表单 `update()` |
-| `GET /codegen/*` (6 个) | Codegen | 不做 |
+| `PATCH /users/{id}/status`、`PUT /roles/{id}/status`、`PATCH /menus/{menuId}` (visible) | User / Role / Menu | 前端通过编辑表单 PUT update() 一并改 status/visible，无独立调用 |
+| `GET /depts/{id}` | Dept | Java 有，前端用 `:id/form` 取详情，无独立调用 |
+| `GET /codegen/*` (6 个) | Codegen | ⏭️ 不做 |
 
 ## 分类汇总
 
