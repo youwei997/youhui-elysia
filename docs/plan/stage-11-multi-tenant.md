@@ -40,7 +40,7 @@
   - `isPlatformTenant(tenantId)` → `tenantId === 0`。
 - 新增 plugin `src/plugins/tenant.ts`（`derive` 全局）：从 `ctx.user.tenantId` 暴露 `ctx.tenantId` 与 `ctx.isPlatform`。
 - 所有业务 query 函数增加 `tenantId` 入参（与现有 `db` 入参风格一致，纯函数），在 `.where` 拼 `tenantEq`。
-- 与数据权限组合时：`.where(and(tenantEq(t, tenantId), dataScopeFilter(...), isNull(t.deleteTime)))`，**`tenantEq` 必须放 `and()` 最前**（tenant_id 索引最左前缀先过滤，与 §4.10 软删"先过滤再判断"一致）。
+- 与数据权限组合时：`.where(and(tenantEq(t, tenantId), dataScopeFilter(...), isNull(t.deleteTime)))`，**`tenantEq` 统一放 `and()` 最前**（仅为可读性/一致性约定；PG 优化器按统计信息与可用索引选执行计划，不依赖 `and()` 参数顺序，不做索引层面论证）。
 - 租户管理类模块（tenant / tenant-plan）**不调用** `tenantEq`，即绕过隔离（等价 Java 的 `ignoreTables`）。
 
 ### 1.4 Java 原版 `ignoreTables` 映射（哪些表不参与隔离）
@@ -119,10 +119,14 @@
 > `menu / dict / dict-item / config / ip-blacklist` **不加** tenant_id（平台共享，见 1.4）。
 
 ### 3.2 新增表
-- `sys_tenant`（id, name, code unique, contactName, contactPhone, contactEmail, domain unique, logo, planId, status, remark, expireTime, createTime, updateTime）
-- `sys_tenant_plan`（id, name, code unique, status, sort, remark, createTime, updateTime）
-- `sys_tenant_plan_menu`（tenantPlanId, menuId，PK 复合）
-- `sys_tenant_menu`（tenantId, menuId，PK 复合）
+
+> **审计列策略（须定案，勿留到写代码）**：管理表用**完整 `auditColumns`（含 `deleteTime` 软删）**，对齐本项目管理表范式（`role/dept/config/dict` 均如此），**不**跟 Java 原版硬删。理由：① `architecture.md §4.12` 要求业务表带 `auditColumns`；② 项目内"局部复用 `auditColumns.createTime`（物理删除）"的先例**仅限事件表**（`oper_log/login_log`，见 `docs/notes/2026-06-29-auditColumns-局部复用案例.md`），tenant/tenant-plan 是管理表不属此类。桥表（`*_menu`）同 `relation.ts` **不带**审计列。
+> **DELETE 语义**：`DELETE /tenants/{ids}` = **软删**（置 `deleteTime`），仅标记租户行本身，**不级联**软删该租户的 user/role/dept（避免 reviewer 担心的大范围级联）；租户停用后登录侧按 status/存在性拦截。
+
+- `sys_tenant`（id, name, code unique, contactName, contactPhone, contactEmail, domain unique, logo, planId, status, remark, expireTime, **+ `auditColumns`**）
+- `sys_tenant_plan`（id, name, code unique, status, sort, remark, **+ `auditColumns`**）
+- `sys_tenant_plan_menu`（tenantPlanId, menuId，PK 复合，**无审计列**，同桥表 `relation.ts`）
+- `sys_tenant_menu`（tenantId, menuId，PK 复合，**无审计列**）
 
 ### 3.3 种子数据
 - `sys_tenant`: `(0, '平台租户', 'PLATFORM', ...)`、`(1, '演示租户', 'DEMO', ...)`
@@ -142,6 +146,7 @@
 - **新增 `POST /api/v1/auth/switch-tenant?tenantId=`**：
   - `auth: true`；校验当前用户允许切换到该租户（`user.tenantId === target` 或平台超管）。
   - 重新签发 token（新 `tenantId`），返回 `{ accessToken, refreshToken, tokenType, expiresIn }`。
+  - **权限码决策（显式记录）**：本期**不加** `sys:tenant:switch` 权限码——普通租户用户只属单一租户、`/tenants/options` 只返回自身租户，无切换场景；实际能跨租户切换的只有平台超管，靠**超管短路**即足够。Java 原版有 `sys:tenant:switch`，若未来放开给普通用户跨租户，再补该码 + 前端切换入口。
 - `refresh-token`：JWT 已含 tenantId，刷新自动沿用，无需改动。
 - **创建租户时管理员命名（避免保留名冲突）**：因本项目保持 `username` 全局唯一，不同租户**不能**同名（如都用 `admin`）。`POST /tenants` 初始化默认管理员时自动生成带租户前缀的用户名（如 `t_{tenantCode}_admin`，例 `t_DEMO_admin`，与原版一致）；平台租户保留 `admin/root` 等保留名（仅 `tenant_id=0`）。
 
@@ -178,6 +183,21 @@
 - [ ] `modules/tenant/{schema,types,errors,routes,queries}.ts`：11 个端点全实现
 - [ ] `POST /tenants` 初始化默认数据（建管理员用户 + 角色 + 默认菜单），返回 `TenantCreateResult`
 - [ ] `/options` `/current` `/{id}/switch` `/{id}/menuIds` `/{id}/menus` `/{id}/status`
+- [ ] **每端点权限码（对齐 Java 原版权限码，逐一显式声明 `requirePerm`，勿凭感觉写）**：
+
+  | 端点 | 方法 | requirePerm |
+  |---|---|---|
+  | `/tenants` | GET | `['sys:tenant:list']` |
+  | `/tenants/{id}/form` | GET | `['sys:tenant:list']` |
+  | `/tenants/{id}/menuIds` | GET | `['sys:tenant:list']` |
+  | `/tenants` | POST | `['sys:tenant:create']` |
+  | `/tenants/{id}` | PUT | `['sys:tenant:update']` |
+  | `/tenants/{id}/menus` | PUT | `['sys:tenant:plan-assign']` |
+  | `/tenants/{ids}` | DELETE | `['sys:tenant:delete']` |
+  | `/tenants/{id}/status` | PUT | `['sys:tenant:change-status']` |
+  | `/tenants/options` | GET | 仅 `auth: true`（切换下拉，无独立权限码） |
+  | `/tenants/current` | GET | 仅 `auth: true`（任何登录用户取自身租户） |
+  | `/tenants/{id}/switch` | POST | 仅 `auth: true` + 超管短路，见 §4（不加 `sys:tenant:switch`） |
 - [ ] 单测覆盖
 
 ### Step 6 · tenant-plan 模块 CRUD（0.5d）
