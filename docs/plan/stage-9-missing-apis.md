@@ -72,7 +72,6 @@
 | `POST /depts` | ✅ | ✅ | ✅ | ✅ |
 | `PUT /depts/{id}` | ✅ | ✅ | ✅ | ✅ |
 | `DELETE /depts/{ids}` | ✅ | ✅ | ✅ | ✅ |
-| `GET /depts/{id}` | ❌ | ❌ | ✅ | 我们额外加的详情接口，保留 |
 | **Dict** | | | | |
 | `GET /dicts` (分页) | ✅ | ✅ | ✅ | ✅ |
 | `GET /dicts/options` | ✅ | ✅ | ✅ | ✅ |
@@ -136,7 +135,6 @@
 | `PATCH /users/{id}/status` | User | Java 有独立接口，前端通过 `PUT /users/{id}` 编辑表单时一起更新 status，无需独立接口 |
 | `PUT /roles/{id}/status` | Role | Java 有独立接口，前端通过 `PUT /roles/{id}` 编辑表单时一起更新 status，无需独立接口 |
 | `PATCH /menus/{menuId}` (visible) | Menu | Java 有独立接口，前端通过 `PUT /menus/{id}` 编辑表单时一起更新 visible，无需独立接口 |
-| `GET /codegen/*` (6 个) | Codegen | ⏭️ 不做 |
 
 ## 我们额外做的接口（Java 没有）
 
