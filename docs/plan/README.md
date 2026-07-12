@@ -14,6 +14,7 @@
 | 6 · 代码生成器 | ⭐⭐⭐⭐ | 5-6d | ⏭️ 已跳过 | [stage-6-codegen.md](./stage-6-codegen.md) |
 | 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
 | 8 · 补充模块（计划外新增） | ⭐⭐ | — | ✅ 已完成 | [stage-8-supplement-modules.md](./stage-8-supplement-modules.md) |
+| 10 · SSE 实时推送 | ⭐⭐ | 0.5-1d | ⬜ 未开始 | [stage-10-sse.md](./stage-10-sse.md) |
 
 > 状态标记：⬜ 未开始 · 🟡 进行中 · ✅ 已完成 · ⚠️ 受阻 · ⏭️ 已跳过
 
