@@ -142,7 +142,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 
 ### T1 · sse 模块骨架（types + registry）⏳
 - [ ] `src/modules/sse/types.ts`：`SseMessage = { event: string; data: unknown }`、`SseConnection`（属性：`id: string` / `userId: string`；方法：`push` / `close` / `[Symbol.asyncIterator]` / `next`——**空队列时 `next()` 必须挂起等待，不能 `{ done: true }`**）、`SseEventTopic = "online-count" | "dict" | "notice" | "notice-revoke" | "ping"`
-- [ ] `src/modules/sse/registry.ts`：`connections: Map<string, SseConnection>` + `addSseConnection`（`map.set(conn.id, conn)`）/ `removeSseConnection`（**先 `close()` 再 `delete`**）/ `broadcast`（遍历 `values()`，try/catch 隔离）/ `getOnlineCount`（`map.size`）+ `startSse`（25s 周期 ping + online-count 单例定时器）
+- [ ] `src/modules/sse/registry.ts`：`connections: Map<string, SseConnection>` + `addSseConnection`（`map.set(conn.id, conn)`）/ `removeSseConnection`（**先 `close()` 再 `delete`**）/ `broadcast`（遍历 `values()`，try/catch 隔离）/ `getOnlineCount`（`map.size`）+ `startSse`（25s 周期 ping + online-count 单例定时器）+ `closeAllSseConnections`（遍历 close + clear）
 - [ ] 验证：`bun run tsc` 通过
 
 ### T2 · 连接端点 + 流（先做连通 spike）⏳
@@ -192,7 +192,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 - **单实例限制**：registry 是进程内存，多实例 / 负载均衡下事件只推到本机连接。未来多实例再上 Redis pub/sub 做跨实例广播（v1 不做，符合"第一版只追求对不追求快"）。
 - **online-count 口径**：v1 取活跃 SSE 连接数；未开 SSE 但已登录的用户不计入（备选读 Redis online 键，记技术债）。
 - **心跳间隔 25s**：经验值，若部署在会切断空闲连接的代理后，按需调小。
-- **优雅关停**：v1 进程退出时 SSE 流由 OS 关闭即可；可选在 `gracefulShutdown` 里主动 `close()` 所有连接。
+- **优雅关停**：已由 T7 覆盖，见 `closeAllSseConnections()`。
 
 ## 避雷
 
