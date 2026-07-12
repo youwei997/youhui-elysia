@@ -20,7 +20,7 @@
 
 | 事件名 | payload 形状 | 前端消费位置 | 前端用法 |
 |---|---|---|---|
-| `online-count` | **裸数字** `count: number`（非对象） | `useOnlineCount.ts:14` `handleOnlineCountMessage(count: number)` | `onlineUserCount.value = count` |
+| `online-count` | **裸 JSON 数字**（如 `42`） | `useOnlineCount.ts:14` `handleOnlineCountMessage(count: number)` | `onlineUserCount.value = count` |
 | `dict` | `{ dictCode: string, timestamp: number }` | `useDictSync.ts:4-7` `DictChangeMessage` | `dictStore.removeDictItem(dictCode)`（失效缓存后由 store 重新拉取） |
 | `notice` | `{ id, title, type, publishTime }` | `useNotice.ts:78-83` | 顶部 `ElNotification` 弹窗 + `unreadTotal += 1` + 列表头插 |
 | `notice-revoke` | `{ id }` | `useNotice.ts:100-104` | 按 `id` 从列表移除 + `unreadTotal -= 1` |
@@ -114,7 +114,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
   }, { auth: true });
 ```
 
-> ✅ **为何比手写 ReadableStream 省事**：`sse()` 是 Elysia 核心 API（`import { sse } from "elysia"`），自动设 `Content-Type: text/event-stream`、按 `event/data/id/retry` 规范拼帧；客户端断开时 Elysia **自动取消 generator**（`utils.d.ts` 文档 "Automatic cancellation"），`finally` 块即可精准清理，不用手动监听 `request.signal`。
+> ✅ **为何比手写 ReadableStream 省事**：`sse()` 是 Elysia 核心 API（`import { sse } from "elysia"`），自动设 `Content-Type: text/event-stream`、按 `event/data/id/retry` 规范拼帧；客户端断开时 Elysia **自动取消 generator**，`finally` 块即可精准清理，不用手动监听 `request.signal`（T2.1 spike 会实测验证）。
 >
 > 🔴 **实现前先做连通性 spike（T2 第一步）**：虽是官方 API，仍先小验证 `async function*` handler + `yield sse(...)` 在 Bun 下是否**逐帧立即下发**（不被整体缓冲）、客户端 abort 是否真触发 `finally`。拿最小端点 `bun run dev` + `curl -N` 验两帧到达 + Ctrl-C 后服务端 `finally` 执行，再写完整逻辑。
 
@@ -165,7 +165,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
   - registry `add`→`broadcast`→ 通过 `SseConnection.next()` 收到正确 `{ event, data }`（含 `online-count` 用 `String` 包裹后 data 为字符串）
   - `removeSseConnection` 后 `broadcast` 不再送达
   - `getOnlineCount` 随增删正确变化
-  - **序列化防呆**：`sse({ event: "online-count", data: String(42) }).toSSE()` 断言包含 `data: 42`（且不含多余引号）；可附一条反向注释——若写成 `data: 42`（裸 number）`sse()` 会静默丢 `data:` 行，必须用 `String()`
+  - **序列化防呆**：`(sse({ event: "online-count", data: String(42) }) as any).toSSE()` 断言包含 `data: 42`（且不含多余引号）；注意 `sse()` 的 TS 返回类型不含 `.toSSE`（`utils.d.ts:197` 的条件类型只保留输入类型），运行时存在但 `tsc` 会报错，须用 `as any` 绕过。反向注释——若写成 `data: 42`（裸 number）`sse()` 会静默丢 `data:` 行，必须用 `String()`。
 - [ ] `bun test src/modules/test/sse.test.ts` 全绿
 
 ### T7 · 收尾验证 ⏳
