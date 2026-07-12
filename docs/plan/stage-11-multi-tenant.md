@@ -40,6 +40,7 @@
   - `isPlatformTenant(tenantId)` → `tenantId === 0`。
 - 新增 plugin `src/plugins/tenant.ts`（`derive` 全局）：从 `ctx.user.tenantId` 暴露 `ctx.tenantId` 与 `ctx.isPlatform`。
 - 所有业务 query 函数增加 `tenantId` 入参（与现有 `db` 入参风格一致，纯函数），在 `.where` 拼 `tenantEq`。
+- 与数据权限组合时：`.where(and(tenantEq(t, tenantId), dataScopeFilter(...), isNull(t.deleteTime)))`，**`tenantEq` 必须放 `and()` 最前**（tenant_id 索引最左前缀先过滤，与 §4.10 软删"先过滤再判断"一致）。
 - 租户管理类模块（tenant / tenant-plan）**不调用** `tenantEq`，即绕过隔离（等价 Java 的 `ignoreTables`）。
 
 ### 1.4 Java 原版 `ignoreTables` 映射（哪些表不参与隔离）
@@ -64,6 +65,8 @@
 |---|---|---|---|
 | `/api/v1/auth/login` | POST | body 可选 `tenantId`；返回 token | 需改：解析并写 JWT |
 | `/api/v1/auth/switch-tenant` | POST | `?tenantId=`；返回新 `LoginResponse` | **缺失，需新增** |
+
+> 注：`auth/switch-tenant` 只负责换 token（写入新 tenantId），`tenants/{id}/switch` 只负责返回租户信息——两接口共同完成切换，非冗余。
 
 ### 2.2 租户模块 `/api/v1/tenants`
 | 端点 | 方法 | 说明 | 现状 |
@@ -107,7 +110,10 @@
 对以下表新增 `tenantId: bigint("tenant_id").notNull().default(0)`：
 - 独立 schema 文件：`user, role, dept, operLog, loginLog, file`
 - `notice.ts` 内两张：`sys_notice`（公告）、`sys_user_notice`（用户公告快照，**Java 原版有 `tenant_id`，本次须补齐**）
-- `relation.ts` 内：`userRole, roleMenu, roleDept`
+- `relation.ts` 内：`userRole, roleMenu, roleDept`（加 `tenant_id` 列；**PK/唯一约束不统一加 tenantId，逐表对齐 Java 原版**）：
+  - `sysUserRole`：PK 保持 `(userId, roleId)` 不变（userId 全局唯一，tenantId 仅作冗余索引列，加 `idx_user_role_tenant_id`，同原版 `PRIMARY KEY (user_id, role_id)`）
+  - `sysRoleMenu`：PK 保持 `(roleId, menuId)` 不变（同上，同原版 `uk_roleid_menuid(role_id, menu_id)`）
+  - `sysRoleDept`：PK 改为 `(tenantId, roleId, deptId)`（对齐原版 `uk_tenant_roleid_deptid(tenant_id, role_id, dept_id)` 唯一索引**含** tenant_id）
 
 > 注：`tenantMenu`（`sys_tenant_menu`）是**新建**表，见 §3.2，不在此列；`relation.ts` 当前仅含 `userRole/roleMenu/roleDept` 三张。
 > `menu / dict / dict-item / config / ip-blacklist` **不加** tenant_id（平台共享，见 1.4）。
@@ -137,6 +143,7 @@
   - `auth: true`；校验当前用户允许切换到该租户（`user.tenantId === target` 或平台超管）。
   - 重新签发 token（新 `tenantId`），返回 `{ accessToken, refreshToken, tokenType, expiresIn }`。
 - `refresh-token`：JWT 已含 tenantId，刷新自动沿用，无需改动。
+- **创建租户时管理员命名（避免保留名冲突）**：因本项目保持 `username` 全局唯一，不同租户**不能**同名（如都用 `admin`）。`POST /tenants` 初始化默认管理员时自动生成带租户前缀的用户名（如 `t_{tenantCode}_admin`，例 `t_DEMO_admin`，与原版一致）；平台租户保留 `admin/root` 等保留名（仅 `tenant_id=0`）。
 
 ---
 
@@ -160,9 +167,12 @@
 
 ### Step 4 · 既有业务 query 接入 tenantId（1.5d，最大机械量，串行阻塞点）
 - [ ] user / role / dept / menu(仅联表处) / notice（sys_notice + sys_user_notice）/ oper-log / login-log / file
-      及各 relation 查询（userRole / roleMenu / roleDept）：加 `tenantId` 入参 + `.where(and(..., tenantEq(...)))`
+      及各 relation 查询（userRole / roleMenu / roleDept）：加 `tenantId` 入参 + `.where(and(tenantEq(...), ...))`
+- [ ] **`audit-log` plugin 改造**：`getUser` 增加取 `tenantId`；`buildEntry` 写入 `sys_oper_log.tenant_id = ctx.user.tenantId`（oper_log 已加列，漏写会默认归平台租户 0 或 notNull 报错）
+- [ ] **`buildDataScopeContext` 改造**：签名增加 `tenantId` 入参；内部查 `sys_user.deptId` 加 `tenantEq(sysUser, tenantId)` 防御（userId 虽全局唯一不会跨租户命中，语义上收紧更安全）
+- [ ] 历史/事件表（oper_log / login_log）insert 在 queries 层**显式传 `tenantId`**，不依赖库 `default(0)`，避免漏传静默归 0
 - [ ] 租户管理模块（tenant/tenant-plan）**不**加过滤
-- [ ] ⛔ **门禁（本步硬卡）**：完成即当跑跨租户隔离单测——seed 租户 0 与租户 1 数据，断言 tenant 0 的查询**看不到** tenant 1 行（user/role/dept/notice/userNotice 等逐一验证）。**未通过不得进入 Step 5**，避免泄漏拖到联调才暴露。
+- [ ] ⛔ **门禁（本步硬卡）**：完成即当跑跨租户隔离单测——seed 租户 0 与租户 1 数据，断言 tenant 0 的查询**看不到** tenant 1 行（user/role/dept/notice/userNotice 等逐一验证）。**特别包含 fan-out 场景**：租户 0 发布一条公告后，断言 `sys_user_notice` 仅含租户 0 用户记录；租户 1 用户查询"我的通知"看不到租户 0 的公告。**未通过不得进入 Step 5**，避免泄漏拖到联调才暴露。
 
 ### Step 5 · tenant 模块 CRUD（1d）
 - [ ] `modules/tenant/{schema,types,errors,routes,queries}.ts`：11 个端点全实现
@@ -172,6 +182,7 @@
 
 ### Step 6 · tenant-plan 模块 CRUD（0.5d）
 - [ ] `modules/tenant-plan/{schema,types,errors,routes,queries}.ts`：8 个端点
+- [ ] 路由加 `auth: true` + `requirePerm: ['sys:tenant-plan:*']`，仅平台超管可访问（天然绕过 tenant 隔离，普通租户用户不可见套餐管理）
 - [ ] `/options` `/{id}/menuIds` `/{id}/menus`
 - [ ] 单测覆盖
 
@@ -191,6 +202,8 @@
 | 平台用户是否看跨租户业务数据 | 本期：平台用户仅在本租户(0)上下文；跨租户管理只走 tenant 模块（绕过隔离） |
 | `db:push` 给现有表加列需默认值 | `default(0)` + `notNull`，历史数据归平台租户，安全 |
 | 字典/菜单共享 vs 租户私有 | 跟原版：共享（平台级），租户仅通过 `sys_tenant_menu` 取子集 |
+| 权限缓存 key 是否需 tenant 维度 | 本期 `user_id` 全局唯一，同一用户不会跨租户有不同权限，`userPerms(userId)` 不冲突；若未来支持用户跨租户（平台超管管多租户），再在 `redis-keys.ts` 预留 `tenantId` 维度 |
+| 关联表 PK 是否含 tenantId | 不统一加：对齐原版 `sys_user_role` PK `(userId,roleId)`、`sys_role_menu` PK `(roleId,menuId)` 均不含 tenantId；仅 `sys_role_dept` 扩展为 `(tenantId,roleId,deptId)`（原版唯一索引含 tenant_id） |
 
 ---
 
