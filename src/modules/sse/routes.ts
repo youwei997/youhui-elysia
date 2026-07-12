@@ -1,5 +1,4 @@
 import { Elysia, sse } from "elysia";
-import { unauthorized } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import {
 	addSseConnection,
@@ -23,8 +22,9 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 	.get(
 		"/connect",
 		async function* ({ set, user }) {
-			// auth macro 已在 beforeHandle 拦截未登录；这里 if 仅为 TS 收窄 user 类型
-			if (!user) throw unauthorized();
+			// auth: true 的 macro 已在 beforeHandle 拦截未登录，此处 user 必非 null
+			// 用类型断言收窄 TS 类型，不抛运行时错误（不会走到这里）
+			const u = user!;
 
 			// 首帧前设响应头（sse 自动加 text/event-stream，其余手动）
 			set.headers["cache-control"] = "no-cache";
@@ -33,7 +33,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 
 			// 建连接、入注册表
 			const connId = crypto.randomUUID();
-			const conn = new SseConnection(connId, user.sub);
+			const conn = new SseConnection(connId, u.sub);
 			addSseConnection(conn);
 			// 连接即广播一次在线数（String 包裹，裸 number 会被 sse() 静默丢弃 data 行）
 			// 用 broadcast 而非 push，让所有连接实时看到计数上升
