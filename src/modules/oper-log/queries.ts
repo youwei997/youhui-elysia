@@ -220,3 +220,24 @@ export const getVisitTrend = async (
 
 	return { dates, pvList, uvList };
 };
+
+/**
+ * 清理过期操作日志（物理删除）
+ *
+ * 删除 createTime < now - retentionDays 天 的记录，返回删除条数。
+ * 对齐 docs/notes/2026-06-29-oper-log-物理删除策略.md：oper_log 不走软删，定时硬删。
+ * 仅在 cron 任务中调用，不暴露为 REST 接口。
+ */
+export const cleanExpiredOperLogs = async (
+	retentionDays: number,
+	db: DB,
+): Promise<number> => {
+	const cutoff = new Date(
+		Date.now() - retentionDays * 24 * 60 * 60 * 1000,
+	).toISOString();
+	const result = await db
+		.delete(sysOperLog)
+		.where(lt(sysOperLog.createTime, cutoff))
+		.returning({ id: sysOperLog.id });
+	return result.length;
+};
