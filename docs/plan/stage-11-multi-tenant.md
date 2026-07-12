@@ -135,9 +135,10 @@
   - 菜单为平台共享表（§1.4 不加 `tenant_id`），但"谁能看到"由 `sys_tenant_menu` 子集 + 角色权限控制。
   - 参照本项目 `scripts/seed.ts` 现有范式（目录 → 页面节点 → 按钮权限节点，`perm` 字段对齐权限码表）：
     - **租户管理目录**（如 `system/tenant`）：下挂页面节点（`routeName`/`component` 对齐前端 `src/views/system/tenant` 实际路由）+ 按钮节点，按钮 `perm` 逐一对齐 Step 5 权限码表（`sys:tenant:list/create/update/delete/change-status/plan-assign`）。
-    - **套餐管理目录**（如 `system/tenant-plan`）：下挂页面节点 + 按钮节点，`perm` 对齐 `sys:tenant-plan:list` / `sys:tenant-plan:create` / `sys:tenant-plan:update` / `sys:tenant-plan:delete`（精确按钮权限，与 Step 6 `requirePerm` 一致）。
+    - **套餐管理目录**（如 `system/tenant-plan`）：下挂页面节点 + 按钮节点，`perm` 对齐 `sys:tenant-plan:list` / `sys:tenant-plan:create` / `sys:tenant-plan:update` / `sys:tenant-plan:delete` / `sys:tenant-plan:assign`（精确按钮权限，与 Step 6 `requirePerm` 一致；`assign` 对应「套餐菜单配置」节点，Java 菜单 1205）。
   - 不 seed 的后果：非 ROOT 的平台运营角色 `getUserPerms` 收不到 `sys:tenant:*`，`v-hasPerm` 隐藏按钮；且 `/menu/tree` 不含该目录，侧边栏不显示租户管理菜单。
-- `sys_tenant_menu`: 平台(0) 全量菜单（**含**新租户管理/套餐管理节点 id）；演示(1) 仅业务菜单（不含平台管理）。
+- **`sys_menu.scope` 分类（🔴#2：计划原漏，Java 靠 `WHERE scope=2` 切业务菜单）**：`menu.ts:51` 已有 `scope: smallint default 1`（1=平台 / 2=业务），但当前 `scripts/seed.ts` 中 `scope` 出现 **0 次**——须给每个菜单节点显式赋值 `scope`（平台管理类=1、业务类=2），否则全部默认 1，无法切出「演示租户=仅业务菜单」。
+- `sys_tenant_menu`: 平台(0) 全量菜单（`SELECT 0, id FROM sys_menu`，**含**新租户管理/套餐管理节点 id，它们 scope=1）；演示(1) **仅业务菜单**（`SELECT 1, id FROM sys_menu WHERE scope=2`，不含平台管理）。与 Java 原版 seed 逻辑一致，保证「套餐限制菜单」落地。
 - 平台运营角色（非 ROOT）经 `sys_role_menu` 关联到上述租户管理/套餐管理按钮节点，使其 `perms` 含 `sys:tenant:list/create/update/delete/change-status/plan-assign` 与 `sys:tenant-plan:list/create/update/delete`（ROOT 用户短路不依赖 perms；此处 `sys:*` 为集合简写，非 `requirePerm` 的字面通配）。
 - `sys_tenant_plan`: 至少 1 个默认套餐，`sys_tenant_plan_menu` 关联菜单。
 
@@ -155,7 +156,11 @@
   - 重新签发 token（新 `tenantId`），返回 `{ accessToken, refreshToken, tokenType, expiresIn }`。
   - **权限码决策（显式记录）**：本期**不加** `sys:tenant:switch` 权限码——普通租户用户只属单一租户、`/tenants/options` 只返回自身租户，无切换场景；实际能跨租户切换的只有平台超管，靠**超管短路**即足够。Java 原版有 `sys:tenant:switch`，若未来放开给普通用户跨租户，再补该码 + 前端切换入口。
 - `refresh-token`：JWT 已含 tenantId，刷新自动沿用，无需改动。
-- **创建租户时管理员命名（避免保留名冲突）**：因本项目保持 `username` 全局唯一，不同租户**不能**同名（如都用 `admin`）。`POST /tenants` 初始化默认管理员时自动生成带租户前缀的用户名（如 `t_{tenantCode}_admin`，例 `t_DEMO_admin`，与原版一致）；平台租户保留 `admin/root` 等保留名（仅 `tenant_id=0`）。
+- **创建租户时管理员与角色规约（🟡#6，避免实现时再拍脑袋；对齐 Java 原版 `TenantServiceImpl`）**：
+  - **用户名**：`t_{tenantCode}_admin`（例 `t_DEMO_admin`），全局唯一避免与平台 `admin/root` 保留名冲突；若前端提交的管理员名恰为 `admin/root` 则拒绝（平台保留名仅 `tenant_id=0` 可用）。
+  - **角色编码**：`TENANT_ADMIN_{tenantCode}`（例 `TENANT_ADMIN_DEMO`），dataScope = `1`（仅本人部门数据），作为该租户默认管理员角色。
+  - **初始密码**：`123456`（Java `SystemConstants.DEFAULT_PASSWORD`），写入 `TenantCreateResult.adminInitialPassword`；**须要求首次登录强制改密**，否则弱口令暴露（前端登录后提示或后端首登校验）。
+  - 上述三项即 `POST /tenants` 初始化产物，已在 §2.3 types 列出 `adminUsername/adminInitialPassword/adminRoleCode`。
 
 ---
 
@@ -182,6 +187,7 @@
 ### Step 4 · 既有业务 query 接入 tenantId（1.5d，最大机械量，串行阻塞点）
 - [ ] user / role / dept / menu(仅联表处) / notice（sys_notice + sys_user_notice）/ oper-log / login-log / file
       及各 relation 查询（userRole / roleMenu / roleDept）：加 `tenantId` 入参 + `.where(and(tenantEq(...), ...))`
+- [ ] **`findMenusByRoleCodes` 改造为「租户可用菜单交集」版（🔴#1 多租户核心，对应 Java `getMenusByRoleCodesAndTenant`）**：当前该函数仅 join `sys_role_menu` 拼角色菜单（`queries.ts:49-91`），**未**与 `sys_tenant_menu` 求交集。须改造为 `sys_role_menu` ∩ `sys_tenant_menu(tenantId)`（`innerJoin(sysTenantMenu, and(eq(sysTenantMenu.menuId, sysMenu.id), eq(sysTenantMenu.tenantId, tenantId)))`），使「租户只能看到套餐授权的菜单子集」。否则 §3.3 seed 的 `sys_tenant_menu` 变死数据、套餐限制菜单功能不生效。
 - [ ] **`audit-log` plugin 改造**：`getUser` 增加取 `tenantId`；`buildEntry` 写入 `sys_oper_log.tenant_id = ctx.user.tenantId`（oper_log 已加列，漏写会默认归平台租户 0 或 notNull 报错）
 - [ ] **`buildDataScopeContext` 改造**：签名增加 `tenantId` 入参；内部查 `sys_user.deptId` 加 `tenantEq(sysUser, tenantId)` 防御（userId 虽全局唯一不会跨租户命中，语义上收紧更安全）
 - [ ] 历史/事件表（oper_log / login_log）insert 在 queries 层**显式传 `tenantId`**，不依赖库 `default(0)`，避免漏传静默归 0
@@ -190,6 +196,7 @@
   - **列表类**：user/role/dept/notice/userNotice 逐一验证；
   - **fan-out 场景**：租户 0 发布一条公告后，断言 `sys_user_notice` 仅含租户 0 用户记录；租户 1 用户查询"我的通知"看不到租户 0 的公告；
   - **菜单树泄漏（最隐蔽，第四轮 review B）**：租户 0/1 各建**同名角色**并绑定**不同菜单**，断言各自的 `findMenusByRoleCodes` 菜单树**不含**对方租户绑定的菜单 ID——`sys_role_menu` 加 tenant_id 后必须 `tenantEq(sysRoleMenu, tenantId)`，否则可跨租户透出菜单；`sys_role`/`sys_role_menu`/`sys_role_dept` 的 `findRoles`/`findRoleById`/`findRoleMenuIds`/`findRoleDeptIds` 同理须加 `tenantEq`（第四轮 review E：已确认 `findRoles` 当前仅 `isNull(deleteTime)`+keywords+status，漏 tenant 过滤）；
+  - **租户菜单子集（🔴#1 核心，须与上一场景区分）**：`sys_tenant_menu` 平台(0)=全量、`演示(1)=仅 scope=2 业务菜单`；断言对租户 1 ctx 调用改造后的 `findMenusByRoleCodes` 返回的菜单树**只含**其 `sys_tenant_menu` 交集内菜单 ID、**不含**平台管理节点。这验证的是「套餐限制菜单」本身生效，而非仅防跨租户泄漏。
   - **单条查询按 ID 跨租户（第四轮 review C）**：用租户 0 的 ctx 按租户 1 的用户 ID 查 `findUserById`/`findUserFormData`/`findUserProfileDetail`，断言返回空/404（userId 全局唯一实际不命中，但须**显式验证**隔离契约，而非依赖隐式假设）。
   **未通过不得进入 Step 5**，避免泄漏拖到联调才暴露。
 
@@ -203,8 +210,8 @@
   | 端点 | 方法 | requirePerm |
   |---|---|---|
   | `/tenants` | GET | `['sys:tenant:list']` |
-  | `/tenants/{id}/form` | GET | `['sys:tenant:list']` |
-  | `/tenants/{id}/menuIds` | GET | `['sys:tenant:list']` |
+  | `/tenants/{id}/form` | GET | `['sys:tenant:update']` |
+  | `/tenants/{id}/menuIds` | GET | `['sys:tenant:plan-assign']` |
   | `/tenants` | POST | `['sys:tenant:create']` |
   | `/tenants/{id}` | PUT | `['sys:tenant:update']` |
   | `/tenants/{id}/menus` | PUT | `['sys:tenant:plan-assign']` |
@@ -217,6 +224,11 @@
   - `DELETE /tenants/{ids}`：若 `ids` 含 `0` → **400**（平台租户不可删）；
   - `PUT /tenants/{id}/status`：若 `id=0 && status=0` → **400**（平台租户不可禁用）。
   - 理由：平台租户是系统运行基础；且本期 JWT **不主动吊销**——若被软删/禁用，已有平台用户 token 仍有效、`tenantId=0` 继续工作，而 `findActiveTenantById` 只拦**新**切换、拦不住已登录会话，故必须在写操作入口硬拒，杜绝误操作。
+- [ ] **套餐菜单边界校验（🟡#3，对应 Java `getTenantMenuIds`/`updateTenantMenus`）**：
+  - `GET /tenants/{id}/menuIds`：返回 `tenantMenuIds ∩ planMenuIds`（`resolveTenantPlanMenuIds` 取套餐菜单；套餐未配置则兜底全部业务菜单）；
+  - `PUT /tenants/{id}/menus`：校验提交的 `menuIds ⊆ 套餐菜单集合`，否则 400「租户菜单只能从套餐菜单中选择」。
+- [ ] **平台租户菜单守卫扩展（🟡#4）**：`GET /tenants/{id}/menuIds` 与 `PUT /tenants/{id}/menus` 当 `id=0` 时 → 400「平台租户不支持配置菜单」（Java `:357/:400` `!PLATFORM_TENANT_ID` 断言；平台租户菜单由 `sys_tenant_menu(0)` 全量固定，不接受配置）。
+- [ ] **删前用户校验（🟡#5）**：`DELETE /tenants/{ids}` 软删前，若任一目标非平台租户下仍 `userCount>0`，→ 400「租户下存在用户，无法删除」（Java `:589-593`；即便软删，留用户指向已软删租户会使其数据全空，故拦截）。
 - [ ] 单测覆盖
 
 ### Step 6 · tenant-plan 模块 CRUD（0.5d）
@@ -226,12 +238,12 @@
   | 端点 | 方法 | requirePerm |
   |---|---|---|
   | `/tenant-plans` | GET | `['sys:tenant-plan:list']` |
-  | `/tenant-plans/{id}/form` | GET | `['sys:tenant-plan:list']` |
-  | `/tenant-plans/{id}/menuIds` | GET | `['sys:tenant-plan:list']` |
+  | `/tenant-plans/{id}/form` | GET | `['sys:tenant-plan:update']` |
+  | `/tenant-plans/{id}/menuIds` | GET | `['sys:tenant-plan:assign']` |
   | `/tenant-plans/options` | GET | `['sys:tenant-plan:list']` |
   | `/tenant-plans` | POST | `['sys:tenant-plan:create']` |
   | `/tenant-plans/{id}` | PUT | `['sys:tenant-plan:update']` |
-  | `/tenant-plans/{id}/menus` | PUT | `['sys:tenant-plan:update']` |
+  | `/tenant-plans/{id}/menus` | PUT | `['sys:tenant-plan:assign']` |
   | `/tenant-plans/{ids}` | DELETE | `['sys:tenant-plan:delete']` |
 
   全部 `auth: true` + 仅平台运营角色持有这些 perm（天然绕过 tenant 隔离，普通租户用户不可见套餐管理）。**⚠️ `requirePerm` 是 `user.perms.includes(p)` 的 ANY 匹配**（`src/plugins/permission.ts:55`），故**每个端点只声明自身对应的那一枚权限码**，绝不能把 4 码塞进同一数组（否则有任一权限即能访问全部端点，等于无区分）；**非**前缀/通配，不能写 `sys:tenant-plan:*`（该字面量匹配不到真实按钮权限）；`*:*:*` 仅超管通配短路，与此无关。
