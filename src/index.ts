@@ -1,9 +1,11 @@
 import { app } from "@/app";
 import { config } from "@/config";
 import { db } from "@/db/client";
+import { startJobs } from "@/jobs/index";
 import { logger } from "@/lib/logger";
 
 app.listen(config.PORT);
+startJobs();
 
 // 启动横幅：端口、环境、数据库地址（密码用 *** 隐藏）
 logger.info(
