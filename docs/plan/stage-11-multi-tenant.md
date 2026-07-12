@@ -71,7 +71,7 @@
 ### 2.2 租户模块 `/api/v1/tenants`
 | 端点 | 方法 | 说明 | 现状 |
 |---|---|---|---|
-| `/tenants/options` | GET | 当前用户可访问租户列表 `TenantInfo[]` | **缺失** |
+| `/tenants/options` | GET | 当前用户可访问租户列表 `TenantInfo[]`（实现：`isPlatform ? 所有启用租户 : 仅自身租户`，与 §4 仅平台超管可切一致） | **缺失** |
 | `/tenants/current` | GET | 当前租户信息 `TenantInfo` | **缺失** |
 | `/tenants/{id}/switch` | POST | 切换（返回 `TenantInfo`） | **缺失** |
 | `/tenants` | GET | 平台租户分页 | **缺失** |
@@ -131,7 +131,14 @@
 ### 3.3 种子数据
 - `sys_tenant`: `(0, '平台租户', 'PLATFORM', ...)`、`(1, '演示租户', 'DEMO', ...)`
 - 现有 seed 用户（admin 等）归到 `tenant_id = 0`；可选新增一个 `tenant_id = 1` 演示用户。
-- `sys_tenant_menu`: 平台(0) 全量菜单；演示(1) 仅业务菜单（不含平台管理）。
+- **`sys_menu` 补租户管理 / 套餐管理节点（必须 seed，否则前端不可见）**：
+  - 菜单为平台共享表（§1.4 不加 `tenant_id`），但"谁能看到"由 `sys_tenant_menu` 子集 + 角色权限控制。
+  - 参照本项目 `scripts/seed.ts` 现有范式（目录 → 页面节点 → 按钮权限节点，`perm` 字段对齐权限码表）：
+    - **租户管理目录**（如 `system/tenant`）：下挂页面节点（`routeName`/`component` 对齐前端 `src/views/system/tenant` 实际路由）+ 按钮节点，按钮 `perm` 逐一对齐 Step 5 权限码表（`sys:tenant:list/create/update/delete/change-status/plan-assign`）。
+    - **套餐管理目录**（如 `system/tenant-plan`）：下挂页面节点 + 按钮节点，`perm` 对齐 `sys:tenant-plan:*`。
+  - 不 seed 的后果：非 ROOT 的平台运营角色 `getUserPerms` 收不到 `sys:tenant:*`，`v-hasPerm` 隐藏按钮；且 `/menu/tree` 不含该目录，侧边栏不显示租户管理菜单。
+- `sys_tenant_menu`: 平台(0) 全量菜单（**含**新租户管理/套餐管理节点 id）；演示(1) 仅业务菜单（不含平台管理）。
+- 平台运营角色（非 ROOT）经 `sys_role_menu` 关联到上述租户管理/套餐管理按钮节点，使其 `perms` 含 `sys:tenant:*` / `sys:tenant-plan:*`（ROOT 用户短路不依赖 perms）。
 - `sys_tenant_plan`: 至少 1 个默认套餐，`sys_tenant_plan_menu` 关联菜单。
 
 ---
