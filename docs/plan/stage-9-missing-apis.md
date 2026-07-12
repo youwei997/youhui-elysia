@@ -11,6 +11,8 @@
 - **SSE**：`GET /sse/connect`（推送 online-count / dict / notice / notice-revoke 事件）
 - **租户管理 + 租户套餐**：约 20 个接口（含 `POST /auth/switch-tenant`）
 
+**已知不做项**：代码生成器（前端有调用，本项目不实现）
+
 ## 三方对照表
 
 | 端点 | Java 有 | Vue 调了 | 我们做了 | 结论 |
