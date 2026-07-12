@@ -1,8 +1,15 @@
 import { Elysia } from "elysia";
 import { success } from "@/lib/errors";
 
-/** 白名单：这些路径的响应不包壳（文档页、健康检查等） */
-const WHITELIST = ["/openapi", "/favicon.ico", "/health", "/uploads"];
+/** 白名单：这些路径的响应不包壳（文档页、健康检查、SSE 流等） */
+const WHITELIST = [
+	"/openapi",
+	"/favicon.ico",
+	"/health",
+	"/uploads",
+	// SSE 是流式 generator 响应，包壳会破坏 text/event-stream 帧
+	"/api/v1/sse",
+];
 
 /**
  * 响应壳 plugin：onAfterHandle 拦截成功响应，统一包成 { code, msg, data }

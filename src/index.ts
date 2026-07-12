@@ -3,9 +3,11 @@ import { config } from "@/config";
 import { db } from "@/db/client";
 import { startJobs } from "@/jobs/index";
 import { logger } from "@/lib/logger";
+import { closeAllSseConnections, startSse } from "@/modules/sse/registry";
 
 app.listen(config.PORT);
 startJobs();
+startSse();
 
 // 启动横幅：端口、环境、数据库地址（密码用 *** 隐藏）
 logger.info(
@@ -21,6 +23,8 @@ logger.info(
 const gracefulShutdown = async (signal: string) => {
 	logger.info({ signal }, "收到关闭信号，开始优雅关停...");
 	try {
+		// 先关闭所有 SSE 流，让客户端连接干净断开，再停 HTTP 服务与数据库
+		closeAllSseConnections();
 		app.server?.stop();
 		await db.$client.end();
 		logger.info("服务已干净关闭");

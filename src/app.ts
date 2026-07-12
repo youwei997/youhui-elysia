@@ -11,6 +11,7 @@ import { noticeRoutes } from "@/modules/notice/routes";
 import { onlineRoutes } from "@/modules/online/routes";
 import { operLogRoutes } from "@/modules/oper-log/routes";
 import { roleRoutes } from "@/modules/role/routes";
+import { sseRoutes } from "@/modules/sse/routes";
 import { storageRoutes } from "@/modules/storage/routes";
 import { userRoutes } from "@/modules/user/routes";
 import { auditLogPlugin } from "@/plugins/audit-log";
@@ -49,6 +50,7 @@ export const app = new Elysia()
 					{ name: "Notice", description: "通知公告" },
 					{ name: "File", description: "文件存储" },
 					{ name: "IpBlacklist", description: "IP 黑名单" },
+					{ name: "SSE", description: "实时推送" },
 				],
 				components: {
 					securitySchemes: {
@@ -85,4 +87,5 @@ export const app = new Elysia()
 	.use(noticeRoutes)
 	.use(ipBlacklistRoutes)
 	.use(storageRoutes)
+	.use(sseRoutes)
 	.get("/", () => "Hello Elysia");
