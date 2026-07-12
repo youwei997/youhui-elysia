@@ -46,7 +46,7 @@ bun run start            # 生产启动
 bun run tsc              # 类型检查（只读）
 bun run check            # biome 格式化 + lint + organizeImports
 bun run check:dev        # 运行时检查（同 dev，但加 --check 标志）
-bun run test             # 运行全部测试
+bun test                 # 运行全部测试
 bun run db:seed          # 种子数据
 bun run db:studio        # Drizzle Studio
 ```
