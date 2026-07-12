@@ -23,6 +23,7 @@
 | `online-count` | **裸 JSON 数字**（如 `42`） | `useOnlineCount.ts:14` `handleOnlineCountMessage(count: number)` | `onlineUserCount.value = count` |
 | `dict` | `{ dictCode: string, timestamp: number }` | `useDictSync.ts:4-7` `DictChangeMessage` | `dictStore.removeDictItem(dictCode)`（失效缓存后由 store 重新拉取） |
 | `notice` | `{ id, title, type, publishTime }` | `useNotice.ts:78-83` | 顶部 `ElNotification` 弹窗 + `unreadTotal += 1` + 列表头插 |
+> ℹ️ `publishTime` 格式：后端写 `new Date().toISOString()` 入库，`JSON.stringify` 对 Date/string 均输出 ISO 格式（如 `"2026-07-12T10:00:00.000Z"`），无需额外格式化。
 | `notice-revoke` | `{ id }` | `useNotice.ts:100-104` | 按 `id` 从列表移除 + `unreadTotal -= 1` |
 
 > ⚠️ **致命细节**：`online-count` 的 `data` 必须是**裸 JSON 数字**（如 `data: 42`），不能是 `data: {"count":42}`——前端直接把 `JSON.parse` 结果当 number 传给 handler（`if (count !== undefined && !isNaN(count))`）。其余三个事件 `data` 是 JSON 对象。
@@ -98,8 +99,8 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
     const connId = crypto.randomUUID();
     const conn = new SseConnection(connId, user!.sub);
     addSseConnection(conn);
-    // 3) 连接即推一次在线数（String 包裹，详见契约 ⚠️）
-    conn.push({ event: "online-count", data: String(getOnlineCount()) });
+    // 3) 连接即广播一次在线数（String 包裹，详见契约 ⚠️）——用 broadcast 而非 push，让<span>所有</span>连接实时看到计数上升
+    broadcast("online-count", String(getOnlineCount()));
     try {
       // 4) 逐条消费本连接的消息队列，用 sse() 包成 SSE 帧 yield 出去
       for await (const msg of conn) {
@@ -108,7 +109,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
     } finally {
       // 5) 客户端断开（Elysia 自动取消 generator）或异常 → 清理注册表
       removeSseConnection(connId);
-      // 断开后让其他客户端在线数回落
+      // 断开后让其他客户端在线数回落（broadcast 给所有剩余连接）
       broadcast("online-count", String(getOnlineCount()));
     }
   }, { auth: true });
@@ -116,7 +117,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 
 > ✅ **为何比手写 ReadableStream 省事**：`sse()` 是 Elysia 核心 API（`import { sse } from "elysia"`），自动设 `Content-Type: text/event-stream`、按 `event/data/id/retry` 规范拼帧；客户端断开时 Elysia **自动取消 generator**，`finally` 块即可精准清理，不用手动监听 `request.signal`（T2.1 spike 会实测验证）。
 >
-> 🔴 **实现前先做连通性 spike（T2 第一步）**：虽是官方 API，仍先小验证 `async function*` handler + `yield sse(...)` 在 Bun 下是否**逐帧立即下发**（不被整体缓冲）、客户端 abort 是否真触发 `finally`。拿最小端点 `bun run dev` + `curl -N` 验两帧到达 + Ctrl-C 后服务端 `finally` 执行，再写完整逻辑。
+> 🔴 **实现前先做连通性 spike（T2 第一步）**：虽是官方 API，仍先小验证 `async function*` handler + `yield sse(...)` 在 Bun 下是否**逐帧立即下发**（不被整体缓冲）、客户端 abort 是否真触发 `finally`。拿最小端点 `bun run dev` + `curl -vN http://localhost:PORT/api/v1/sse/connect -H "Authorization: Bearer <token>"` 验：① 两帧逐帧到达 ② `Content-Type`/`Cache-Control`/`x-accel-buffering` 头正确 ③ Ctrl-C 断开后服务端 `finally` 执行，再写完整逻辑。
 
 ### 3. 事件广播触发点
 | 事件 | 触发位置 | 调用 |
@@ -124,7 +125,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 | `online-count` | 连接/断开时（见上）+ `startSse` 周期 | `broadcast("online-count", String(getOnlineCount()))`（**必须 String 包裹**） |
 | `notice` | `notice/routes.ts` 发布成功路由 | `broadcast("notice", { id, title, type, publishTime })`（从 `publishNotice` 返回的 `NoticeRecord` 取这 4 字段） |
 | `notice-revoke` | `notice/routes.ts` 撤回成功路由 | `broadcast("notice-revoke", { id })`（撤回只关心 id） |
-| `dict` | `dict/routes.ts` 的 dict 类型 + dict 项的**增/删/改**共 6 处路由成功后 | `broadcast("dict", { dictCode, timestamp: Date.now() })`（dictCode 来自 :dictCode 路径参数或创建返回的 dictCode） |
+| `dict` | `dict/routes.ts` 的 dict 类型 + dict 项的**增/删/改**共 6 处路由成功后 | `broadcast("dict", { dictCode, timestamp: Date.now() })`（dictCode 来自创建/更新返回值的 `dictCode` 字段，或 items 路由中 `params.id`——双模式中可作 dictCode） |
 | `ping` | `startSse` 周期（25s） | `broadcast("ping", "")`（心跳，前端无监听器→忽略，仅保活） |
 
 > 广播是跨模块调用：registry 是模块级单例，直接 `import { broadcast } from "@/modules/sse/registry"` 即可（不引 DI 容器，符合 AGENTS 红线）。
@@ -165,7 +166,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
   - registry `add`→`broadcast`→ 通过 `SseConnection.next()` 收到正确 `{ event, data }`（含 `online-count` 用 `String` 包裹后 data 为字符串）
   - `removeSseConnection` 后 `broadcast` 不再送达
   - `getOnlineCount` 随增删正确变化
-  - **序列化防呆**：`(sse({ event: "online-count", data: String(42) }) as any).toSSE()` 断言包含 `data: 42`（且不含多余引号）；注意 `sse()` 的 TS 返回类型不含 `.toSSE`（`utils.d.ts:197` 的条件类型只保留输入类型），运行时存在但 `tsc` 会报错，须用 `as any` 绕过。反向注释——若写成 `data: 42`（裸 number）`sse()` 会静默丢 `data:` 行，必须用 `String()`。
+  - **序列化防呆**：`expect((sse({ event: "online-count", data: String(42) }) as any).toSSE()).toContain("data: 42")`（断言输出包含 `data: 42` 且不含多余引号）；注意 `sse()` 的 TS 返回类型不含 `.toSSE`（`utils.d.ts:197` 的条件类型只保留输入类型），运行时存在但 `tsc` 会报错，须用 `as any` 绕过。反向注释——若写成 `data: 42`（裸 number）`sse()` 会静默丢 `data:` 行，必须用 `String()`。
 - [ ] `bun test src/modules/test/sse.test.ts` 全绿
 
 ### T7 · 收尾验证 ⏳
