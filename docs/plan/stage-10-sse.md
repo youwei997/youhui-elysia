@@ -67,11 +67,16 @@ src/modules/test/sse.test.ts   # 注册表广播 + sse() 帧格式单测
 注册：在 `src/app.ts` 挂 `sseRoutes`（与 `noticeRoutes` 同方式）；在 `src/index.ts` 启动处调一次 `startSse()`。
 
 ### 1. registry.ts（内存连接表 + 广播）
-- `SseConnection` 是一个**可异步迭代的连接队列**（不是手写 ReadableStream）：内部 `queue: SseMessage[]` + 一个 pending resolver；`push(msg)` 入队并唤醒等待者；实现 `[Symbol.asyncIterator]` 让连接端点能用 `for await` 逐条取消息。
+- `SseConnection` 是一个**可异步迭代的连接队列**（不是手写 ReadableStream）。核心设计：
+  - 内部队列 `queue: SseMessage[]` + 一个 `pendingResolve: (() => void) | null`（挂起等待的唤醒器）
+  - `next()`：队列有值时 `queue.shift()` 立即返回 `{ value, done: false }`；**队列为空时创建一个 Promise，把它的 resolve 存为 `pendingResolve` 并 `await` 它**——即挂起等待，不返回 `{ done: true }`
+  - `push(msg)`：入队 `queue.push(msg)`，若 `pendingResolve` 存在则调用它唤醒（让 `next()` 继续消费）
+  - `close()`：设置 `closed = true`，resolve 所有挂起 Promise，让后续 `next()` 返回 `{ done: true }`
+  - 实现 `[Symbol.asyncIterator]` 返回 `{ next }`，让连接端点能用 `for await` 逐条取消息
 - `type SseMessage = { event: string; data: unknown }`
 - `const connections = new Set<SseConnection>()`
 - 导出：
-  - `addSseConnection(conn)` / `removeSseConnection(connId)`（移除并 `conn.close()`）
+  - `addSseConnection(conn)` / `removeSseConnection(connId)` —— **必须先 `conn.close()` 再从 Set 中 `delete`**（顺序重要，反了可能漏 close）
   - `broadcast(topic: SseEventTopic, data: unknown): void` —— 遍历 `connections`，`conn.push({ event: topic, data })`；**单连接异常 try/catch 隔离**，不阻断主流程
   - `getOnlineCount(): number` —— `connections.size`（活跃 SSE 连接数；语义对齐 Java `sessionRegistry.getOnlineUserCount()`）
   - `startSse(): void` —— 进程级单例 `setInterval`（25s）周期 `broadcast("ping", "")`（心跳保活）+ `broadcast("online-count", String(getOnlineCount()))`（周期刷新在线数）。在 `src/index.ts` 启动处调用一次
@@ -132,8 +137,8 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 ## 子任务清单
 
 ### T1 · sse 模块骨架（types + registry）⏳
-- [ ] `src/modules/sse/types.ts`：`SseMessage = { event: string; data: unknown }`、`SseConnection`（异步可迭代队列类：`push` / `close` / `[Symbol.asyncIterator]` / `next`）、`SseEventTopic = "online-count" | "dict" | "notice" | "notice-revoke" | "ping"`
-- [ ] `src/modules/sse/registry.ts`：`connections: Set<SseConnection>` + `addSseConnection` / `removeSseConnection` / `broadcast`（遍历 push，try/catch 隔离）/ `getOnlineCount`（size）+ `startSse`（25s 周期 ping + online-count 单例定时器）
+- [ ] `src/modules/sse/types.ts`：`SseMessage = { event: string; data: unknown }`、`SseConnection`（异步可迭代队列类：`push` / `close` / `[Symbol.asyncIterator]` / `next`——**空队列时 `next()` 必须挂起等待，不能 `{ done: true }`**）、`SseEventTopic = "online-count" | "dict" | "notice" | "notice-revoke" | "ping"`
+- [ ] `src/modules/sse/registry.ts`：`connections: Set<SseConnection>` + `addSseConnection` / `removeSseConnection`（**先 `close()` 再 `delete`**）/ `broadcast`（遍历 push，try/catch 隔离）/ `getOnlineCount`（size）+ `startSse`（25s 周期 ping + online-count 单例定时器）
 - [ ] 验证：`bun run tsc` 通过
 
 ### T2 · 连接端点 + 流（先做连通 spike）⏳
