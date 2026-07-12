@@ -6,7 +6,7 @@
 
 ## 结论
 
-**前端实际调用的全部接口，我们后端已 100% 覆盖。无缺失接口。**
+**核心业务接口已 100% 覆盖。SSE 实时推送已确认需要实现，列入待办。**
 
 ## 三方对照表
 
@@ -107,6 +107,9 @@
 | **File** | | | | |
 | `POST /files` | ✅ | ✅ | ✅ | ✅ |
 | `DELETE /files?filePath=` | ✅ | ✅ | ✅ | ✅ |
+| **SSE** | | | | |
+| `GET /sse/connect` | ✅ | ✅ (via composable) | ❌ | ✅ 要做 |
+| `GET /sse/online-count` | ✅ | ✅ (SSE 事件流接收) | ❌ | ✅ 要做 |
 | **Codegen** | ✅ | ✅ | ❌ | ⏭️ 不做 |
 | **Tenant / TenantPlan** | ❌ | ✅ | ❌ | ⏳ 待定 |
 
@@ -115,6 +118,8 @@
 | 接口 | 模块 | 原因 |
 |---|---|---|
 | `POST /auth/switch-tenant` | Auth | 租户功能，待定 |
+| `GET /sse/connect` | SSE | ✅ 要做 |
+| `GET /sse/online-count` | SSE | ✅ 要做 |
 | 租户 11 个接口 | Tenant | ⏳ 待定 |
 | 租户套餐 8 个接口 | TenantPlan | ⏳ 待定 |
 | 代码生成 6 个接口 | Codegen | ⏭️ 不做 |
@@ -128,14 +133,14 @@
 | `PATCH /users/{id}/status` | User | 前端走编辑表单 `update()` |
 | `PUT /roles/{id}/status` | Role | 前端走编辑表单 `update()` |
 | `PATCH /menus/{menuId}` (visible) | Menu | 前端走编辑表单 `update()` |
-| `GET /sse/connect`、`GET /sse/online-count` | SSE | 前端未接入实时推送 |
 | `GET /codegen/*` (6 个) | Codegen | 不做 |
 
 ## 分类汇总
 
 | 类别 | 决定 |
 |---|---|
-| 短信登录 / 微信小程序 / SSE | ❌ 第三方，不做 |
+| 短信登录 / 微信小程序 | ❌ 第三方，不做 |
+| SSE 实时推送 | ✅ 要做 |
 | 代码生成器 | ❌ 不做 |
 | **租户管理 + 租户套餐** | ⏳ **待定（可能做）** |
 | 其余全部 | ✅ 已完成 |
