@@ -175,6 +175,23 @@
   - **初始密码**：`123456`（Java `SystemConstants.DEFAULT_PASSWORD`），写入 `TenantCreateResult.adminInitialPassword`；**须要求首次登录强制改密**，否则弱口令暴露（前端登录后提示或后端首登校验）。
   - 上述三项即 `POST /tenants` 初始化产物，已在 §2.3 types 列出 `adminUsername/adminInitialPassword/adminRoleCode`。
 
+### 4.x 权限装载的租户上下文（认证链盲区，本轮补，定案）
+
+**核心原则**：用户身份相关装载——`findUserPerms`(权限码)、`findUserRoles`(角色)、`findMenusByRoleCodes`(当前用户 `/menus/routes` 菜单树，调用点 `menu/routes.ts:126`)——一律以**用户所属租户 `sys_user.tenant_id`（home tenant）**为 tenant 上下文，**不随 token 当前 `tenantId` 漂移**；只有 Step 4 业务数据查询才用 token 当前 `tenantId`。
+
+**为什么（对齐 Java 原版 `getCurrentUserInfo`/`listCurrentUserRoutes`：平台超管的角色/权限/菜单恒从 `PLATFORM_TENANT_ID(0)` 读，不随切换目标租户漂移）**：
+1. **消除 §6 line 284 与 §4 line 157 的自相矛盾**：原风险表称「同一用户不会跨租户有不同权限」，但 switch-tenant 恰恰让超管跨租户。定案「perms 从 home tenant 读」后该句变为**真**——超管无论切到哪个租户，perms 恒来自 tenant 0；`userPerms(userId)` 缓存 key 不冲突、无需加 tenantId 维度（撤掉"未来预留"的含糊表述）。
+2. **非 ROOT 平台运营角色不被误伤（🔴 真问题）**：前端 `hasPerm`(`src/utils/auth.ts:58`) 仅对 `roles.includes(ROLE_ROOT)` 短路；§3.3 的「平台运营角色（非 ROOT）」带真实 `sys:tenant:*` perms。若 `findUserPerms` 用 token 当前 tenantId，该角色切到租户 1 后 role_menu 绑定在 tenant 0 查不到 → perms 变空 → 租户管理按钮整片消失（后端 requirePerm 短路救不了前端 `v-hasPerm`）。用 home tenant 则恒返回 tenant 0 的 perms，切换不影响。
+3. **ROOT 本身无害但语义要对齐**：ROOT 角色按约定不绑菜单，`findUserPerms` 返回 `[]`（`auth/queries.ts:67-68` 注释已记）；后端 requirePerm 与前端 `hasPerm` 均靠 ROOT 短路放行。用 home tenant 加载后 `[]` 仍是稳定结果，不受切换扰动。
+
+**落地（随 Step 4 一起做）**：
+- `findUserPerms(userId, db)`：内部按 `userId` 取 `sys_user.tenant_id` 作 homeTenant，join `sys_role_menu` 加 `tenantEq(sysRoleMenu.tenantId, homeTenant)`。login/refresh/switch-tenant 调用处**不传** token.tenantId（或显式传 homeTenant）。
+- `findUserRoles(userId, db)`：join `sys_user_role` 加 `tenantEq(sysUserRole.tenantId, homeTenant)`（防止跨租户角色泄漏，语义同上）。
+- `findMenusByRoleCodes`（当前用户菜单树）：Step 4 已要求 `sys_role_menu ∩ sys_tenant_menu(tenantId)`；此处 `tenantId` 传 **homeTenant** 而非 token 当前 tenantId → 超管见全量（tenant 0 = 全菜单），普通租户用户见本租户套餐子集。注意与「角色管理页菜单下拉」(遗漏 3) 区分：后者用被编辑角色的 tenant。
+- **switch-tenant 的 perms 处理**：重签 token 时**复用** Redis `userPerms(userId)`（已是 home-tenant 结果），**不**按新 token.tenantId 重算；仅把 token.tenantId 改为 target 用于后续数据查询。语义「切换＝换数据视图租户，不动身份/权限」。
+
+> 此项即「遗漏 1」的改法依据：`auth/queries.ts` 的 `findUserPerms`/`findUserRoles` 必须进入 Step 4 改造清单 + 门禁断言（见 Step 4）。
+
 ---
 
 ## 5. 分阶段实施步骤
@@ -200,6 +217,8 @@
 ### Step 4 · 既有业务 query 接入 tenantId（1.5d，最大机械量，串行阻塞点）
 - [ ] user / role / dept / menu(仅联表处) / notice（sys_notice + sys_user_notice）/ oper-log / login-log / file
       及各 relation 查询（userRole / roleMenu / roleDept）：加 `tenantId` 入参 + `.where(and(tenantEq(...), ...))`
+- [ ] **`auth/queries.ts` 的 `findUserPerms` / `findUserRoles` 接入 home tenant（🔴 遗漏 1 + 遗漏 2 依据，§4.x）**：二者 join `sys_role_menu` / `sys_user_role` 当前**无** tenant 过滤，登录/刷新(`auth/routes.ts:221-224/:303-306`)与 switch-tenant 调用。须内部按 `userId` 取 `sys_user.tenant_id`(homeTenant) 加 `tenantEq(sysRoleMenu.tenantId, homeTenant)` / `tenantEq(sysUserRole.tenantId, homeTenant)`，**不**用 token 当前 tenantId。否则超管/平台运营角色切租户后 perms 丢失或跨租户泄漏。
+- [ ] **`findMenuOptions`（角色分配菜单下拉，`menu/queries.ts:133`）接入 tenant 交集（🟡 遗漏 3）**：当前仅按 `deleteTime`/`type`/`scope` 过滤，无 `sys_tenant_menu` 交集。须加 `tenantId` 入参；当 `tenantId !== 0`（非平台）时 `innerJoin(sysTenantMenu, and(eq(sysTenantMenu.menuId, sysMenu.id), eq(sysTenantMenu.tenantId, tenantId)))`，对齐 Java `listMenuOptions`（非平台租户下拉限定在本租户可用菜单内）；平台(0) 不交集（全菜单）。调用点（角色管理页分配菜单）传被编辑角色的 tenant。
 - [ ] **`findMenusByRoleCodes` 改造为「租户可用菜单交集」版（🔴#1 多租户核心，对应 Java `getMenusByRoleCodesAndTenant`）**：当前该函数仅 join `sys_role_menu` 拼角色菜单（`queries.ts:49-91`），**未**与 `sys_tenant_menu` 求交集。须改造为 `sys_role_menu` ∩ `sys_tenant_menu(tenantId)`（`innerJoin(sysTenantMenu, and(eq(sysTenantMenu.menuId, sysMenu.id), eq(sysTenantMenu.tenantId, tenantId)))`），使「租户只能看到套餐授权的菜单子集」。否则 §3.3 seed 的 `sys_tenant_menu` 变死数据、套餐限制菜单功能不生效。
 - [ ] **`audit-log` plugin 改造**：`getUser` 增加取 `tenantId`；`buildEntry` 写入 `sys_oper_log.tenant_id = ctx.user.tenantId`（oper_log 已加列，漏写会默认归平台租户 0 或 notNull 报错）
 - [ ] **`buildDataScopeContext` 改造**：签名增加 `tenantId` 入参；内部查 `sys_user.deptId` 加 `tenantEq(sysUser, tenantId)` 防御（userId 虽全局唯一不会跨租户命中，语义上收紧更安全）
@@ -211,6 +230,7 @@
   - **菜单树泄漏（最隐蔽，第四轮 review B）**：租户 0/1 各建**同名角色**并绑定**不同菜单**，断言各自的 `findMenusByRoleCodes` 菜单树**不含**对方租户绑定的菜单 ID——`sys_role_menu` 加 tenant_id 后必须 `tenantEq(sysRoleMenu, tenantId)`，否则可跨租户透出菜单；`sys_role`/`sys_role_menu`/`sys_role_dept` 的 `findRoles`/`findRoleById`/`findRoleMenuIds`/`findRoleDeptIds` 同理须加 `tenantEq`（第四轮 review E：已确认 `findRoles` 当前仅 `isNull(deleteTime)`+keywords+status，漏 tenant 过滤）；
   - **租户菜单子集（🔴#1 核心，须与上一场景区分）**：`sys_tenant_menu` 平台(0)=全量、`演示(1)=仅 scope=2 业务菜单`；断言对租户 1 ctx 调用改造后的 `findMenusByRoleCodes` 返回的菜单树**只含**其 `sys_tenant_menu` 交集内菜单 ID、**不含**平台管理节点。这验证的是「套餐限制菜单」本身生效，而非仅防跨租户泄漏。
   - **单条查询按 ID 跨租户（第四轮 review C）**：用租户 0 的 ctx 按租户 1 的用户 ID 查 `findUserById`/`findUserFormData`/`findUserProfileDetail`，断言返回空/404（userId 全局唯一实际不命中，但须**显式验证**隔离契约，而非依赖隐式假设）。
+  - **认证链权限装载隔离（🔴 遗漏 1 + 遗漏 2）**：seed 租户 0 与租户 1 各一个「平台运营角色」绑定**不同** `sys_role_menu`（如租户 0 绑 `sys:tenant:*`，租户 1 绑 `sys:dept:*`）；断言对租户 0 用户调 `findUserPerms` 返回的是**仅** tenant 0 的 perms（不含租户 1 的 `sys:dept:*`）；并对同一超管用户分别用 homeTenant 与「切到租户 1 的 token.tenantId」跑 `findUserPerms`，断言两次结果**完全相同**（验证 perms 不随 token.tenantId 漂移、§4.x 定案成立）。
   **未通过不得进入 Step 5**，避免泄漏拖到联调才暴露。
 
 ### Step 5 · tenant 模块 CRUD（1d）
@@ -281,7 +301,7 @@
 | 平台用户是否看跨租户业务数据 | 本期：平台用户仅在本租户(0)上下文；跨租户管理只走 tenant 模块（绕过隔离） |
 | `db:push` 给现有表加列需默认值 | `default(0)` + `notNull`，历史数据归平台租户，安全 |
 | 字典/菜单共享 vs 租户私有 | 跟原版：共享（平台级），租户仅通过 `sys_tenant_menu` 取子集 |
-| 权限缓存 key 是否需 tenant 维度 | 本期 `user_id` 全局唯一，同一用户不会跨租户有不同权限，`userPerms(userId)` 不冲突；若未来支持用户跨租户（平台超管管多租户），再在 `redis-keys.ts` 预留 `tenantId` 维度 |
+| 权限缓存 key 是否需 tenant 维度 | **不需** tenant 维度：perms/roles/菜单树一律从用户 home tenant（`sys_user.tenant_id`）装载（§4.x 定案），与 token 当前 tenantId 无关；平台超管切到任意租户 perms 恒不变，`userPerms(userId)` 不冲突。故 `redis-keys.ts` 维持 `userPerms(userId)` 现状，不预留 tenantId 维度 |
 | 关联表 PK 是否含 tenantId | 不统一加：对齐原版 `sys_user_role` PK `(userId,roleId)`、`sys_role_menu` PK `(roleId,menuId)` 均不含 tenantId；仅 `sys_role_dept` 扩展为 `(tenantId,roleId,deptId)`（原版唯一索引含 tenant_id） |
 
 ---
