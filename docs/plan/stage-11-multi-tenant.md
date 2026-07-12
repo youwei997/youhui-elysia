@@ -221,7 +221,20 @@
 
 ### Step 6 · tenant-plan 模块 CRUD（0.5d）
 - [ ] `modules/tenant-plan/{schema,types,errors,routes,queries}.ts`：8 个端点
-- [ ] 路由加 `auth: true` + `requirePerm: ['sys:tenant-plan:list','sys:tenant-plan:create','sys:tenant-plan:update','sys:tenant-plan:delete']`，仅平台超管可访问（天然绕过 tenant 隔离，普通租户用户不可见套餐管理）。**⚠️ `requirePerm` 为精确匹配**（`src/plugins/permission.ts:55` `user.perms.includes(p)`，**非**前缀/通配），故不能写 `sys:tenant-plan:*`——该字面量匹配不到 `sys:tenant-plan:list` 等真实按钮权限；`*:*:*` 仅超管通配短路，与此无关。
+- [ ] **每端点权限码（与 Step 5 同模式，逐一显式声明 `requirePerm`，勿凭感觉写）**：
+
+  | 端点 | 方法 | requirePerm |
+  |---|---|---|
+  | `/tenant-plans` | GET | `['sys:tenant-plan:list']` |
+  | `/tenant-plans/{id}/form` | GET | `['sys:tenant-plan:list']` |
+  | `/tenant-plans/{id}/menuIds` | GET | `['sys:tenant-plan:list']` |
+  | `/tenant-plans/options` | GET | `['sys:tenant-plan:list']` |
+  | `/tenant-plans` | POST | `['sys:tenant-plan:create']` |
+  | `/tenant-plans/{id}` | PUT | `['sys:tenant-plan:update']` |
+  | `/tenant-plans/{id}/menus` | PUT | `['sys:tenant-plan:update']` |
+  | `/tenant-plans/{ids}` | DELETE | `['sys:tenant-plan:delete']` |
+
+  全部 `auth: true` + 仅平台运营角色持有这些 perm（天然绕过 tenant 隔离，普通租户用户不可见套餐管理）。**⚠️ `requirePerm` 是 `user.perms.includes(p)` 的 ANY 匹配**（`src/plugins/permission.ts:55`），故**每个端点只声明自身对应的那一枚权限码**，绝不能把 4 码塞进同一数组（否则有任一权限即能访问全部端点，等于无区分）；**非**前缀/通配，不能写 `sys:tenant-plan:*`（该字面量匹配不到真实按钮权限）；`*:*:*` 仅超管通配短路，与此无关。
 - [ ] `/options` `/{id}/menuIds` `/{id}/menus`
 - [ ] 单测覆盖
 
