@@ -83,6 +83,7 @@ src/modules/test/sse.test.ts   # 注册表广播 + sse() 帧格式单测
   - `broadcast(topic: SseEventTopic, data: unknown): void` —— 遍历 `connections.values()`，`conn.push({ event: topic, data })`；**单连接异常 try/catch 隔离**，不阻断主流程
   - `getOnlineCount(): number` —— `connections.size`（活跃 SSE 连接数；语义对齐 Java `sessionRegistry.getOnlineUserCount()`）
   - `startSse(): void` —— 进程级单例 `setInterval`（25s）周期 `broadcast("ping", "")`（心跳保活）+ `broadcast("online-count", String(getOnlineCount()))`（周期刷新在线数）。在 `src/index.ts` 启动处调用一次
+  - `closeAllSseConnections(): void` —— 遍历 `connections.values()` 调 `conn.close()` 后 `connections.clear()`，用于 `gracefulShutdown` 清理所有 SSE 流
 
 > 数据序列化交给 Elysia 内置 `sse()`（见 T2），registry **不再手写 `event:/data:/空行` 拼帧**。注意 `broadcast` 收到的 `data` 必须已是「可被 `sse()` 正确序列化」的形态：`online-count` 调方须传 `String(count)`（见契约段 ⚠️），其余三个事件传对象即可。
 
@@ -174,7 +175,7 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 ### T7 · 收尾验证 ⏳
 - [ ] `bun run tsc` + `bun run check` 通过
 - [ ] 端到端联调：前端发通知 → 另一浏览器在线人数/弹窗实时；改字典 → 实时失效；全部 REST 仍可用
-- [ ] 优雅关停：`src/index.ts` 的 `gracefulShutdown` 里遍历 `connections` 调 `close()`，进程退出前清理所有 SSE 流
+- [ ] 优雅关停：`src/index.ts` 的 `gracefulShutdown` 里调 `closeAllSseConnections()`，进程退出前清理所有 SSE 流
 
 ## 验收清单（本阶段总览）
 
