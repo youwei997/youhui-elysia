@@ -23,8 +23,9 @@
 | `online-count` | **裸 JSON 数字**（如 `42`） | `useOnlineCount.ts:14` `handleOnlineCountMessage(count: number)` | `onlineUserCount.value = count` |
 | `dict` | `{ dictCode: string, timestamp: number }` | `useDictSync.ts:4-7` `DictChangeMessage` | `dictStore.removeDictItem(dictCode)`（失效缓存后由 store 重新拉取） |
 | `notice` | `{ id, title, type, publishTime }` | `useNotice.ts:78-83` | 顶部 `ElNotification` 弹窗 + `unreadTotal += 1` + 列表头插 |
-> 🟡 `publishTime` 格式注意：广播处从 `publishNotice` 返回值取 `publishTime`，但 PG `timestamptz` 回读时可能重渲染为 `2026-07-12 10:00:00+00`（非 ISO 格式），`JSON.stringify` 不保证恢复 ISO。实现时广播处显式 `new Date(row.publishTime).toISOString()`，或在 T7 端到端联调时 `curl` 抓一帧真实 publishTime 确认格式与前端预期一致。
 | `notice-revoke` | `{ id }` | `useNotice.ts:100-104` | 按 `id` 从列表移除 + `unreadTotal -= 1` |
+
+> 🟡 `publishTime` 格式注意：广播处从 `publishNotice` 返回值取 `publishTime`，但 PG `timestamptz` 回读时可能重渲染为 `2026-07-12 10:00:00+00`（非 ISO 格式），`JSON.stringify` 不保证恢复 ISO。实现时广播处显式 `new Date(row.publishTime).toISOString()`，或在 T7 端到端联调时 `curl` 抓一帧真实 publishTime 确认格式与前端预期一致。
 
 > ⚠️ **致命细节**：`online-count` 的 `data` 必须是**裸 JSON 数字**（如 `data: 42`），不能是 `data: {"count":42}`——前端直接把 `JSON.parse` 结果当 number 传给 handler（`if (count !== undefined && !isNaN(count))`）。其余三个事件 `data` 是 JSON 对象。
 >
