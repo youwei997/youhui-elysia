@@ -1,0 +1,205 @@
+# 阶段 11 · 多租户（Multi-Tenancy）
+
+> 目标：在不改前端（`vue3-element-admin-v4.6.0`）的前提下，补齐后端多租户能力，
+> 对齐 youlai-boot-tenant 的**单库多租户**契约。
+> 技术栈：Bun + ElysiaJS + Drizzle + PostgreSQL（与本项目一致）。
+> 参考：Java 原版 `H:\open-source\frontend\youlai-boot-tenant`（仅作契约/行为参考，**不是**实现基准）。
+
+---
+
+## 0. 进度分析（前置）
+
+| 阶段 | 状态 |
+|---|---|
+| 1 地基 · 2 基础CRUD · 3 Plugin · 4 权限 · 5 进阶 · 8 补充 · 10 SSE | ✅ 已完成 |
+| 6 代码生成器 | ⏭️ 已跳过（用户决定不做） |
+| 7 收尾&部署 | ⬜ 未开始 |
+| **tenant / tenant-plan / switch-tenant** | ⬜ **本次新增（阶段 11）** |
+
+**结论**：业务框架（RBAC、数据权限、SSE）均已就绪，唯一缺口是租户维度。
+本项目现状：schema 无 `tenant_id`、JWT 无 `tenantId`、`src/modules` 无 tenant 模块。
+租户全部靠"后端补、前端不动"补齐。
+
+---
+
+## 1. 设计决策（与 Java 原版对齐）
+
+### 1.1 隔离模式：单库多租户（tenant_id 列）
+- **不选**独立 schema / 独立库：复杂度高、Drizzle 动态 schema 难做、与本项目稳定范式冲突。
+- **选**单库多租户：所有业务表加 `tenant_id` 列，查询统一过滤。**与 Java 原版完全一致**。
+
+### 1.2 租户来源：JWT 携带 `tenantId`（非请求头）
+- 前端**不发**租户请求头（`utils/request.ts` 无任何 tenant header）。
+- 前端 `stores/tenant.ts` 切换租户时：先调 `auth/switch-tenant` 拿到**新 token**（新 tenantId 已写入 JWT），再调 `tenants/:id/switch` 拿 `TenantInfo`。
+- 因此后端：登录时把用户所属 `tenantId` 写进 JWT；切换时重新签发。所有业务查询从 `ctx.user.tenantId` 取上下文。
+- **平台租户 `tenantId = 0`**：SaaS 运营方，租户管理类接口（tenant / tenant-plan 模块）以平台身份运行，绕过隔离。
+
+### 1.3 隔离落地：Drizzle 类型安全 `.where(eq(...))`（严禁 sql 模板）
+- 新增 `db/helpers/tenant.ts`：
+  - `tenantEq(table, tenantId)` → 返回 `eq(table.tenantId, tenantId)`，供 `.where(and(...))` 组合。
+  - `isPlatformTenant(tenantId)` → `tenantId === 0`。
+- 新增 plugin `src/plugins/tenant.ts`（`derive` 全局）：从 `ctx.user.tenantId` 暴露 `ctx.tenantId` 与 `ctx.isPlatform`。
+- 所有业务 query 函数增加 `tenantId` 入参（与现有 `db` 入参风格一致，纯函数），在 `.where` 拼 `tenantEq`。
+- 租户管理类模块（tenant / tenant-plan）**不调用** `tenantEq`，即绕过隔离（等价 Java 的 `ignoreTables`）。
+
+### 1.4 Java 原版 `ignoreTables` 映射（哪些表不参与隔离）
+平台级 / 共享表（**不加** tenant_id，或加了但模块级绕过）：
+- `sys_tenant`、`sys_tenant_plan`、`sys_tenant_plan_menu`（租户定义本身）
+- `sys_menu`（菜单目录，全租户共享；租户菜单分配走 `sys_tenant_menu` 桥表）
+- `sys_dict`、`sys_dict_item`（字典共享）
+- `sys_config`（系统配置共享）
+- `sys_ip_blacklist`（基础设施，平台级）
+
+业务表（**加** `tenant_id`，自动隔离）：
+`sys_user`、`sys_role`、`sys_dept`、`sys_user_role`、`sys_role_menu`、`sys_role_dept`、
+`sys_notice`、`sys_user_notice`（用户公告快照）、`sys_oper_log`、`sys_login_log`、`sys_file`、
+`sys_tenant_menu`（桥表，PK 含 tenant_id）。
+
+---
+
+## 2. 前端契约对照（必须对齐，前端不改）
+
+### 2.1 认证侧
+| 端点 | 方法 | 说明 | 现状 |
+|---|---|---|---|
+| `/api/v1/auth/login` | POST | body 可选 `tenantId`；返回 token | 需改：解析并写 JWT |
+| `/api/v1/auth/switch-tenant` | POST | `?tenantId=`；返回新 `LoginResponse` | **缺失，需新增** |
+
+### 2.2 租户模块 `/api/v1/tenants`
+| 端点 | 方法 | 说明 | 现状 |
+|---|---|---|---|
+| `/tenants/options` | GET | 当前用户可访问租户列表 `TenantInfo[]` | **缺失** |
+| `/tenants/current` | GET | 当前租户信息 `TenantInfo` | **缺失** |
+| `/tenants/{id}/switch` | POST | 切换（返回 `TenantInfo`） | **缺失** |
+| `/tenants` | GET | 平台租户分页 | **缺失** |
+| `/tenants/{id}/form` | GET | 表单回填 | **缺失** |
+| `/tenants` | POST | 新增并初始化默认数据（返回 `TenantCreateResult`） | **缺失** |
+| `/tenants/{id}` | PUT | 修改 | **缺失** |
+| `/tenants/{ids}` | DELETE | 批量删除 | **缺失** |
+| `/tenants/{id}/status` | PUT | `?status=` 改状态 | **缺失** |
+| `/tenants/{id}/menuIds` | GET | 租户菜单ID集合 | **缺失** |
+| `/tenants/{id}/menus` | PUT | 更新租户菜单（body: number[]） | **缺失** |
+
+### 2.3 租户套餐模块 `/api/v1/tenant-plans`
+| 端点 | 方法 | 说明 | 现状 |
+|---|---|---|---|
+| `/tenant-plans` | GET | 分页 | **缺失** |
+| `/tenant-plans/{id}/form` | GET | 表单回填 | **缺失** |
+| `/tenant-plans` | POST | 新增 | **缺失** |
+| `/tenant-plans/{id}` | PUT | 修改 | **缺失** |
+| `/tenant-plans/{ids}` | DELETE | 批量删除 | **缺失** |
+| `/tenant-plans/options` | GET | 套餐下拉 | **缺失** |
+| `/tenant-plans/{id}/menuIds` | GET | 方案菜单ID集合 | **缺失** |
+| `/tenant-plans/{id}/menus` | PUT | 更新方案菜单（body: number[]） | **缺失** |
+
+### 2.4 前端类型形状（照搬，不重新设计）
+- `TenantInfo { id, name, domain? }`
+- `TenantItem / TenantForm / TenantCreateForm`（name/code/contactName/contactPhone/contactEmail/domain/logo/planId/status/remark/expireTime）
+- `TenantCreateResult { tenantId, tenantCode, tenantName, adminUsername, adminInitialPassword, adminRoleCode }`
+- `TenantPlanItem / TenantPlanForm { id, name, code, status, sort, remark }`
+- 分页统一 `{ list, total }`（与本项目现有范式一致）
+
+---
+
+## 3. 数据库 schema 变更（`db:push` 同步，非 migrate）
+
+### 3.1 现有业务表加列
+对以下表新增 `tenantId: bigint("tenant_id").notNull().default(0)`：
+- 独立 schema 文件：`user, role, dept, operLog, loginLog, file`
+- `notice.ts` 内两张：`sys_notice`（公告）、`sys_user_notice`（用户公告快照，**Java 原版有 `tenant_id`，本次须补齐**）
+- `relation.ts` 内：`userRole, roleMenu, roleDept`
+
+> 注：`tenantMenu`（`sys_tenant_menu`）是**新建**表，见 §3.2，不在此列；`relation.ts` 当前仅含 `userRole/roleMenu/roleDept` 三张。
+> `menu / dict / dict-item / config / ip-blacklist` **不加** tenant_id（平台共享，见 1.4）。
+
+### 3.2 新增表
+- `sys_tenant`（id, name, code unique, contactName, contactPhone, contactEmail, domain unique, logo, planId, status, remark, expireTime, createTime, updateTime）
+- `sys_tenant_plan`（id, name, code unique, status, sort, remark, createTime, updateTime）
+- `sys_tenant_plan_menu`（tenantPlanId, menuId，PK 复合）
+- `sys_tenant_menu`（tenantId, menuId，PK 复合）
+
+### 3.3 种子数据
+- `sys_tenant`: `(0, '平台租户', 'PLATFORM', ...)`、`(1, '演示租户', 'DEMO', ...)`
+- 现有 seed 用户（admin 等）归到 `tenant_id = 0`；可选新增一个 `tenant_id = 1` 演示用户。
+- `sys_tenant_menu`: 平台(0) 全量菜单；演示(1) 仅业务菜单（不含平台管理）。
+- `sys_tenant_plan`: 至少 1 个默认套餐，`sys_tenant_plan_menu` 关联菜单。
+
+---
+
+## 4. JWT / Auth 变更
+
+- `JwtPayload` 增加 `tenantId: number`。
+- `signAccessToken/signRefreshToken` 调用处补 `tenantId`（来自 `sys_user.tenant_id`）。
+- **login**：body 可选 `tenantId`。
+  - **前端登录表单不采集 `tenantId`**（仅显示租户标签，无 `LoginForm.tenantId` 绑定），故**保持 `username` 全局唯一**，不改为 `(username, tenant_id)` 复合唯一——否则无 tenantId 时登录同名跨租户歧义，且无前端配合无法消歧。
+  - 解析规则：按 `username` 全局唯一定位用户；若 body 带 `tenantId`，校验 `user.tenantId === body.tenantId` 或当前为平台超管，否则 401；写入 JWT 的 `tenantId` 取该用户所属租户。
+- **新增 `POST /api/v1/auth/switch-tenant?tenantId=`**：
+  - `auth: true`；校验当前用户允许切换到该租户（`user.tenantId === target` 或平台超管）。
+  - 重新签发 token（新 `tenantId`），返回 `{ accessToken, refreshToken, tokenType, expiresIn }`。
+- `refresh-token`：JWT 已含 tenantId，刷新自动沿用，无需改动。
+
+---
+
+## 5. 分阶段实施步骤
+
+### Step 1 · schema + 种子（0.5d）
+- [ ] 业务表加 `tenantId` 列；新增 4 张租户表（schema 三件套风格：`db/schema/system/tenant.ts` 等）
+- [ ] `bun run db:push` 同步库
+- [ ] 补种子：租户 0/1、tenant_menu、tenant_plan、现有用户归 tenant 0
+- [ ] 单测：schema 类型推断通过
+
+### Step 2 · JWT + Auth + switch-tenant（0.5d）
+- [ ] `JwtPayload` 加 `tenantId`；login 解析并写入
+- [ ] 新增 `auth/switch-tenant` 路由（校验 + 重新签发）
+- [ ] 单测：登录带/不带 tenantId；切换后 token 含新 tenantId；越权切换被拒
+
+### Step 3 · tenant 隔离 plugin + helper（0.5d）
+- [ ] `src/plugins/tenant.ts`：`derive` 暴露 `ctx.tenantId` / `ctx.isPlatform`
+- [ ] `db/helpers/tenant.ts`：`tenantEq` / `isPlatformTenant`
+- [ ] 单测：`tenantEq` 生成正确条件
+
+### Step 4 · 既有业务 query 接入 tenantId（1.5d，最大机械量，串行阻塞点）
+- [ ] user / role / dept / menu(仅联表处) / notice（sys_notice + sys_user_notice）/ oper-log / login-log / file
+      及各 relation 查询（userRole / roleMenu / roleDept）：加 `tenantId` 入参 + `.where(and(..., tenantEq(...)))`
+- [ ] 租户管理模块（tenant/tenant-plan）**不**加过滤
+- [ ] ⛔ **门禁（本步硬卡）**：完成即当跑跨租户隔离单测——seed 租户 0 与租户 1 数据，断言 tenant 0 的查询**看不到** tenant 1 行（user/role/dept/notice/userNotice 等逐一验证）。**未通过不得进入 Step 5**，避免泄漏拖到联调才暴露。
+
+### Step 5 · tenant 模块 CRUD（1d）
+- [ ] `modules/tenant/{schema,types,errors,routes,queries}.ts`：11 个端点全实现
+- [ ] `POST /tenants` 初始化默认数据（建管理员用户 + 角色 + 默认菜单），返回 `TenantCreateResult`
+- [ ] `/options` `/current` `/{id}/switch` `/{id}/menuIds` `/{id}/menus` `/{id}/status`
+- [ ] 单测覆盖
+
+### Step 6 · tenant-plan 模块 CRUD（0.5d）
+- [ ] `modules/tenant-plan/{schema,types,errors,routes,queries}.ts`：8 个端点
+- [ ] `/options` `/{id}/menuIds` `/{id}/menus`
+- [ ] 单测覆盖
+
+### Step 7 · 联调 + 验证（0.5d）
+- [ ] `bun run tsc` + `bun run lint` + 全量测试零回归
+- [ ] 端到端：开关 `VITE_APP_TENANT_ENABLED=true` 下，前端登录→切租户→业务数据隔离验证
+- [ ] 更新 `docs/plan/README.md` 进度看板 + 本文档验收清单
+
+---
+
+## 6. 风险与取舍
+
+| 风险 | 应对 |
+|---|---|
+| Step 4 改所有 query 易漏 / 易泄漏 | 单测强制断言跨租户不可见；helper 集中一处，避免散落；Step 4 末设硬门禁 |
+| 登录无 tenantId 的歧义（改复合唯一后同名跨租户） | **不引入** `(username, tenant_id)` 复合唯一：保持 username 全局唯一，登录按 username 解析、tenantId 取用户所属租户；复合唯一会制造无前端配合的登录歧义（前端登录不发 tenantId） |
+| 平台用户是否看跨租户业务数据 | 本期：平台用户仅在本租户(0)上下文；跨租户管理只走 tenant 模块（绕过隔离） |
+| `db:push` 给现有表加列需默认值 | `default(0)` + `notNull`，历史数据归平台租户，安全 |
+| 字典/菜单共享 vs 租户私有 | 跟原版：共享（平台级），租户仅通过 `sys_tenant_menu` 取子集 |
+
+---
+
+## 7. 验收清单
+
+- [ ] 所有业务表含 `tenant_id`，查询均按当前租户隔离
+- [ ] 跨租户数据不可互见（单测证明）
+- [ ] `auth/login` 写 tenantId；`auth/switch-tenant` 重新签发
+- [ ] `/tenants` 11 端点 + `/tenant-plans` 8 端点全通，形状对齐前端类型
+- [ ] `/tenants/options` `/current` `/{id}/switch` 与前端 store 流程吻合
+- [ ] `bun run tsc` + `lint` + 全量测试通过
+- [ ] 更新进度看板

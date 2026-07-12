@@ -15,6 +15,7 @@
 | 7 · 收尾 & 部署 | ⭐ | 2-3d | ⬜ 未开始 | [stage-7-deploy.md](./stage-7-deploy.md) |
 | 8 · 补充模块（计划外新增） | ⭐⭐ | — | ✅ 已完成 | [stage-8-supplement-modules.md](./stage-8-supplement-modules.md) |
 | 10 · SSE 实时推送 | ⭐⭐ | 0.5-1d | ✅ 已完成 | [stage-10-sse.md](./stage-10-sse.md) |
+| 11 · 多租户 | ⭐⭐⭐ | 4-5d | ⬜ 未开始 | [stage-11-multi-tenant.md](./stage-11-multi-tenant.md) |
 
 > 状态标记：⬜ 未开始 · 🟡 进行中 · ✅ 已完成 · ⚠️ 受阻 · ⏭️ 已跳过
 
@@ -41,7 +42,8 @@
 详细任务清单、接口契约、验收标准见 [stage-8-supplement-modules.md](./stage-8-supplement-modules.md)。
 
 ### 待确认
-- **tenant / tenant-plan**：前端有完整模块，受 `tenantEnabled` 开关控制。是否启用待定。
+- ~~**tenant / tenant-plan**：前端有完整模块，受 `tenantEnabled` 开关控制。是否启用待定。~~
+  **已决定做**（2026-07-13）：列为阶段 11，单库多租户，tenantId 写入 JWT，对齐 youlai-boot-tenant 契约。详见 [stage-11-multi-tenant.md](./stage-11-multi-tenant.md)。
 
 ### 不做
 - 社交登录（`sys_user_social`）、第三方登录、短信登录
