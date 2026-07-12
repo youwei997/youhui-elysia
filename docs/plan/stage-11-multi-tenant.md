@@ -135,10 +135,10 @@
   - 菜单为平台共享表（§1.4 不加 `tenant_id`），但"谁能看到"由 `sys_tenant_menu` 子集 + 角色权限控制。
   - 参照本项目 `scripts/seed.ts` 现有范式（目录 → 页面节点 → 按钮权限节点，`perm` 字段对齐权限码表）：
     - **租户管理目录**（如 `system/tenant`）：下挂页面节点（`routeName`/`component` 对齐前端 `src/views/system/tenant` 实际路由）+ 按钮节点，按钮 `perm` 逐一对齐 Step 5 权限码表（`sys:tenant:list/create/update/delete/change-status/plan-assign`）。
-    - **套餐管理目录**（如 `system/tenant-plan`）：下挂页面节点 + 按钮节点，`perm` 对齐 `sys:tenant-plan:*`。
+    - **套餐管理目录**（如 `system/tenant-plan`）：下挂页面节点 + 按钮节点，`perm` 对齐 `sys:tenant-plan:list` / `sys:tenant-plan:create` / `sys:tenant-plan:update` / `sys:tenant-plan:delete`（精确按钮权限，与 Step 6 `requirePerm` 一致）。
   - 不 seed 的后果：非 ROOT 的平台运营角色 `getUserPerms` 收不到 `sys:tenant:*`，`v-hasPerm` 隐藏按钮；且 `/menu/tree` 不含该目录，侧边栏不显示租户管理菜单。
 - `sys_tenant_menu`: 平台(0) 全量菜单（**含**新租户管理/套餐管理节点 id）；演示(1) 仅业务菜单（不含平台管理）。
-- 平台运营角色（非 ROOT）经 `sys_role_menu` 关联到上述租户管理/套餐管理按钮节点，使其 `perms` 含 `sys:tenant:*` / `sys:tenant-plan:*`（ROOT 用户短路不依赖 perms）。
+- 平台运营角色（非 ROOT）经 `sys_role_menu` 关联到上述租户管理/套餐管理按钮节点，使其 `perms` 含 `sys:tenant:list/create/update/delete/change-status/plan-assign` 与 `sys:tenant-plan:list/create/update/delete`（ROOT 用户短路不依赖 perms；此处 `sys:*` 为集合简写，非 `requirePerm` 的字面通配）。
 - `sys_tenant_plan`: 至少 1 个默认套餐，`sys_tenant_plan_menu` 关联菜单。
 
 ---
@@ -171,7 +171,7 @@
 ### Step 2 · JWT + Auth + switch-tenant（0.5d）
 - [ ] `JwtPayload` 加 `tenantId`；login 解析并写入
 - [ ] 新增 `auth/switch-tenant` 路由（校验 + 重新签发）
-- [ ] **目标租户状态校验（第四轮 review D）**：`auth/switch-tenant` 与 `tenants/{id}/switch` 均须先查目标租户**存在且 `status=1` 且 `deleteTime IS NULL`**，否则 400/404。防平台超管切到已软删/停用租户——`§3.2` 软删不级联、租户行仍可被查到，若不加校验 token 会携带无效 tenantId、后续业务查询全空却不报错。tenant queries 层提供 `findActiveTenantById` 供两路由复用。
+- [ ] **目标租户状态校验（第四轮 review D）**：`auth/switch-tenant` 与 `tenants/{id}/switch` 均须先查目标租户**存在且 `status=1` 且 `deleteTime IS NULL`**，否则 400/404。防平台超管切到已软删/停用租户——`§3.2` 软删不级联、租户行仍可被查到，若不加校验 token 会携带无效 tenantId、后续业务查询全空却不报错。**本函数在 Step 2 即前置创建**（放 `lib/tenant.ts` 或 tenant queries 雏形，勿等 Step 5 整模块），两路由统一调用。
 - [ ] 单测：登录带/不带 tenantId；切换后 token 含新 tenantId；越权切换被拒
 
 ### Step 3 · tenant 隔离 plugin + helper（0.5d）
@@ -213,11 +213,15 @@
   | `/tenants/options` | GET | 仅 `auth: true`（切换下拉，无独立权限码） |
   | `/tenants/current` | GET | 仅 `auth: true`（任何登录用户取自身租户） |
   | `/tenants/{id}/switch` | POST | 仅 `auth: true` + 超管短路，见 §4（不加 `sys:tenant:switch`） |
+- [ ] **平台租户(id=0)硬守卫（必须修复，对齐 Java 原版 DEFAULT_TENANT_ID / PLATFORM_TENANT_ID 保护）**：
+  - `DELETE /tenants/{ids}`：若 `ids` 含 `0` → **400**（平台租户不可删）；
+  - `PUT /tenants/{id}/status`：若 `id=0 && status=0` → **400**（平台租户不可禁用）。
+  - 理由：平台租户是系统运行基础；且本期 JWT **不主动吊销**——若被软删/禁用，已有平台用户 token 仍有效、`tenantId=0` 继续工作，而 `findActiveTenantById` 只拦**新**切换、拦不住已登录会话，故必须在写操作入口硬拒，杜绝误操作。
 - [ ] 单测覆盖
 
 ### Step 6 · tenant-plan 模块 CRUD（0.5d）
 - [ ] `modules/tenant-plan/{schema,types,errors,routes,queries}.ts`：8 个端点
-- [ ] 路由加 `auth: true` + `requirePerm: ['sys:tenant-plan:*']`，仅平台超管可访问（天然绕过 tenant 隔离，普通租户用户不可见套餐管理）
+- [ ] 路由加 `auth: true` + `requirePerm: ['sys:tenant-plan:list','sys:tenant-plan:create','sys:tenant-plan:update','sys:tenant-plan:delete']`，仅平台超管可访问（天然绕过 tenant 隔离，普通租户用户不可见套餐管理）。**⚠️ `requirePerm` 为精确匹配**（`src/plugins/permission.ts:55` `user.perms.includes(p)`，**非**前缀/通配），故不能写 `sys:tenant-plan:*`——该字面量匹配不到 `sys:tenant-plan:list` 等真实按钮权限；`*:*:*` 仅超管通配短路，与此无关。
 - [ ] `/options` `/{id}/menuIds` `/{id}/menus`
 - [ ] 单测覆盖
 
