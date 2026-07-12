@@ -6,7 +6,10 @@
 
 ## 结论
 
-**核心业务接口已 100% 覆盖。SSE 实时推送已确认需要实现，列入待办。**
+前端实际调用的全部 API 已覆盖。需实现的新模块：
+
+- **SSE**：`GET /sse/connect`（推送 online-count / dict / notice / notice-revoke 事件）
+- **租户管理 + 租户套餐**：约 20 个接口（含 `POST /auth/switch-tenant`）
 
 ## 三方对照表
 
@@ -14,7 +17,7 @@
 |---|---|---|---|---|
 | **Auth** | | | | |
 | `POST /auth/login` | ✅ | ✅ | ✅ | ✅ |
-| `POST /auth/switch-tenant` | ❌ | ✅ | ❌ | 租户功能，待定 |
+| `POST /auth/switch-tenant` | ❌ | ✅ | ❌ | 租户功能，要做 |
 | `POST /auth/refresh-token` | ✅ | ✅ | ✅ | ✅ |
 | `DELETE /auth/logout` | ✅ | ✅ | ✅ | ✅ |
 | `GET /auth/captcha` | ✅ | ✅ | ✅ | ✅ |
@@ -41,7 +44,7 @@
 | `PUT /users/email` | ✅ | ✅ | ✅ | ✅ |
 | `DELETE /users/email` | ✅ | ✅ | ✅ | ✅ |
 | `GET /users/options` | ✅ | ✅ | ✅ | ✅ |
-| `PATCH /users/{id}/status` | ✅ | ❌ | ❌ | 前端用 `update()`，不做 |
+| `PATCH /users/{id}/status` | ✅ | ❌ | ❌ | 前端通过 `PUT /users/{id}` 更新状态，不做 |
 | **Role** | | | | |
 | `GET /roles` (分页) | ✅ | ✅ | ✅ | ✅ |
 | `GET /roles/options` | ✅ | ✅ | ✅ | ✅ |
@@ -52,7 +55,7 @@
 | `GET /roles/{id}/menu-ids` | ✅ | ✅ | ✅ | ✅ |
 | `PUT /roles/{id}/menus` | ✅ | ✅ | ✅ | ✅ |
 | `GET /roles/{id}/dept-ids` | ✅ | ✅ | ✅ | ✅ |
-| `PUT /roles/{id}/status` | ✅ | ❌ | ❌ | 前端用 `update()`，不做 |
+| `PUT /roles/{id}/status` | ✅ | ❌ | ❌ | 前端通过 `PUT /roles/{id}` 更新状态，不做 |
 | **Menu** | | | | |
 | `GET /menus` (树形) | ✅ | ✅ | ✅ | ✅ |
 | `GET /menus/options` | ✅ | ✅ | ✅ | ✅ |
@@ -61,7 +64,7 @@
 | `POST /menus` | ✅ | ✅ | ✅ | ✅ |
 | `PUT /menus/{id}` | ✅ | ✅ | ✅ | ✅ |
 | `DELETE /menus/{id}` | ✅ | ✅ | ✅ | ✅ |
-| `PATCH /menus/{menuId}` (visible) | ✅ | ❌ | ❌ | 前端用 `update()`，不做 |
+| `PATCH /menus/{menuId}` (visible) | ✅ | ❌ | ❌ | 前端通过 `PUT /menus/{id}` 更新 visible，不做 |
 | **Dept** | | | | |
 | `GET /depts` (树形) | ✅ | ✅ | ✅ | ✅ |
 | `GET /depts/options` | ✅ | ✅ | ✅ | ✅ |
@@ -69,6 +72,7 @@
 | `POST /depts` | ✅ | ✅ | ✅ | ✅ |
 | `PUT /depts/{id}` | ✅ | ✅ | ✅ | ✅ |
 | `DELETE /depts/{ids}` | ✅ | ✅ | ✅ | ✅ |
+| `GET /depts/{id}` | ❌ | ❌ | ✅ | 我们额外加的详情接口，保留 |
 | **Dict** | | | | |
 | `GET /dicts` (分页) | ✅ | ✅ | ✅ | ✅ |
 | `GET /dicts/options` | ✅ | ✅ | ✅ | ✅ |
@@ -108,31 +112,42 @@
 | `POST /files` | ✅ | ✅ | ✅ | ✅ |
 | `DELETE /files?filePath=` | ✅ | ✅ | ✅ | ✅ |
 | **SSE** | | | | |
-| `GET /sse/connect` | ✅ | ✅ (via composable) | ❌ | ✅ 要做 |
-| `GET /sse/online-count` | ✅ | ✅ (SSE 事件流接收) | ❌ | ✅ 要做 |
+| `GET /sse/connect` | ✅ | ✅ (via composable) | ❌ | ✅ 要做（推送 online-count / dict / notice / notice-revoke 事件） |
 | **Codegen** | ✅ | ✅ | ❌ | ⏭️ 不做 |
-| **Tenant / TenantPlan** | ❌ | ✅ | ❌ | ⏳ 待定 |
+| **Tenant** | ❌ | ✅ | ❌ | ✅ 要做 |
+| **TenantPlan** | ❌ | ✅ | ❌ | ✅ 要做 |
 
 ## 前端调了但我们没做的接口
 
 | 接口 | 模块 | 原因 |
 |---|---|---|
-| `POST /auth/switch-tenant` | Auth | 租户功能，待定 |
-| `GET /sse/connect` | SSE | ✅ 要做 |
-| `GET /sse/online-count` | SSE | ✅ 要做 |
-| 租户 11 个接口 | Tenant | ⏳ 待定 |
-| 租户套餐 8 个接口 | TenantPlan | ⏳ 待定 |
+| `POST /auth/switch-tenant` | Auth | 租户功能，要做 |
+| `GET /sse/connect` | SSE | ✅ 要做（推送 online-count / dict / notice / notice-revoke 事件） |
+| 租户 11 个接口 | Tenant | ✅ 要做 |
+| 租户套餐 8 个接口 | TenantPlan | ✅ 要做 |
 | 代码生成 6 个接口 | Codegen | ⏭️ 不做 |
 
-## Java 有但前端没调的接口（无需关注）
+## Java 有但前端没调的接口（无需实现）
 
-| 接口 | 模块 | 原因 |
+| 接口 | 模块 | 说明 |
 |---|---|---|
-| `POST /auth/login/sms`、`POST /auth/sms/code` | Auth | 第三方短信，前端此版本无入口 |
+| `POST /auth/login/sms`、`POST /auth/sms/code` | Auth | 第三方短信，此版本前端无入口 |
 | `POST /wxma/auth/*` (3 个) | WxMa | 微信小程序专用 |
-| `PATCH /users/{id}/status`、`PUT /roles/{id}/status`、`PATCH /menus/{menuId}` (visible) | User / Role / Menu | 前端通过编辑表单 PUT update() 一并改 status/visible，无独立调用 |
-| `GET /depts/{id}` | Dept | Java 有，前端用 `:id/form` 取详情，无独立调用 |
+| `PATCH /users/{id}/status` | User | Java 有独立接口，前端通过 `PUT /users/{id}` 编辑表单时一起更新 status，无需独立接口 |
+| `PUT /roles/{id}/status` | Role | Java 有独立接口，前端通过 `PUT /roles/{id}` 编辑表单时一起更新 status，无需独立接口 |
+| `PATCH /menus/{menuId}` (visible) | Menu | Java 有独立接口，前端通过 `PUT /menus/{id}` 编辑表单时一起更新 visible，无需独立接口 |
 | `GET /codegen/*` (6 个) | Codegen | ⏭️ 不做 |
+
+## 我们额外做的接口（Java 没有）
+
+| 接口 | 模块 | 说明 |
+|---|---|---|
+| `GET /depts/{id}` | Dept | 部门详情，前端用 `:id/form` 取同量数据，无独立调用 |
+| `GET /dicts/{id}` | Dict | 字典类型详情 |
+| `GET /menus/my-tree` | Menu | 菜单树 + 权限列表合一接口 |
+| `GET /online` + `DELETE /online/:userId` | Online | 在线用户管理 |
+| `GET /ip-blacklist` + `DELETE /ip-blacklist/:id` | IpBlacklist | IP 黑名单管理 |
+| `POST /auth/logout-all` | Auth | 全端登出 |
 
 ## 分类汇总
 
@@ -141,5 +156,5 @@
 | 短信登录 / 微信小程序 | ❌ 第三方，不做 |
 | SSE 实时推送 | ✅ 要做 |
 | 代码生成器 | ❌ 不做 |
-| **租户管理 + 租户套餐** | ⏳ **待定（可能做）** |
+| **租户管理 + 租户套餐** | ✅ **要做** |
 | 其余全部 | ✅ 已完成 |
