@@ -13,7 +13,9 @@
 | ORM | Drizzle ORM |
 | 数据库 | PostgreSQL |
 | 缓存 | Redis |
+| 日志 | pino |
 | 验证 | Zod |
+| JWT | jose |
 | 文档 | OpenAPI + Scalar |
 | 前端对照 | vue3-element-admin-v4.6.0 |
 
