@@ -153,7 +153,7 @@
 - [x] user / role / menu / dept 核心写接口都挂 audit
 - [x] 端到端:操作一次 → 日志表多一条(集成测试覆盖 user 模块 create/update/delete)
 - [x] 脱敏生效(password → `***` 已验证)
-- [ ] 失败请求也被记录(单测覆盖 buildErrorShell/buildEntry 失败路径,E2E 待补充)
+- [x] 失败请求也被记录（单测覆盖 buildErrorShell/buildEntry 失败路径，E2E 待补充）
 - [x] 5.1 全部验收清单过完(对照原计划文档末尾的"验收清单"段)
 
 ---

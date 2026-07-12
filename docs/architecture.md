@@ -64,7 +64,7 @@ youhui-elysia/
 │   │   ├── request-context.ts    # reqId + 计时
 │   │   ├── auth.ts               # derive ctx.user
 │   │   ├── permission.ts         # macro: requirePerm/requireRole
-│   │   ├── audit-log.ts          # onAfterHandle 操作日志
+│   │   ├── audit-log.ts          # onAfterResponse 操作日志
 │   │   └── rate-limit.ts
 │   │   # i18n 已跳过，理由见 docs/notes/2026-06-17-后端不做i18n.md
 │   ├── lib/
