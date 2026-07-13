@@ -65,8 +65,10 @@
 |---|---|---|---|
 | `/api/v1/auth/login` | POST | body 可选 `tenantId`；返回 token | 需改：解析并写 JWT |
 | `/api/v1/auth/switch-tenant` | POST | `?tenantId=`；返回新 `LoginResponse` | **缺失，需新增** |
+| `/api/v1/users/me` | GET | 返回当前用户信息，含 `canSwitchTenant`（前端据此决定是否渲染切换器） | **需改：响应加 `canSwitchTenant`** |
 
 > 注：`auth/switch-tenant` 只负责换 token（写入新 tenantId），`tenants/{id}/switch` 只负责返回租户信息——两接口共同完成切换，非冗余。
+> `canSwitchTenant` 前端不读 JWT claim，读 `GET /users/me` 响应的 `userInfo.canSwitchTenant`（`LayoutToolbar.vue:97`），决定是否渲染 `TenantSwitcher`。
 
 ### 2.2 租户模块 `/api/v1/tenants`
 | 端点 | 方法 | 说明 | 现状 |
@@ -96,6 +98,7 @@
 | `/tenant-plans/{id}/menus` | PUT | 更新方案菜单（body: number[]） | **缺失** |
 
 ### 2.4 前端类型形状（照搬，不重新设计）
+- `UserInfo { userId, username, nickname, avatar, roles: string[], perms: string[], canSwitchTenant: boolean }`（`canSwitchTenant` 对齐前端 `api/system/user/types.ts:18`，`GET /users/me` 返回，前端 `LayoutToolbar.vue:97` 据此渲染切换器）
 - `TenantInfo { id, name, domain? }`
 - `TenantItem`（id/name/code/contactName/contactPhone/contactEmail/domain/logo/planId/status/remark/expireTime/createTime/updateTime）
 - `TenantForm`（编辑，含 `status`）：id/name/code/contactName/contactPhone/contactEmail/domain/logo/planId/status/remark/expireTime
@@ -159,16 +162,20 @@
 
 ## 4. JWT / Auth 变更
 
-- `JwtPayload` 增加 `tenantId: number`。
-- `signAccessToken/signRefreshToken` 调用处补 `tenantId`（来自 `sys_user.tenant_id`）。
+- `JwtPayload` 增加 `tenantId: number` 和 `canSwitchTenant: boolean`。
+- `signAccessToken/signRefreshToken` 调用处补 `tenantId` 和 `canSwitchTenant`。
+  - **login**：`tenantId` = `user.tenant_id`（home tenant）；`canSwitchTenant` = 平台超管判定（`isSuperUser()`，即 `roles.includes(ROOT)`）。
+  - **refresh-token**：`tenantId` = `oldPayload.tenantId`（保留数据视图，不重算）；`canSwitchTenant` = `oldPayload.canSwitchTenant`（原样保留，不重查）。
+  - **switch-tenant**：`tenantId` = `target`（数据视图切目标租户）；`canSwitchTenant` 不变（切换不改身份能力）。
 - **login**：body 可选 `tenantId`。
   - **前端登录表单不采集 `tenantId`**（仅显示租户标签，无 `LoginForm.tenantId` 绑定），故**保持 `username` 全局唯一**，不改为 `(username, tenant_id)` 复合唯一——否则无 tenantId 时登录同名跨租户歧义，且无前端配合无法消歧。
-  - 解析规则：按 `username` 全局唯一定位用户；若 body 带 `tenantId`，校验 `user.tenantId === body.tenantId` 或当前为平台超管，否则 401；写入 JWT 的 `tenantId` 取该用户所属租户。
+  - 解析规则：按 `username` 全局唯一定位用户；若 body 带 `tenantId`，校验 `user.tenantId === body.tenantId` 或当前为平台超管，否则 401；写入 JWT 的 `tenantId` 取该用户所属租户，`canSwitchTenant` 取平台超管判定结果。
 - **新增 `POST /api/v1/auth/switch-tenant?tenantId=`**：
   - `auth: true`；校验当前用户允许切换到该租户（`user.tenantId === target` 或平台超管）。
   - 重新签发 token（新 `tenantId`），返回 `{ accessToken, refreshToken, tokenType, expiresIn }`。
+  - 返回的 token 中 `canSwitchTenant` 保持原值（不随 tenantId 改变）。
   - **权限码决策（显式记录）**：本期**不加** `sys:tenant:switch` 权限码——普通租户用户只属单一租户、`/tenants/options` 只返回自身租户，无切换场景；实际能跨租户切换的只有平台超管，靠**超管短路**即足够。Java 原版有 `sys:tenant:switch`，若未来放开给普通用户跨租户，再补该码 + 前端切换入口。
-- **`refresh-token`：必须保留数据视图 tenantId（🔴 与 §4.x 定案冲突，须改）**：刷新重建 payload 时 `tenantId` 取 `oldPayload.tenantId`（保留当前数据视图租户），**不可**用 home tenant 重算；而 `roles`/`perms`/`dataScopes` 仍按 §4.x 从 home tenant 重新查库（`findUserRoles`/`findUserPerms`）。即「身份维度重算、数据视图维度透传」两条线在 refresh 交汇。原「JWT 已含 tenantId，刷新自动沿用，无需改动」仅在单租户成立；switch-tenant 后若不透传，`buildJwtPayload` 会漏掉 tenantId（见 Step 2），超管切到租户 1 后 15min access 过期、refresh 静默踢回租户 0 数据视图，而前端 UI 仍显示租户 1 → 数据错乱。
+- **`refresh-token`：必须保留数据视图 tenantId + canSwitchTenant（🔴 与 §4.x 定案冲突，须改）**：刷新重建 payload 时 `tenantId` 取 `oldPayload.tenantId`（保留当前数据视图租户），`canSwitchTenant` 取 `oldPayload.canSwitchTenant`（原样保留），**不可**用 home tenant 重算；而 `roles`/`perms`/`dataScopes` 仍按 §4.x 从 home tenant 重新查库（`findUserRoles`/`findUserPerms`）。即「身份维度重算、数据视图维度透传」两条线在 refresh 交汇。原「JWT 已含 tenantId，刷新自动沿用，无需改动」仅在单租户成立；switch-tenant 后若不透传，`buildJwtPayload` 会漏掉 tenantId（见 Step 2），超管切到租户 1 后 15min access 过期、refresh 静默踢回租户 0 数据视图，而前端 UI 仍显示租户 1 → 数据错乱。
 - **创建租户时管理员与角色规约（🟡#6，避免实现时再拍脑袋；对齐 Java 原版 `TenantServiceImpl`）**：
   - **用户名**：`t_{tenantCode}_admin`（例 `t_DEMO_admin`），全局唯一避免与平台 `admin/root` 保留名冲突；若前端提交的管理员名恰为 `admin/root` 则拒绝（平台保留名仅 `tenant_id=0` 可用）。
   - **角色编码**：`TENANT_ADMIN_{tenantCode}`（例 `TENANT_ADMIN_DEMO`），dataScope = `1`（仅本人部门数据），作为该租户默认管理员角色。
@@ -205,12 +212,13 @@
 - [ ] 单测：schema 类型推断通过
 
 ### Step 2 · JWT + Auth + switch-tenant（0.5d）
-- [ ] **`buildJwtPayload` 增加 `tenantId` 入参并写入 token（🔴 修 refresh 漏点）**：当前 `buildJwtPayload(user: {id,username}, ...)` 只解构 `{id,username}`、返回 payload **无** `tenantId`——连 login 传完整 `user` 时 tenantId 也被静默丢弃。须改为 `user: {id, username, tenantId}` 并在返回 payload 带 `tenantId`。三处调用约定（身份维度=home tenant、数据视图维度=token tenantId 分两条线）：
-  - **login**：`tenantId = user.tenant_id`（home tenant）；roles/perms 从 home tenant 查（§4.x）。
-  - **refresh-token**：`tenantId = oldPayload.tenantId`（**保留数据视图**，不重算）；roles/perms 从 home tenant 重算（§4.x 交汇点，见 §4 refresh 子弹）。
-  - **switch-tenant**：`tenantId = target`（数据视图切目标租户）；roles/perms **复用** Redis `userPerms(userId)`（§4.x 第 4 点，不重算）。
-  - 注：`JwtPayload` 类型仅需加 `tenantId: number` 字段（§4），但「写入值从哪来」由上述三处调用分别决定，不能一处写死。
-- [ ] 新增 `auth/switch-tenant` 路由（校验 + 重新签发）
+- [ ] **`buildJwtPayload` 增加 `tenantId` + `canSwitchTenant` 入参并写入 token（🔴 修 refresh 漏点）**：当前 `buildJwtPayload(user: {id,username}, ...)` 只解构 `{id,username}`、返回 payload **无** `tenantId`——连 login 传完整 `user` 时 tenantId 也被静默丢弃。须改为 `user: {id, username, tenantId}` 并在返回 payload 带 `tenantId` + `canSwitchTenant`。三处调用约定（身份维度=home tenant、数据视图维度=token tenantId 分两条线）：
+  - **login**：`tenantId = user.tenant_id`（home tenant）；`canSwitchTenant = isSuperUser()`（平台超管判定）；roles/perms 从 home tenant 查（§4.x）。
+  - **refresh-token**：`tenantId = oldPayload.tenantId`（**保留数据视图**，不重算）；`canSwitchTenant = oldPayload.canSwitchTenant`（原样保留）；roles/perms 从 home tenant 重算（§4.x 交汇点，见 §4 refresh 子弹）。
+  - **switch-tenant**：`tenantId = target`（数据视图切目标租户）；`canSwitchTenant = oldPayload.canSwitchTenant`（不随 tenantId 改变）；roles/perms **复用** Redis `userPerms(userId)`（§4.x 第 4 点，不重算）。
+  - 注：`JwtPayload` 类型需加 `tenantId: number` + `canSwitchTenant: boolean` 字段（§4），但「写入值从哪来」由上述三处调用分别决定，不能一处写死。
+- [ ] 新增 `auth/switch-tenant` 路由（校验 + 重新签发）；返回 token 中 `canSwitchTenant` 保持原值（不随 tenantId 改变）
+- [ ] `GET /api/v1/users/me` 响应加 `canSwitchTenant: boolean`（来源：`isSuperUser()` 判定，前端据此渲染切换器）
 - [ ] **目标租户状态校验（第四轮 review D）**：`auth/switch-tenant` 与 `tenants/{id}/switch` 均须先查目标租户**存在且 `status=1` 且 `deleteTime IS NULL`**，否则 400/404。防平台超管切到已软删/停用租户——`§3.2` 软删不级联、租户行仍可被查到，若不加校验 token 会携带无效 tenantId、后续业务查询全空却不报错。**本函数在 Step 2 即前置创建**（放 `lib/tenant.ts` 或 tenant queries 雏形，勿等 Step 5 整模块），两路由统一调用。
 - [ ] 单测：登录带/不带 tenantId；切换后 token 含新 tenantId；越权切换被拒
 
