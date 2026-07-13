@@ -4,7 +4,6 @@ import {
 	integer,
 	pgTable,
 	smallint,
-	uniqueIndex,
 	varchar,
 } from "drizzle-orm/pg-core";
 
@@ -12,8 +11,8 @@ import {
  * 系统角色表
  * 对齐 youlai-boot sys_role 设计，data_scope 用 smallint(1-5) 与前端 RoleItem.dataScope: number 一致
  *
- * 多租户：name/code 唯一约束改为租户内复合（tenant_id, name/code），
- * 允许不同租户使用相同角色名称/编码。
+ * 多租户：name/code 唯一约束为租户内复合（tenant_id, name/code）且仅对未删除行生效。
+ * 部分唯一索引无法通过 Drizzle schema 声明，由 seed.ts 在 db:push 后通过原生 SQL 创建。
  */
 export const sysRole = pgTable(
 	"sys_role",
@@ -22,7 +21,7 @@ export const sysRole = pgTable(
 		id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
 		/** 租户 ID */
 		tenantId: bigint("tenant_id", { mode: "number" }).default(0).notNull(),
-		/** 角色名称（租户内唯一） */
+		/** 角色名称（租户内唯一，软删行不计入） */
 		name: varchar("name", { length: 64 }).notNull(),
 		/** 角色编码（租户内唯一），如 ADMIN / DEPT_MANAGER / STAFF */
 		code: varchar("code", { length: 32 }).notNull(),
@@ -37,16 +36,5 @@ export const sysRole = pgTable(
 		/** 审计字段 */
 		...auditColumns,
 	},
-	(table) => ({
-		/** 租户内角色名称唯一 */
-		uniqRoleTenantName: uniqueIndex("uniq_role_tenant_name").on(
-			table.tenantId,
-			table.name,
-		),
-		/** 租户内角色编码唯一 */
-		uniqRoleTenantCode: uniqueIndex("uniq_role_tenant_code").on(
-			table.tenantId,
-			table.code,
-		),
-	}),
+	// 部分唯一索引（deleted_at IS NULL）由 seed.ts 原生 SQL 创建，Drizzle schema 不声明
 );

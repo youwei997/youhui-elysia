@@ -60,9 +60,7 @@ const main = async () => {
 			contactEmail: "platform@youlai.tech",
 			status: 1,
 			remark: "SaaS 平台运营方，系统运行基础租户",
-			createdBy: 1,
 			createTime: NOW,
-			updatedBy: 1,
 			updateTime: NOW,
 		},
 		{
@@ -75,9 +73,7 @@ const main = async () => {
 			planId: 1,
 			status: 1,
 			remark: "演示用租户，仅含业务菜单",
-			createdBy: 1,
 			createTime: NOW,
-			updatedBy: 1,
 			updateTime: NOW,
 		},
 	]);
@@ -1653,7 +1649,7 @@ const main = async () => {
 	// 基础套餐(1) → 全部业务菜单
 	await db.insert(sysTenantPlanMenu).values(
 		businessMenuIds.map((menuId) => ({
-			tenantPlanId: 1,
+			planId: 1,
 			menuId,
 		})),
 	);
@@ -1751,6 +1747,28 @@ const main = async () => {
 	console.log("  ├─ 角色-部门：3 条");
 	console.log("  ├─ 租户菜单：平台全量 + 演示仅业务");
 	console.log("  └─ 租户套餐菜单：基础套餐关联全部业务菜单");
+	// ==========================================
+	// 部分唯一索引（Drizzle schema 不支持部分索引，用原生 SQL 补建）
+	// 对齐 Java 原版 uk_tenant_name / uk_tenant_code（含软删判断）
+	// 注意：项目用 deleted_at 而非 is_deleted，WHERE 条件用 IS NULL
+	// ==========================================
+	await db.execute(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_role_tenant_name
+		ON sys_role (tenant_id, name)
+		WHERE deleted_at IS NULL
+	`);
+	await db.execute(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_role_tenant_code
+		ON sys_role (tenant_id, code)
+		WHERE deleted_at IS NULL
+	`);
+	await db.execute(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_dept_tenant_code
+		ON sys_dept (tenant_id, code)
+		WHERE deleted_at IS NULL
+	`);
+	console.log("  ✅ 部分唯一索引：role(name/code)、dept(code)");
+
 	console.log("");
 	console.log("📋 角色清单（密码均为 123456）：");
 	console.log("  root                → ROOT               超管，无部门，dataScope=ALL");

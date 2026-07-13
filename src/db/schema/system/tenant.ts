@@ -1,4 +1,3 @@
-import { auditColumns } from "@db/schema/_shared";
 import {
 	bigint,
 	pgTable,
@@ -8,9 +7,9 @@ import {
 } from "drizzle-orm/pg-core";
 
 /**
- * 系统租户表
+ * 系统租户表（平台级配置表）
  *
- * 管理表，完整 auditColumns（含软删），与 Java 原版 sys_tenant 对齐。
+ * 与 Java 原版对齐：不含软删和创建人/更新人追踪，只保留 create_time/update_time。
  * tenantId=0 为平台租户（系统运行基础），不可删除/禁用。
  */
 export const sysTenant = pgTable("sys_tenant", {
@@ -38,6 +37,12 @@ export const sysTenant = pgTable("sys_tenant", {
 	remark: varchar("remark", { length: 255 }),
 	/** 过期时间 */
 	expireTime: timestamp("expire_time", { withTimezone: true, mode: "string" }),
-
-	...auditColumns,
+	/** 创建时间 */
+	createTime: timestamp("created_at", { withTimezone: true, mode: "string" })
+		.defaultNow()
+		.notNull(),
+	/** 更新时间 */
+	updateTime: timestamp("updated_at", { withTimezone: true, mode: "string" })
+		.defaultNow()
+		.notNull(),
 });

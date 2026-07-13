@@ -25,6 +25,7 @@ export const sysUserRole = pgTable(
  * 角色-菜单关联表
  *
  * PK 保持 (roleId, menuId)，tenantId 为冗余索引列。
+ * 对齐 Java 原版：idx_role_menu_tenant_id + idx_tenant_role。
  */
 export const sysRoleMenu = pgTable(
 	"sys_role_menu",
@@ -39,6 +40,7 @@ export const sysRoleMenu = pgTable(
 	(t) => [
 		primaryKey({ columns: [t.roleId, t.menuId] }),
 		index("idx_role_menu_tenant_id").on(t.tenantId),
+		index("idx_tenant_role").on(t.tenantId, t.roleId),
 	],
 );
 

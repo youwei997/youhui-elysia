@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import { and, eq, isNull } from "drizzle-orm";
-import { db } from "../../client";
-import { sysMenu } from "../system/menu";
-import { sysRoleMenu } from "../system/relation";
-import { sysRole } from "../system/role";
-import { sysTenant } from "../system/tenant";
-import { sysUser } from "../system/user";
+import { sysMenu } from "../schema/system/menu";
+import { sysRoleMenu } from "../schema/system/relation";
+import { sysRole } from "../schema/system/role";
+import { sysTenant } from "../schema/system/tenant";
+import { sysUser } from "../schema/system/user";
+import { db } from "./client";
 
 /**
  * Step 1 多租户 schema 运行时验证
@@ -54,7 +54,7 @@ describe("多租户 schema 运行时验证", () => {
 			expect(row?.exists).toBe(true);
 		});
 
-		it("sys_tenant_plan_menu 桥表存在（无审计列，PK 为 (tenant_plan_id, menu_id)）", async () => {
+		it("sys_tenant_plan_menu 桥表存在（无审计列，PK 为 (plan_id, menu_id)）", async () => {
 			const [row] = await db.execute<{ exists: boolean }>(`
 				SELECT EXISTS (SELECT 1 FROM information_schema.tables
 				               WHERE table_schema = 'public'
@@ -69,7 +69,7 @@ describe("多租户 schema 运行时验证", () => {
 				ORDER BY ordinal_position
 			`);
 			const colNames = cols.map((c) => c.column_name);
-			expect(colNames).toContain("tenant_plan_id");
+			expect(colNames).toContain("plan_id");
 			expect(colNames).toContain("menu_id");
 			expect(colNames).not.toContain("created_by");
 			expect(colNames).not.toContain("created_at");
@@ -147,22 +147,24 @@ describe("多租户 schema 运行时验证", () => {
 			expect(singleNameUnique.length).toBe(0);
 		});
 
-		it("sys_role 有 uniq_role_tenant_name 复合唯一索引", async () => {
-			const rows = await db.execute<{ indexname: string }>(`
-				SELECT indexname FROM pg_indexes
+		it("sys_role 有 idx_role_tenant_name 部分唯一索引（含 deleted_at IS NULL）", async () => {
+			const rows = await db.execute<{ indexname: string; indexdef: string }>(`
+				SELECT indexname, indexdef FROM pg_indexes
 				WHERE tablename = 'sys_role'
-				  AND indexname = 'uniq_role_tenant_name'
+				  AND indexname = 'idx_role_tenant_name'
 			`);
 			expect(rows.length).toBe(1);
+			expect(rows[0]?.indexdef).toContain("(deleted_at IS NULL)");
 		});
 
-		it("sys_role 有 uniq_role_tenant_code 复合唯一索引", async () => {
-			const rows = await db.execute<{ indexname: string }>(`
-				SELECT indexname FROM pg_indexes
+		it("sys_role 有 idx_role_tenant_code 部分唯一索引（含 deleted_at IS NULL）", async () => {
+			const rows = await db.execute<{ indexname: string; indexdef: string }>(`
+				SELECT indexname, indexdef FROM pg_indexes
 				WHERE tablename = 'sys_role'
-				  AND indexname = 'uniq_role_tenant_code'
+				  AND indexname = 'idx_role_tenant_code'
 			`);
 			expect(rows.length).toBe(1);
+			expect(rows[0]?.indexdef).toContain("(deleted_at IS NULL)");
 		});
 
 		it("sys_dept 无单列唯一索引", async () => {
@@ -179,13 +181,14 @@ describe("多租户 schema 运行时验证", () => {
 			expect(singleCodeUnique.length).toBe(0);
 		});
 
-		it("sys_dept 有 uniq_dept_tenant_code 复合唯一索引", async () => {
-			const rows = await db.execute<{ indexname: string }>(`
-				SELECT indexname FROM pg_indexes
+		it("sys_dept 有 idx_dept_tenant_code 部分唯一索引（含 deleted_at IS NULL）", async () => {
+			const rows = await db.execute<{ indexname: string; indexdef: string }>(`
+				SELECT indexname, indexdef FROM pg_indexes
 				WHERE tablename = 'sys_dept'
-				  AND indexname = 'uniq_dept_tenant_code'
+				  AND indexname = 'idx_dept_tenant_code'
 			`);
 			expect(rows.length).toBe(1);
+			expect(rows[0]?.indexdef).toContain("(deleted_at IS NULL)");
 		});
 	});
 
