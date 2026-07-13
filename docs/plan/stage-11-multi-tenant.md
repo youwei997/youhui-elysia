@@ -169,6 +169,8 @@
   - **switch-tenant**：`tenantId` = `target`（数据视图切目标租户）；`canSwitchTenant` 不变（切换不改身份能力）。
 - **login**：body 可选 `tenantId`。
   - **前端登录表单不采集 `tenantId`**（仅显示租户标签，无 `LoginForm.tenantId` 绑定），故**保持 `username` 全局唯一**，不改为 `(username, tenant_id)` 复合唯一——否则无 tenantId 时登录同名跨租户歧义，且无前端配合无法消歧。
+    - **实证（vue3-element-admin v4.6.0）**：`views/login/index.vue` 的 `loginFormData` 仅 `username/password/captcha/rememberMe`，登录页唯一租户元素是装饰性 `<el-tag>多租户</el-tag>`（受 `VITE_APP_TENANT_ENABLED` 控制、无 `v-model` 绑定）；`utils/request.ts` 无 `X-Tenant` 头注入，`utils/tenant.ts` 只有 `isTenantEnabled`/`isPlatformTenantId` 判断助手。`api/auth/types.ts` 虽留 `tenantId?` 可选口子且 `api/auth/index.ts` 会「有值才带」，但登录表单从不 `set` → 实际 login body 不含 tenantId。tenantId 前端→后端唯一实际通路是登录**之后**的 `switchTenant(tenantId)`。
+    - **⚠️ 未来触发条件（勿忘）**：Java `AuthController` 有「账号归属多个租户，请使用租户域名或指定租户登录」分支。若后续启用**按租户域名登录 / 指定租户登录**（前端开始传 tenantId），则「username 全局唯一」相对原版 `(username, tenant_id, is_deleted)` 租户内唯一的偏离会真正咬人——**同名用户将无法跨租户共存**（原版 seed 里 tenant0/tenant1 各有 `admin`/`test` 即依赖此）。届时须回看本决策，评估改 `(username, tenant_id)` 复合唯一 + 登录消歧规则。见 §6 风险表同名条目。
   - 解析规则：按 `username` 全局唯一定位用户；若 body 带 `tenantId`，校验 `user.tenantId === body.tenantId` 或当前为平台超管，否则 401；写入 JWT 的 `tenantId` 取该用户所属租户，`canSwitchTenant` 取平台超管判定结果。
 - **新增 `POST /api/v1/auth/switch-tenant?tenantId=`**：
   - `auth: true`；校验当前用户允许切换到该租户（`user.tenantId === target` 或平台超管）。
@@ -310,7 +312,7 @@
 | 风险 | 应对 |
 |---|---|
 | Step 4 改所有 query 易漏 / 易泄漏 | 单测强制断言跨租户不可见；helper 集中一处，避免散落；Step 4 末设硬门禁 |
-| 登录无 tenantId 的歧义（改复合唯一后同名跨租户） | **不引入** `(username, tenant_id)` 复合唯一：保持 username 全局唯一，登录按 username 解析、tenantId 取用户所属租户；复合唯一会制造无前端配合的登录歧义（前端登录不发 tenantId） |
+| 登录无 tenantId 的歧义（改复合唯一后同名跨租户） | **不引入** `(username, tenant_id)` 复合唯一：保持 username 全局唯一，登录按 username 解析、tenantId 取用户所属租户；复合唯一会制造无前端配合的登录歧义（前端登录不发 tenantId）。**成立前提**：当前前端登录确实不传 tenantId（已实证 vue3-element-admin v4.6.0，见 §4）。**失效条件**：若未来启用「按租户域名 / 指定租户登录」（前端开始传 tenantId），此简化失效——同名用户跨租户无法共存，须回看是否改回 `(username, tenant_id)` 租户内唯一 + 登录消歧 |
 | 平台用户是否看跨租户业务数据 | 本期：平台用户仅在本租户(0)上下文；跨租户管理只走 tenant 模块（绕过隔离） |
 | `db:push` 给现有表加列需默认值 | `default(0)` + `notNull`，历史数据归平台租户，安全 |
 | 字典/菜单共享 vs 租户私有 | 跟原版：共享（平台级），租户仅通过 `sys_tenant_menu` 取子集 |
