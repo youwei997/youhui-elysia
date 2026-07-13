@@ -22,9 +22,9 @@ export const sseRoutes = new Elysia({ prefix: "/api/v1/sse" })
 	.get(
 		"/connect",
 		async function* ({ set, user }) {
-			// auth: true 的 macro 已在 beforeHandle 拦截未登录，此处 user 必非 null
-			// 用类型断言收窄 TS 类型，不抛运行时错误（不会走到这里）
-			const u = user!;
+			// auth guard 已在 beforeHandle 拦截未登录，显式 guard 收窄 TS 类型（不会走到这里）
+			if (!user) throw new Error("不可达：auth guard 应已拦截未登录请求");
+			const u = user;
 
 			// 首帧前设响应头（sse 自动加 text/event-stream，其余手动）
 			set.headers["cache-control"] = "no-cache";
