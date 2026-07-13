@@ -30,6 +30,8 @@ export const sysOperLog = pgTable(
 	{
 		/** 主键 ID */
 		id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+		/** 租户 ID */
+		tenantId: bigint("tenant_id", { mode: "number" }).default(0).notNull(),
 
 		/** 操作用户 ID(未登录 / 匿名请求为 0) */
 		userId: bigint("user_id", { mode: "number" }).default(0).notNull(),

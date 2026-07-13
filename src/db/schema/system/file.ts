@@ -18,6 +18,8 @@ export const sysFile = pgTable(
 	{
 		/** 主键 ID */
 		id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+		/** 租户 ID */
+		tenantId: bigint("tenant_id", { mode: "number" }).default(0).notNull(),
 
 		/** 存储键（storage 侧的主键），格式 {date}/{uuid}.{ext} */
 		key: varchar("key", { length: 255 }).notNull(),

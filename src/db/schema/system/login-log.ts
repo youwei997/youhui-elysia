@@ -15,6 +15,8 @@ export const sysLoginLog = pgTable(
 	{
 		/** 主键 ID */
 		id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+		/** 租户 ID */
+		tenantId: bigint("tenant_id", { mode: "number" }).default(0).notNull(),
 
 		/** 用户 ID（未登录请求为 0） */
 		userId: bigint("user_id", { mode: "number" }).default(0).notNull(),

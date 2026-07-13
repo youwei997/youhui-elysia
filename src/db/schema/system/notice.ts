@@ -14,6 +14,8 @@ import {
 export const sysNotice = pgTable("sys_notice", {
 	/** 主键 ID */
 	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+	/** 租户 ID */
+	tenantId: bigint("tenant_id", { mode: "number" }).default(0).notNull(),
 	/** 公告标题 */
 	title: varchar("title", { length: 128 }).notNull(),
 	/** 公告内容 */
@@ -50,6 +52,8 @@ export const sysNotice = pgTable("sys_notice", {
 export const sysUserNotice = pgTable("sys_user_notice", {
 	/** 主键 ID */
 	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity(),
+	/** 租户 ID */
+	tenantId: bigint("tenant_id", { mode: "number" }).default(0).notNull(),
 	/** 公告 ID */
 	noticeId: bigint("notice_id", { mode: "number" }).notNull(),
 	/** 用户 ID */
