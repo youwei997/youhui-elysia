@@ -17,11 +17,9 @@ import { sysTenantMenu } from "@/db/schema/system/tenant-menu";
  * bcrypt 哈希密码（明文：123456）
  * 后续阶段 3 接入 auth 模块后，可通过登录接口验证
  *
- * ponytail: 本文件使用 db.execute() 原生 SQL 完成两类操作：
- * 1. 部分唯一索引（partial unique index）：Drizzle schema 不支持 WHERE ... IS NULL 语法，
- *    故 CREATE UNIQUE INDEX 用原生 SQL 创建。升级路径：Drizzle 支持后迁移到 schema 声明。
- * 2. 序列重置（setval）：Drizzle insert 不提供序列管理 API，用原生 SQL 保持自增 ID 连续。
- * 以上均为 seed 脚本特有，不影响业务运行时代码。
+ * ponytail: 本文件使用 db.execute() 原生 SQL 完成序列重置（setval）。
+ * 原因：Drizzle insert 不提供序列管理 API，用原生 SQL 保持自增 ID 连续。
+ * 以上为 seed 脚本特有，不影响业务运行时代码。
  */
 const DEFAULT_PASSWORD =
 	"$2a$10$xVWsNOhHrCxh5UbpCE7/HuJ.PAOKcYAqRxD2CO2nVnJS.IAXkr5aq";
@@ -1755,27 +1753,6 @@ const main = async () => {
 	console.log("  ├─ 角色-部门：3 条");
 	console.log("  ├─ 租户菜单：平台全量 + 演示仅业务");
 	console.log("  └─ 租户套餐菜单：基础套餐关联全部业务菜单");
-	// ==========================================
-	// 部分唯一索引（Drizzle schema 不支持部分索引，用原生 SQL 补建）
-	// 对齐 Java 原版 uk_tenant_name / uk_tenant_code（含软删判断）
-	// 注意：项目用 deleted_at 而非 is_deleted，WHERE 条件用 IS NULL
-	// ==========================================
-	await db.execute(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_role_tenant_name
-		ON sys_role (tenant_id, name)
-		WHERE deleted_at IS NULL
-	`);
-	await db.execute(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_role_tenant_code
-		ON sys_role (tenant_id, code)
-		WHERE deleted_at IS NULL
-	`);
-	await db.execute(`
-		CREATE UNIQUE INDEX IF NOT EXISTS idx_dept_tenant_code
-		ON sys_dept (tenant_id, code)
-		WHERE deleted_at IS NULL
-	`);
-	console.log("  ✅ 部分唯一索引：role(name/code)、dept(code)");
 
 	console.log("");
 	console.log("📋 角色清单（密码均为 123456）：");

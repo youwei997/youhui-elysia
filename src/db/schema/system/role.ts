@@ -1,9 +1,11 @@
 import { auditColumns } from "@db/schema/_shared";
+import { sql } from "drizzle-orm";
 import {
 	bigint,
 	integer,
 	pgTable,
 	smallint,
+	uniqueIndex,
 	varchar,
 } from "drizzle-orm/pg-core";
 
@@ -12,7 +14,7 @@ import {
  * 对齐 youlai-boot sys_role 设计，data_scope 用 smallint(1-5) 与前端 RoleItem.dataScope: number 一致
  *
  * 多租户：name/code 唯一约束为租户内复合（tenant_id, name/code）且仅对未删除行生效。
- * 部分唯一索引无法通过 Drizzle schema 声明，由 seed.ts 在 db:push 后通过原生 SQL 创建。
+ * 通过 uniqueIndex().where(sql`${t.deleteTime} IS NULL`) 声明部分唯一索引，Drizzle beta.22 支持。
  */
 export const sysRole = pgTable(
 	"sys_role",
@@ -36,5 +38,14 @@ export const sysRole = pgTable(
 		/** 审计字段 */
 		...auditColumns,
 	},
-	// 部分唯一索引（deleted_at IS NULL）由 seed.ts 原生 SQL 创建，Drizzle schema 不声明
+	(table) => ({
+		/** 租户内角色名称唯一（软删行不计入） */
+		idxRoleTenantName: uniqueIndex("idx_role_tenant_name")
+			.on(table.tenantId, table.name)
+			.where(sql`${table.deleteTime} IS NULL`),
+		/** 租户内角色编码唯一（软删行不计入） */
+		idxRoleTenantCode: uniqueIndex("idx_role_tenant_code")
+			.on(table.tenantId, table.code)
+			.where(sql`${table.deleteTime} IS NULL`),
+	}),
 );
