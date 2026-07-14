@@ -109,12 +109,7 @@ export const findActiveTenantById = async (
 	const rows = await db
 		.select()
 		.from(sysTenant)
-		.where(
-			and(
-				eq(sysTenant.id, id),
-				eq(sysTenant.status, 1),
-			),
-		)
+		.where(and(eq(sysTenant.id, id), eq(sysTenant.status, 1)))
 		.limit(1);
 
 	return rows.length > 0;

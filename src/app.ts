@@ -21,6 +21,7 @@ import { permissionPlugin } from "@/plugins/permission";
 import { rateLimitPlugin } from "@/plugins/rate-limit";
 import { requestContext } from "@/plugins/request-context";
 import { responseWrap } from "@/plugins/response-wrap";
+import { tenantPlugin } from "@/plugins/tenant";
 
 export const app = new Elysia()
 	// favicon 直接返回 204，避免浏览器自动请求触发 NOT_FOUND 污染日志
@@ -29,6 +30,7 @@ export const app = new Elysia()
 	.use(responseWrap)
 	.use(errorHandler)
 	.use(authPlugin)
+	.use(tenantPlugin)
 	.use(permissionPlugin)
 	.use(auditLogPlugin)
 	.use(rateLimitPlugin)
