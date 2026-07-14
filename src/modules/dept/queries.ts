@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
+import { tenantEq } from "@/db/helpers/tenant";
 import { escapeLike } from "@/db/helpers/like";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysRoleDept } from "@/db/schema/system/relation";
@@ -9,14 +10,14 @@ import type { DeptCreateBody, DeptUpdateBody } from "./schema";
 import type { DeptRecord } from "./types";
 
 /**
- * 查询所有部门（软删过滤，按 sort 升序）
- * 支持可选的 keywords（名称模糊匹配）和 status 筛选
+ * 查询所有部门（软删过滤 + 租户隔离，按 sort 升序）
  */
 export const findAllDepts = async (
 	query: { keywords?: string | undefined; status?: number | undefined } = {},
+	tenantId: number,
 	db: DB,
 ) => {
-	const where = [isNull(sysDept.deleteTime)];
+	const where = [isNull(sysDept.deleteTime), tenantEq(sysDept.tenantId, tenantId)];
 	if (query.keywords) {
 		where.push(like(sysDept.name, `%${escapeLike(query.keywords)}%`));
 	}
@@ -32,24 +33,38 @@ export const findAllDepts = async (
 };
 
 /**
- * 根据 ID 查部门（软删过滤）
+ * 根据 ID 查部门（软删过滤 + 租户隔离）
  */
 export const findDeptById = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<DeptRecord | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysDept)
-		.where(and(eq(sysDept.id, id), isNull(sysDept.deleteTime)))
+		.where(
+			and(
+				eq(sysDept.id, id),
+				tenantEq(sysDept.tenantId, tenantId),
+				isNull(sysDept.deleteTime),
+			),
+		)
 		.limit(1);
 	return rows[0];
 };
 
 /**
  * 计算 treePath：parentId 为 0 → "0"，否则取父节点的 treePath + "," + parentId
+ * @param parentId 父部门 ID
+ * @param tenantId 租户 ID（隔离查询）
+ * @param db Drizzle 实例
  */
-const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
+const calcTreePath = async (
+	parentId: number,
+	tenantId: number,
+	db: DB,
+): Promise<string> => {
 	// 顶级部门：treePath 固定为 "0"
 	if (parentId === 0) {
 		return "0";
@@ -57,7 +72,13 @@ const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 	const parent = await db
 		.select({ treePath: sysDept.treePath })
 		.from(sysDept)
-		.where(and(eq(sysDept.id, parentId), isNull(sysDept.deleteTime)))
+		.where(
+			and(
+				eq(sysDept.id, parentId),
+				tenantEq(sysDept.tenantId, tenantId),
+				isNull(sysDept.deleteTime),
+			),
+		)
 		.limit(1);
 	// 父部门不存在或已删除：抛错
 	if (!parent[0]) {
@@ -67,11 +88,12 @@ const calcTreePath = async (parentId: number, db: DB): Promise<string> => {
 };
 
 /**
- * 防循环：目标节点的 parentId 不能是自己或自己的子孙
+ * 防循环：目标节点的 parentId 不能是自己或自己的子孙（加 tenantEq）
  */
 export const isParentIdCyclic = async (
 	targetId: number,
 	newParentId: number,
+	tenantId: number,
 	db: DB,
 ): Promise<boolean> => {
 	// 顶级部门永远安全
@@ -86,7 +108,13 @@ export const isParentIdCyclic = async (
 	const parent = await db
 		.select({ treePath: sysDept.treePath })
 		.from(sysDept)
-		.where(and(eq(sysDept.id, newParentId), isNull(sysDept.deleteTime)))
+		.where(
+			and(
+				eq(sysDept.id, newParentId),
+				tenantEq(sysDept.tenantId, tenantId),
+				isNull(sysDept.deleteTime),
+			),
+		)
 		.limit(1);
 
 	// 父节点不存在：后续会在 calcTreePath 抛错，这里不管
@@ -100,40 +128,48 @@ export const isParentIdCyclic = async (
 };
 
 /**
- * 创建部门（自动计算 treePath）
+ * 创建部门（自动计算 treePath；注入 tenantId）
  */
 export const createDept = async (
 	data: z.infer<typeof DeptCreateBody>,
+	tenantId: number,
 	db: DB,
 ): Promise<DeptRecord> => {
-	const treePath = await calcTreePath(data.parentId ?? 0, db);
+	const treePath = await calcTreePath(data.parentId ?? 0, tenantId, db);
 	const [dept] = await db
 		.insert(sysDept)
-		.values({ ...data, treePath })
+		.values({ ...data, tenantId, treePath })
 		.returning();
 	return dept as DeptRecord;
 };
 
 /**
- * 更新部门（parentId 变更时重新计算 treePath，级联更新子树的 treePath）
+ * 更新部门（parentId 变更时重新计算 treePath，级联更新子树的 treePath；加 tenantEq）
  */
 export const updateDept = async (
 	id: number,
 	data: z.infer<typeof DeptUpdateBody>,
+	tenantId: number,
 	db: DB,
 ): Promise<DeptRecord | undefined> => {
 	const updateData: Record<string, unknown> = { ...data };
 
 	// 只有 parentId 明确传值且非 null 时才重新计算 treePath
 	if (data.parentId !== undefined && data.parentId !== null) {
-		const newTreePath = await calcTreePath(data.parentId, db);
+		const newTreePath = await calcTreePath(data.parentId, tenantId, db);
 
 		return await db.transaction(async (tx) => {
 			// 查出旧的 treePath（更新前），用于级联替换
 			const before = await tx
 				.select({ treePath: sysDept.treePath })
 				.from(sysDept)
-				.where(and(eq(sysDept.id, id), isNull(sysDept.deleteTime)))
+				.where(
+					and(
+						eq(sysDept.id, id),
+						tenantEq(sysDept.tenantId, tenantId),
+						isNull(sysDept.deleteTime),
+					),
+				)
 				.limit(1);
 			if (!before[0]) {
 				return undefined;
@@ -144,7 +180,13 @@ export const updateDept = async (
 			const [dept] = await tx
 				.update(sysDept)
 				.set({ ...updateData, treePath: newTreePath })
-				.where(and(eq(sysDept.id, id), isNull(sysDept.deleteTime)))
+				.where(
+					and(
+						eq(sysDept.id, id),
+						tenantEq(sysDept.tenantId, tenantId),
+						isNull(sysDept.deleteTime),
+					),
+				)
 				.returning();
 
 			// 级联更新子树的 treePath：替换前缀
@@ -157,6 +199,7 @@ export const updateDept = async (
 					.where(
 						and(
 							isNull(sysDept.deleteTime),
+							tenantEq(sysDept.tenantId, tenantId),
 							like(sysDept.treePath, `${oldTreePath},%`),
 						),
 					);
@@ -169,16 +212,23 @@ export const updateDept = async (
 	const [dept] = await db
 		.update(sysDept)
 		.set(updateData)
-		.where(and(eq(sysDept.id, id), isNull(sysDept.deleteTime)))
+		.where(
+			and(
+				eq(sysDept.id, id),
+				tenantEq(sysDept.tenantId, tenantId),
+				isNull(sysDept.deleteTime),
+			),
+		)
 		.returning();
 	return dept;
 };
 
 /**
- * 软删除部门（级联删除子树 + 清理关联表）
+ * 软删除部门（级联删除子树 + 清理关联表；加 tenantEq）
  */
 export const softDeleteDept = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<number | undefined> => {
 	const pattern = `(^|,)${id}(,|$)`;
@@ -190,6 +240,7 @@ export const softDeleteDept = async (
 			.where(
 				and(
 					isNull(sysDept.deleteTime),
+					tenantEq(sysDept.tenantId, tenantId),
 					or(eq(sysDept.id, id), sql`${sysDept.treePath} ~ ${pattern}`),
 				),
 			);
@@ -203,54 +254,80 @@ export const softDeleteDept = async (
 		// 清理关联表：sys_role_dept 中的引用
 		await tx
 			.delete(sysRoleDept)
-			.where(inArray(sysRoleDept.deptId, idsToDelete));
+			.where(
+				and(
+					inArray(sysRoleDept.deptId, idsToDelete),
+					tenantEq(sysRoleDept.tenantId, tenantId),
+				),
+			);
 
 		// 软删部门
 		await tx
 			.update(sysDept)
 			.set({ deleteTime: new Date().toISOString() })
-			.where(inArray(sysDept.id, idsToDelete));
+			.where(
+				and(
+					inArray(sysDept.id, idsToDelete),
+					tenantEq(sysDept.tenantId, tenantId),
+				),
+			);
 
 		return idsToDelete.length;
 	});
 };
 
 /**
- * 批量软删除部门 + 清理关联
- *
- * 与 softDeleteDept 同逻辑，但使用 inArray 批量操作，
- * 单事务内完成 sys_role_dept 清理 + 部门软删，减少往返。
- * 前置拦截（用户引用校验）由 routes 层负责。
+ * 批量软删除部门 + 清理关联（加 tenantEq 防跨租户误删）
  */
 export const batchSoftDeleteDepts = async (
 	ids: number[],
+	tenantId: number,
 	db: DB,
 ): Promise<DeptRecord[]> => {
 	if (ids.length === 0) {
 		return [];
 	}
 	return await db.transaction(async (tx) => {
-		await tx.delete(sysRoleDept).where(inArray(sysRoleDept.deptId, ids));
+		await tx
+			.delete(sysRoleDept)
+			.where(
+				and(
+					inArray(sysRoleDept.deptId, ids),
+					tenantEq(sysRoleDept.tenantId, tenantId),
+				),
+			);
 		const depts = await tx
 			.update(sysDept)
 			.set({ deleteTime: new Date().toISOString() })
-			.where(inArray(sysDept.id, ids))
+			.where(
+				and(
+					inArray(sysDept.id, ids),
+					tenantEq(sysDept.tenantId, tenantId),
+				),
+			)
 			.returning();
 		return depts;
 	});
 };
 
 /**
- * 检查部门是否被用户引用（删除前校验）
+ * 检查部门是否被用户引用（删除前校验；加 tenantEq）
  */
 export const isDeptUsedByUsers = async (
 	deptId: number,
+	tenantId: number,
 	db: DB,
 ): Promise<boolean> => {
 	const rows = await db
 		.select({ id: sysUser.id })
 		.from(sysUser)
-		.where(and(eq(sysUser.deptId, deptId), isNull(sysUser.deleteTime)))
+		.where(
+			and(
+				eq(sysUser.deptId, deptId),
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+			),
+		)
 		.limit(1);
 	return rows.length > 0;
 };
