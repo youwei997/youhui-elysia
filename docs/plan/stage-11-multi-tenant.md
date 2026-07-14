@@ -250,7 +250,7 @@
 
 ### Step 5 · tenant 模块 CRUD（1d）
 - [ ] `modules/tenant/{schema,types,errors,routes,queries}.ts`：11 个端点全实现
-- [ ] tenant queries 提供 `findActiveTenantById`（存在且 `status=1` 且 `deleteTime IS NULL`），供 `auth/switch-tenant` 与 `tenants/{id}/switch` 状态校验复用（见 Step 2 第四轮 review D）
+- [ ] tenant queries 提供 `findActiveTenantById`（存在且 `status=1`），供 `auth/switch-tenant` 与 `tenants/{id}/switch` 状态校验复用（见 Step 2 第四轮 review D）
 - [ ] `POST /tenants` 初始化默认数据（建管理员用户 + 角色 + 默认菜单），返回 `TenantCreateResult`
   - **默认菜单来源必须是套餐菜单（🟠 本轮 B，对应 Java `TenantServiceImpl:87/327` `resolveNewTenantAdminMenuIds(planId)`）**：新租户的 `sys_tenant_menu(newId)` 与管理员角色的 `sys_role_menu` 菜单**同源，均取自该租户套餐的 `plan_menu`**（`resolveTenantPlanMenuIds(form.planId)`）；**套餐未配置菜单时兜底为全部业务菜单（`scope=2`）**。切勿实现时拍脑袋给全量或给空——给全量会突破套餐约束、给空则新租户无任何菜单。
 - [ ] `/options` `/current` `/{id}/switch` `/{id}/menuIds` `/{id}/menus` `/{id}/status`
@@ -272,7 +272,7 @@
 - [ ] **平台租户(id=0)硬守卫（必须修复，对齐 Java 原版 DEFAULT_TENANT_ID / PLATFORM_TENANT_ID 保护）**：
   - `DELETE /tenants/{ids}`：若 `ids` 含 `0` → **400**（平台租户不可删）；
   - `PUT /tenants/{id}/status`：若 `id=0 && status=0` → **400**（平台租户不可禁用）。
-  - 理由：平台租户是系统运行基础；且本期 JWT **不主动吊销**——若被软删/禁用，已有平台用户 token 仍有效、`tenantId=0` 继续工作，而 `findActiveTenantById` 只拦**新**切换、拦不住已登录会话，故必须在写操作入口硬拒，杜绝误操作。
+  - 理由：平台租户是系统运行基础；且本期 JWT **不主动吊销**——若被硬删/禁用，已有平台用户 token 仍有效、`tenantId=0` 继续工作，而 `findActiveTenantById` 只拦**新**切换、拦不住已登录会话，故必须在写操作入口硬拒，杜绝误操作。
 - [ ] **套餐菜单边界校验（🟡#3，对应 Java `getTenantMenuIds`/`updateTenantMenus`）**：
   - `GET /tenants/{id}/menuIds`：返回 `tenantMenuIds ∩ planMenuIds`（`resolveTenantPlanMenuIds` 取套餐菜单；套餐未配置则兜底全部业务菜单）；
   - `PUT /tenants/{id}/menus`：校验提交的 `menuIds ⊆ 套餐菜单集合`，否则 400「租户菜单只能从套餐菜单中选择」。
