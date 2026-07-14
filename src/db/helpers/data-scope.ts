@@ -29,6 +29,7 @@
 import { and, eq, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { DB } from "@/db/client";
+import { tenantEq } from "@/db/helpers/tenant";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysRoleDept, sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
@@ -197,6 +198,7 @@ const scopeToCondition = (
 export const buildDataScopeContext = async (
 	userId: number,
 	dataScopes: number[],
+	tenantId: number,
 	db: DB,
 ): Promise<DataScopeContext> => {
 	const [deptId, customDeptIds] = await Promise.all([
@@ -204,7 +206,13 @@ export const buildDataScopeContext = async (
 		db
 			.select({ deptId: sysUser.deptId })
 			.from(sysUser)
-			.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+			.where(
+				and(
+					eq(sysUser.id, userId),
+					tenantEq(sysUser.tenantId, tenantId),
+					isNull(sysUser.deleteTime),
+				),
+			)
 			.limit(1)
 			.then((rows) => rows[0]?.deptId ?? null),
 
@@ -218,7 +226,9 @@ export const buildDataScopeContext = async (
 					.where(
 						and(
 							eq(sysUserRole.userId, userId),
+							tenantEq(sysUserRole.tenantId, tenantId),
 							isNull(sysRole.deleteTime),
+							tenantEq(sysRole.tenantId, tenantId),
 							eq(sysRole.dataScope, DATA_SCOPE.CUSTOM),
 						),
 					)
@@ -234,7 +244,13 @@ export const buildDataScopeContext = async (
 					await db
 						.select({ treePath: sysDept.treePath })
 						.from(sysDept)
-						.where(and(eq(sysDept.id, deptId), isNull(sysDept.deleteTime)))
+						.where(
+							and(
+								eq(sysDept.id, deptId),
+								tenantEq(sysDept.tenantId, tenantId),
+								isNull(sysDept.deleteTime),
+							),
+						)
 						.limit(1)
 				)[0]?.treePath ?? null);
 

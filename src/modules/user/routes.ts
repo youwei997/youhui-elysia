@@ -320,6 +320,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			const dataScopeCtx = await buildDataScopeContext(
 				Number(user.sub),
 				user.dataScopes,
+				user.tenantId,
 				db,
 			);
 			const result = await findUsers(query, dataScopeCtx, user.tenantId, db);
@@ -571,6 +572,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			const dataScopeCtx = await buildDataScopeContext(
 				Number(user.sub),
 				user.dataScopes,
+				user.tenantId,
 				db,
 			);
 			// ponytail: export ignores pagination, uses same filter params as list。
