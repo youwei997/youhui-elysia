@@ -100,7 +100,7 @@ export const findMenusByRoleCodes = async (
 		.where(
 			and(
 				inArray(sysRole.code, roleCodes),
-				tenantEq(sysRoleMenu.tenantId, tenantId),
+				eq(sysRoleMenu.tenantId, tenantId),
 				isNull(sysRole.deleteTime),
 				eq(sysRole.status, 1),
 				isNull(sysMenu.deleteTime),

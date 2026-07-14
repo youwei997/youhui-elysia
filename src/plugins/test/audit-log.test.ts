@@ -155,7 +155,7 @@ describe("buildEntry 直接调用验证", () => {
 					"x-forwarded-for": "1.2.3.4",
 				}),
 			},
-			{ sub: "7", username: "admin" },
+			{ sub: "7", username: "admin", tenantId: 0 },
 			true,
 		);
 

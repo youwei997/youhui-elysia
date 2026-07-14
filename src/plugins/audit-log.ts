@@ -21,7 +21,10 @@ const metaMap = new WeakMap<
 
 /** 从全局 hook 的 ctx 中提取 user（全局 ctx 缺少用户态类型，需要类型断言） */
 const getUser = (ctx: Record<string, unknown>) =>
-	(ctx.user as { sub: string; username: string } | null | undefined) ?? null;
+	(ctx.user as
+		| { sub: string; username: string; tenantId: number }
+		| null
+		| undefined) ?? null;
 
 /**
  * 审计日志 plugin
@@ -105,13 +108,14 @@ export const auditLogPlugin = new Elysia({ name: "audit-log" })
 export const buildEntry = (
 	meta: { module: string; action: string; body: unknown; t0: number },
 	request: { method: string; url: string; headers: Headers },
-	user: { sub: string; username: string } | null,
+	user: { sub: string; username: string; tenantId: number } | null,
 	isSuccess: boolean,
 	error?: Error,
 	errorShell?: Record<string, unknown>,
 ): AuditLogInsert => ({
 	userId: user?.sub ? Number(user.sub) : 0,
 	username: user?.username ?? "",
+	tenantId: user?.tenantId ?? 0,
 	module: meta.module,
 	action: meta.action,
 	method: request.method,
