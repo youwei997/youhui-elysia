@@ -105,12 +105,12 @@ describe("role 与 dept/menu 事务级联", () => {
 			updateTime: now,
 		});
 		await db.insert(sysRoleDept).values([
-			{ roleId: TEST_ROLE_ID, deptId: TEST_DEPT_ID_1 },
-			{ roleId: TEST_ROLE_ID, deptId: TEST_DEPT_ID_2 },
+			{ roleId: TEST_ROLE_ID, deptId: TEST_DEPT_ID_1, tenantId: 0 },
+			{ roleId: TEST_ROLE_ID, deptId: TEST_DEPT_ID_2, tenantId: 0 },
 		]);
 		await db.insert(sysRoleMenu).values([
-			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_1 },
-			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_2 },
+			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_1, tenantId: 0 },
+			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_2, tenantId: 0 },
 		]);
 	});
 
@@ -129,10 +129,10 @@ describe("role 与 dept/menu 事务级联", () => {
 			deptIds: [TEST_DEPT_ID_1, TEST_DEPT_ID_2],
 		};
 
-		const role = await createRole(body, db);
+		const role = await createRole(body, 0, db);
 		expect(role.code).toBe("CASCADE_TEST2");
 
-		const deptIds = await findRoleDeptIds(role.id, db);
+		const deptIds = await findRoleDeptIds(role.id, 0, db);
 		expect(deptIds).toContain(TEST_DEPT_ID_1);
 		expect(deptIds).toContain(TEST_DEPT_ID_2);
 
@@ -151,10 +151,10 @@ describe("role 与 dept/menu 事务级联", () => {
 			remark: null,
 		};
 
-		const role = await createRole(body, db);
+		const role = await createRole(body, 0, db);
 		expect(role.code).toBe("CASCADE_TEST3");
 
-		const deptIds = await findRoleDeptIds(role.id, db);
+		const deptIds = await findRoleDeptIds(role.id, 0, db);
 		expect(deptIds.length).toBe(0);
 
 		// 清理
@@ -162,23 +162,23 @@ describe("role 与 dept/menu 事务级联", () => {
 	});
 
 	test("replaceRoleMenus 替换角色菜单绑定", async () => {
-		await replaceRoleMenus(TEST_ROLE_ID, [TEST_MENU_ID_1], db);
+		await replaceRoleMenus(TEST_ROLE_ID, [TEST_MENU_ID_1], 0, db);
 
-		const menuIds = await findRoleMenuIds(TEST_ROLE_ID, db);
+		const menuIds = await findRoleMenuIds(TEST_ROLE_ID, 0, db);
 		expect(menuIds).toContain(TEST_MENU_ID_1);
 		expect(menuIds).not.toContain(TEST_MENU_ID_2);
 
 		// 再次替换
-		await replaceRoleMenus(TEST_ROLE_ID, [TEST_MENU_ID_2], db);
-		const menuIds2 = await findRoleMenuIds(TEST_ROLE_ID, db);
+		await replaceRoleMenus(TEST_ROLE_ID, [TEST_MENU_ID_2], 0, db);
+		const menuIds2 = await findRoleMenuIds(TEST_ROLE_ID, 0, db);
 		expect(menuIds2).toContain(TEST_MENU_ID_2);
 		expect(menuIds2).not.toContain(TEST_MENU_ID_1);
 	});
 
 	test("replaceRoleDepts 替换角色部门绑定", async () => {
-		await replaceRoleDepts(TEST_ROLE_ID, { deptIds: [TEST_DEPT_ID_2] }, db);
+		await replaceRoleDepts(TEST_ROLE_ID, { deptIds: [TEST_DEPT_ID_2] }, 0, db);
 
-		const deptIds = await findRoleDeptIds(TEST_ROLE_ID, db);
+		const deptIds = await findRoleDeptIds(TEST_ROLE_ID, 0, db);
 		expect(deptIds).toContain(TEST_DEPT_ID_2);
 		expect(deptIds).not.toContain(TEST_DEPT_ID_1);
 	});
@@ -192,10 +192,11 @@ describe("role 与 dept/menu 事务级联", () => {
 		await replaceRoleDepts(
 			TEST_ROLE_ID,
 			{ deptIds: [TEST_DEPT_ID_1, TEST_DEPT_ID_2] },
+			0,
 			db,
 		);
 
-		const formData = await findRoleFormData(TEST_ROLE_ID, db);
+		const formData = await findRoleFormData(TEST_ROLE_ID, 0, db);
 		expect(formData).toBeDefined();
 		expect(formData?.code).toBe("CASCADE_TEST");
 		expect(formData?.deptIds).toContain(TEST_DEPT_ID_1);
@@ -207,9 +208,10 @@ describe("role 与 dept/menu 事务级联", () => {
 		await db.insert(sysUserRole).values({
 			userId: TEST_USER_ID,
 			roleId: TEST_ROLE_ID,
+			tenantId: 0,
 		});
 
-		const assigned = await isRoleAssignedToUsers(TEST_ROLE_ID, db);
+		const assigned = await isRoleAssignedToUsers(TEST_ROLE_ID, 0, db);
 		expect(assigned).toBe(true);
 
 		// 解绑
@@ -221,7 +223,7 @@ describe("role 与 dept/menu 事务级联", () => {
 					eq(sysUserRole.roleId, TEST_ROLE_ID),
 				),
 			);
-		const unassigned = await isRoleAssignedToUsers(TEST_ROLE_ID, db);
+			const unassigned = await isRoleAssignedToUsers(TEST_ROLE_ID, 0, db);
 		expect(unassigned).toBe(false);
 	});
 
@@ -231,18 +233,19 @@ describe("role 与 dept/menu 事务级联", () => {
 			.update(sysRole)
 			.set({ dataScope: 5 })
 			.where(eq(sysRole.id, TEST_ROLE_ID));
-		await replaceRoleDepts(TEST_ROLE_ID, { deptIds: [TEST_DEPT_ID_1] }, db);
+		await replaceRoleDepts(TEST_ROLE_ID, { deptIds: [TEST_DEPT_ID_1] }, 0, db);
 
 		// 更新为非 CUSTOM
 		const updated = await updateRole(
 			TEST_ROLE_ID,
 			{ name: "更新后角色", sort: 99, status: 1, dataScope: 1 },
+			0,
 			db,
 		);
 		expect(updated?.name).toBe("更新后角色");
 
 		// 确认 sysRoleDept 被清理
-		const deptIds = await findRoleDeptIds(TEST_ROLE_ID, db);
+		const deptIds = await findRoleDeptIds(TEST_ROLE_ID, 0, db);
 		expect(deptIds.length).toBe(0);
 	});
 
@@ -251,19 +254,22 @@ describe("role 与 dept/menu 事务级联", () => {
 		await db.insert(sysUserRole).values({
 			userId: TEST_USER_ID,
 			roleId: TEST_ROLE_ID,
+			tenantId: 0,
 		});
 		await db.insert(sysRoleMenu).values({
 			roleId: TEST_ROLE_ID,
 			menuId: TEST_MENU_ID_1,
+			tenantId: 0,
 		});
 		await db.insert(sysRoleDept).values({
 			roleId: TEST_ROLE_ID,
 			deptId: TEST_DEPT_ID_1,
+			tenantId: 0,
 		});
 
-		await batchSoftDeleteRoles([TEST_ROLE_ID], db);
+		await batchSoftDeleteRoles([TEST_ROLE_ID], 0, db);
 
-		const role = await findRoleById(TEST_ROLE_ID, db);
+		const role = await findRoleById(TEST_ROLE_ID, 0, db);
 		expect(role?.deleteTime).not.toBeNull();
 
 		const userRoles = await db
@@ -274,7 +280,7 @@ describe("role 与 dept/menu 事务级联", () => {
 	});
 
 	test("findRoleById 软删后不返回", async () => {
-		const role = await findRoleById(TEST_ROLE_ID, db);
+		const role = await findRoleById(TEST_ROLE_ID, 0, db);
 		expect(role).toBeUndefined();
 	});
 });

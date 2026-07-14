@@ -77,10 +77,13 @@ const parseRole = (role: RoleResponseInput) => {
 
 export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 	.use(authPlugin)
-	.get(
-		"/",
-		async ({ query }) => {
-			const result = await findRoles(query, db);
+		.get(
+			"/",
+			async ({ user, query }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const result = await findRoles(query, user.tenantId, db);
 			return {
 				...result,
 				list: result.list.map((r) => parseRole(r)),
@@ -97,11 +100,14 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.get(
-		"/options",
-		async () => {
-			return findRoleOptions(db);
-		},
+		.get(
+			"/options",
+			async ({ user }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				return findRoleOptions(user.tenantId, db);
+			},
 		{
 			auth: true,
 			requirePerm: ["sys:role:list"],
@@ -112,10 +118,13 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.get(
-		"/:id",
-		async ({ params }) => {
-			const role = await findRoleById(params.id, db);
+		.get(
+			"/:id",
+			async ({ user, params }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const role = await findRoleById(params.id, user.tenantId, db);
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
@@ -132,10 +141,13 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.get(
-		"/:id/form",
-		async ({ params }) => {
-			const role = await findRoleFormData(params.id, db);
+		.get(
+			"/:id/form",
+			async ({ user, params }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const role = await findRoleFormData(params.id, user.tenantId, db);
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
@@ -154,20 +166,22 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.post(
-		"/",
-		async ({ body }) => {
-			if (body.deptIds) {
-				await ensureValidDeptIds(body.deptIds);
-			}
-			// 前置校验：角色编码必须全大写（Zod 已做正则防御，此处给出业务级明确提示）
-			if (!/^[A-Z][A-Z0-9_]*$/.test(body.code)) {
-				throw new BizError(
-					ERR_CODE.USER_REQUEST_PARAMETER_ERROR,
-					"角色编码必须以大写字母开头，且仅含大写字母、数字、下划线（如 ADMIN）",
-				);
-			}
-			const role = await createRole(body, db);
+		.post(
+			"/",
+			async ({ user, body }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				if (body.deptIds) {
+					await ensureValidDeptIds(body.deptIds);
+				}
+				if (!/^[A-Z][A-Z0-9_]*$/.test(body.code)) {
+					throw new BizError(
+						ERR_CODE.USER_REQUEST_PARAMETER_ERROR,
+						"角色编码必须以大写字母开头，且仅含大写字母、数字、下划线（如 ADMIN）",
+					);
+				}
+				const role = await createRole(body, user.tenantId, db);
 			return parseRole(role);
 		},
 		{
@@ -183,18 +197,21 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.put(
-		"/:id",
-		async ({ params, body }) => {
-			const existing = await findRoleById(params.id, db);
-			if (!existing) {
-				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
-			}
-			ensureNotProtected(existing);
-			if (body.deptIds) {
-				await ensureValidDeptIds(body.deptIds);
-			}
-			const role = await updateRole(params.id, body, db);
+		.put(
+			"/:id",
+			async ({ user, params, body }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const existing = await findRoleById(params.id, user.tenantId, db);
+				if (!existing) {
+					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+				}
+				ensureNotProtected(existing);
+				if (body.deptIds) {
+					await ensureValidDeptIds(body.deptIds);
+				}
+				const role = await updateRole(params.id, body, user.tenantId, db);
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
@@ -214,56 +231,59 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.delete(
-		"/:id",
-		async ({ params }) => {
-			const idStr = params.id;
+		.delete(
+			"/:id",
+			async ({ user: ctxUser, params }) => {
+				if (!ctxUser) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const idStr = params.id;
 
-			// 前端批量删除传 "1,2,3"，单条传 "1"
-			if (idStr.includes(",")) {
-				const ids = idStr
-					.split(",")
-					.map((s) => Number(s.trim()))
-					.filter((n) => !Number.isNaN(n));
+				// 前端批量删除传 "1,2,3"，单条传 "1"
+				if (idStr.includes(",")) {
+					const ids = idStr
+						.split(",")
+						.map((s) => Number(s.trim()))
+						.filter((n) => !Number.isNaN(n));
 
-				if (ids.length === 0) {
+					if (ids.length === 0) {
+						throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+					}
+
+					// 逐条前置校验：受保护角色 / 已绑定用户
+					for (const id of ids) {
+						const existing = await findRoleById(id, ctxUser.tenantId, db);
+						if (!existing) {
+							throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+						}
+						ensureNotProtected(existing);
+						if (await isRoleAssignedToUsers(id, ctxUser.tenantId, db)) {
+							throw new BizError(
+								ERR_CODE.ROLE_HAS_ASSIGNED_USERS,
+								`角色 ${existing.name} 下存在已分配用户，无法删除`,
+							);
+						}
+					}
+
+					const deleted = await batchSoftDeleteRoles(ids, ctxUser.tenantId, db);
+					return deleted.map((r) => parseRole(r));
+				}
+
+				// 单条删除
+				const id = Number(idStr);
+				if (Number.isNaN(id)) {
 					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 				}
 
-				// 逐条前置校验：受保护角色 / 已绑定用户
-				for (const id of ids) {
-					const existing = await findRoleById(id, db);
-					if (!existing) {
-						throw notFound(ERR_CODE.ROLE_NOT_FOUND);
-					}
-					ensureNotProtected(existing);
-					if (await isRoleAssignedToUsers(id, db)) {
-						throw new BizError(
-							ERR_CODE.ROLE_HAS_ASSIGNED_USERS,
-							`角色 ${existing.name} 下存在已分配用户，无法删除`,
-						);
-					}
+				const existing = await findRoleById(id, ctxUser.tenantId, db);
+				if (!existing) {
+					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 				}
-
-				const deleted = await batchSoftDeleteRoles(ids, db);
-				return deleted.map((r) => parseRole(r));
-			}
-
-			// 单条删除
-			const id = Number(idStr);
-			if (Number.isNaN(id)) {
-				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
-			}
-
-			const existing = await findRoleById(id, db);
-			if (!existing) {
-				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
-			}
-			ensureNotProtected(existing);
-			if (await isRoleAssignedToUsers(id, db)) {
-				throw new BizError(ERR_CODE.ROLE_HAS_ASSIGNED_USERS);
-			}
-			const role = await softDeleteRole(id, db);
+				ensureNotProtected(existing);
+				if (await isRoleAssignedToUsers(id, ctxUser.tenantId, db)) {
+					throw new BizError(ERR_CODE.ROLE_HAS_ASSIGNED_USERS);
+				}
+				const role = await softDeleteRole(id, ctxUser.tenantId, db);
 			if (!role) {
 				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
 			}
@@ -282,15 +302,18 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.get(
-		"/:id/menu-ids",
-		async ({ params }) => {
-			const existing = await findRoleById(params.id, db);
-			if (!existing) {
-				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
-			}
-			return await findRoleMenuIds(params.id, db);
-		},
+		.get(
+			"/:id/menu-ids",
+			async ({ user, params }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const existing = await findRoleById(params.id, user.tenantId, db);
+				if (!existing) {
+					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+				}
+				return await findRoleMenuIds(params.id, user.tenantId, db);
+			},
 		{
 			auth: true,
 			requirePerm: ["sys:role:assign"],
@@ -301,15 +324,18 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.get(
-		"/:id/dept-ids",
-		async ({ params }) => {
-			const existing = await findRoleById(params.id, db);
-			if (!existing) {
-				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
-			}
-			return await findRoleDeptIds(params.id, db);
-		},
+		.get(
+			"/:id/dept-ids",
+			async ({ user, params }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const existing = await findRoleById(params.id, user.tenantId, db);
+				if (!existing) {
+					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+				}
+				return await findRoleDeptIds(params.id, user.tenantId, db);
+			},
 		{
 			auth: true,
 			requirePerm: ["sys:role:assign"],
@@ -320,26 +346,29 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.put(
-		"/:id/menus",
-		async ({ params, body }) => {
-			const existing = await findRoleById(params.id, db);
-			if (!existing) {
-				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
-			}
-			// 业务规则前置校验：所有 menuId 必须存在且未软删
-			if (body.length > 0) {
-				const validIds = await findValidMenuIds(body, db);
-				if (validIds.length !== body.length) {
-					const validSet = new Set(validIds);
-					const invalid = body.filter((id) => !validSet.has(id));
-					throw new BizError(
-						ERR_CODE.ROLE_MENU_ID_INVALID,
-						`以下 menuId 非法：${invalid.join(", ")}`,
-					);
+		.put(
+			"/:id/menus",
+			async ({ user, params, body }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 				}
-			}
-			await replaceRoleMenus(params.id, body, db);
+				const existing = await findRoleById(params.id, user.tenantId, db);
+				if (!existing) {
+					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+				}
+				// 业务规则前置校验：所有 menuId 必须存在且未软删
+				if (body.length > 0) {
+					const validIds = await findValidMenuIds(body, db);
+					if (validIds.length !== body.length) {
+						const validSet = new Set(validIds);
+						const invalid = body.filter((id) => !validSet.has(id));
+						throw new BizError(
+							ERR_CODE.ROLE_MENU_ID_INVALID,
+							`以下 menuId 非法：${invalid.join(", ")}`,
+						);
+					}
+				}
+				await replaceRoleMenus(params.id, body, user.tenantId, db);
 			return true;
 		},
 		{
@@ -355,33 +384,36 @@ export const roleRoutes = new Elysia({ prefix: "/api/v1/roles" })
 			},
 		},
 	)
-	.put(
-		"/:id/depts",
-		async ({ params, body }) => {
-			const existing = await findRoleById(params.id, db);
-			if (!existing) {
-				throw notFound(ERR_CODE.ROLE_NOT_FOUND);
-			}
-			// 业务规则：仅 dataScope=5（自定义）角色支持绑定部门
-			if (existing.dataScope !== 5) {
-				throw new BizError(
-					ERR_CODE.ROLE_NOT_CUSTOM_DATA_SCOPE,
-					"仅 dataScope=5（自定义）的角色支持绑定部门",
-				);
-			}
-			// 业务规则前置校验：所有 deptId 必须存在且未软删
-			if (body.deptIds.length > 0) {
-				const validIds = await findValidDeptIds(body.deptIds, db);
-				if (validIds.length !== body.deptIds.length) {
-					const validSet = new Set(validIds);
-					const invalid = body.deptIds.filter((id) => !validSet.has(id));
+		.put(
+			"/:id/depts",
+			async ({ user, params, body }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const existing = await findRoleById(params.id, user.tenantId, db);
+				if (!existing) {
+					throw notFound(ERR_CODE.ROLE_NOT_FOUND);
+				}
+				// 业务规则：仅 dataScope=5（自定义）角色支持绑定部门
+				if (existing.dataScope !== 5) {
 					throw new BizError(
-						ERR_CODE.ROLE_DEPT_ID_INVALID,
-						`以下 deptId 非法：${invalid.join(", ")}`,
+						ERR_CODE.ROLE_NOT_CUSTOM_DATA_SCOPE,
+						"仅 dataScope=5（自定义）的角色支持绑定部门",
 					);
 				}
-			}
-			await replaceRoleDepts(params.id, body, db);
+				// 业务规则前置校验：所有 deptId 必须存在且未软删
+				if (body.deptIds.length > 0) {
+					const validIds = await findValidDeptIds(body.deptIds, db);
+					if (validIds.length !== body.deptIds.length) {
+						const validSet = new Set(validIds);
+						const invalid = body.deptIds.filter((id) => !validSet.has(id));
+						throw new BizError(
+							ERR_CODE.ROLE_DEPT_ID_INVALID,
+							`以下 deptId 非法：${invalid.join(", ")}`,
+						);
+					}
+				}
+				await replaceRoleDepts(params.id, body, user.tenantId, db);
 			return true;
 		},
 		{
