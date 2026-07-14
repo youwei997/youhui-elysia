@@ -29,6 +29,8 @@ const makePayload = (): JwtPayload => ({
 	dataScopes: [1],
 	tokenVersion: 0,
 	jti: "test-jti-1",
+	tenantId: 0,
+	canSwitchTenant: false,
 });
 
 /** 测试路由 handler 返回的 body 结构 */

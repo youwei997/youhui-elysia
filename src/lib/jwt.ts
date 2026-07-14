@@ -34,6 +34,10 @@ export type JwtPayload = {
 	jti: string;
 	/** 过期时间（Unix 秒，由 jose setExpirationTime 注入） */
 	exp?: number;
+	/** 当前数据视图租户 ID（login=home tenant, switch-tenant=target, refresh=透传旧值） */
+	tenantId: number;
+	/** 是否可切换租户（仅平台超管为 true） */
+	canSwitchTenant: boolean;
 };
 
 /**

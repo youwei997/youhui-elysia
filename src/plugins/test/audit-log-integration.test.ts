@@ -14,6 +14,8 @@ const makeAdminPayload = (): JwtPayload => ({
 	dataScopes: [1],
 	tokenVersion: 0,
 	jti: "test-integration-jti-oper-log",
+	tenantId: 0,
+	canSwitchTenant: true,
 });
 
 const defined = <T>(value: T | undefined): T => {

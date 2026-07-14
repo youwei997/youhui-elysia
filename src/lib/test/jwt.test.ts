@@ -48,6 +48,8 @@ const basePayload = (): JwtPayload => ({
 	dataScopes: [1],
 	tokenVersion: 0,
 	jti: "test-jti-abc123",
+	tenantId: 0,
+	canSwitchTenant: false,
 });
 
 describe("jwt 签名", () => {

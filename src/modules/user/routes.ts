@@ -71,6 +71,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				avatar: userInfo.avatar,
 				roles: roles.map((r) => r.code),
 				perms,
+				canSwitchTenant: user.canSwitchTenant,
 			};
 		},
 		{

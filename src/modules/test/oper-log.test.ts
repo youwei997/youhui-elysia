@@ -26,6 +26,8 @@ const makeAdminPayload = (): JwtPayload => ({
 	dataScopes: [1],
 	tokenVersion: 0,
 	jti: "test-jti-oper-log",
+	tenantId: 0,
+	canSwitchTenant: true,
 });
 
 const seedData: (typeof sysOperLog.$inferInsert)[] = [

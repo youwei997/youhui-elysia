@@ -5,6 +5,7 @@ import {
 	IP_FAIL_WINDOW_TTL_S,
 	ONLINE_USER_TTL_S,
 	PERMS_CACHE_TTL_S,
+	ROLE_ROOT,
 } from "@/lib/auth-constants";
 import { generateCaptcha, verifyCaptcha } from "@/lib/captcha";
 import { BizError, ERR_CODE } from "@/lib/errors";
@@ -27,7 +28,7 @@ import {
 	findUserPerms,
 	findUserRoles,
 } from "./queries";
-import { LoginBody, RefreshTokenQuery } from "./schema";
+import { LoginBody, RefreshTokenQuery, SwitchTenantQuery } from "./schema";
 import type { UserRoleItem } from "./types";
 
 /** 生成唯一 jti */
@@ -38,14 +39,16 @@ const generateJti = (): string => {
 /**
  * 构建 JWT 载荷
  *
- * 登录时注入真实的 roles / perms / dataScopes
- * 这些数据由调用方（/login、/refresh）通过 findUserRoles / findUserPerms 获得后传入
+ * 登录时注入真实的 roles / perms / dataScopes / tenantId / canSwitchTenant
+ * 这些数据由调用方（/login、/refresh、/switch-tenant）传入
  */
 const buildJwtPayload = (
 	user: { id: number; username: string },
 	tokenVersion: number,
 	roles: UserRoleItem[],
 	perms: string[],
+	tenantId: number,
+	canSwitchTenant: boolean,
 ): JwtPayload => {
 	return {
 		sub: String(user.id),
@@ -57,6 +60,8 @@ const buildJwtPayload = (
 			.filter((s): s is number => s !== null),
 		tokenVersion,
 		jti: generateJti(),
+		tenantId,
+		canSwitchTenant,
 	};
 };
 
@@ -226,11 +231,18 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				const tokenVersion = Number(
 					(await redis.get(redisKeys.userTokenVersion(user.id))) ?? "0",
 				);
+
+				// login: tenantId = home tenant, canSwitchTenant = 是否平台超管
+				const tenantId = user.tenantId;
+				const canSwitchTenant = userRoles.some((r) => r.code === ROLE_ROOT);
+
 				const payload = buildJwtPayload(
 					user,
 					tokenVersion,
 					userRoles,
 					userPerms,
+					tenantId,
+					canSwitchTenant,
 				);
 
 				// access 和 refresh 用不同的 jti，refresh 的 jti 不在这里黑名单
@@ -309,12 +321,18 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				(await redis.get(redisKeys.userTokenVersion(userId))) ?? "0",
 			);
 
+			// refresh: 保留数据视图 tenantId + canSwitchTenant，不重算
+			const tenantId = oldPayload.tenantId;
+			const canSwitchTenant = oldPayload.canSwitchTenant;
+
 			// 4. 签发新的双 token，携带最新权限
 			const newPayload = buildJwtPayload(
 				{ id: userId, username: oldPayload.username },
 				tokenVersion,
 				userRoles,
 				userPerms,
+				tenantId,
+				canSwitchTenant,
 			);
 			const [accessToken, newRefreshToken] = await Promise.all([
 				signAccessToken({ ...newPayload, jti: generateJti() }),
@@ -353,6 +371,67 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 					"用 refresh token 换取新的双 token，旧 refresh token 立即失效",
 				// 公开接口：覆盖全局 security，不显示锁
 				security: [],
+			},
+		},
+	)
+	.post(
+		"/switch-tenant",
+		async ({ user, query }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+
+			const { tenantId } = query;
+			if (tenantId === undefined || tenantId === null) {
+				throw new BizError(
+					ERR_CODE.ACCESS_TOKEN_INVALID,
+					"缺少 tenantId 参数",
+					400,
+				);
+			}
+
+			// 平台超管可切换到任何租户；普通用户只能切到自身所属租户
+			const isRoot = user.roles.includes(ROLE_ROOT);
+			if (!isRoot && user.tenantId !== tenantId) {
+				throw new BizError(
+					ERR_CODE.ACCESS_TOKEN_INVALID,
+					"无权限切换到该租户",
+					403,
+				);
+			}
+
+			// 重签 token（新 tenantId，canSwitchTenant 保持不变）
+			const [accessToken, refreshToken] = await Promise.all([
+				signAccessToken({
+					...user,
+					tenantId,
+					canSwitchTenant: user.canSwitchTenant,
+					jti: generateJti(),
+				}),
+				signRefreshToken({
+					...user,
+					tenantId,
+					canSwitchTenant: user.canSwitchTenant,
+					jti: generateJti(),
+				}),
+			]);
+
+			return {
+				tokenType: "Bearer",
+				accessToken,
+				refreshToken,
+				expiresIn: 900,
+			};
+		},
+		{
+			query: SwitchTenantQuery,
+			auth: true,
+			rateLimit: "30:10",
+			detail: {
+				tags: ["Auth"],
+				summary: "切换租户",
+				description:
+					"平台超管切换数据视图租户，返回新 token（tenantId 更新，perms/roles 不变）",
 			},
 		},
 	)

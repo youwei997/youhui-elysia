@@ -16,3 +16,10 @@ export const RefreshTokenQuery = z
 		refreshToken: z.string().describe("刷新令牌"),
 	})
 	.describe("刷新 token 查询参数");
+
+/** 切换租户查询参数 */
+export const SwitchTenantQuery = z
+	.object({
+		tenantId: z.number().describe("目标租户 ID"),
+	})
+	.describe("切换租户查询参数");

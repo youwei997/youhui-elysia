@@ -13,6 +13,8 @@ const makeToken = async (username: string): Promise<string> => {
 		dataScopes: number[];
 		tokenVersion: number;
 		jti: string;
+		tenantId: number;
+		canSwitchTenant: boolean;
 	} = {
 		sub: username === "admin" ? "2" : username === "dept_manager" ? "4" : "6",
 		username,
@@ -73,6 +75,8 @@ const makeToken = async (username: string): Promise<string> => {
 			username === "admin" ? [1] : username === "dept_manager" ? [2] : [4],
 		tokenVersion: 0,
 		jti: `test-e2e-${username}`,
+		tenantId: 0,
+		canSwitchTenant: username === "admin",
 	};
 	return signAccessToken(payload);
 };
