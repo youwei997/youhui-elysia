@@ -24,6 +24,7 @@ import { addIpToBlacklist } from "@/modules/ip-blacklist/queries";
 import { authPlugin } from "@/plugins/auth";
 import { rateLimitPlugin } from "@/plugins/rate-limit";
 import {
+	findActiveTenantById,
 	findActiveUserByUsername,
 	findUserPerms,
 	findUserRoles,
@@ -397,6 +398,16 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 					ERR_CODE.ACCESS_TOKEN_INVALID,
 					"无权限切换到该租户",
 					403,
+				);
+			}
+
+			// 校验目标租户存在且状态正常
+			const tenantActive = await findActiveTenantById(tenantId, db);
+			if (!tenantActive) {
+				throw new BizError(
+					ERR_CODE.ACCESS_TOKEN_INVALID,
+					"目标租户不存在或已停用",
+					404,
 				);
 			}
 

@@ -3,6 +3,7 @@ import type { DB } from "@/db/client";
 import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
+import { sysTenant } from "@/db/schema/system/tenant";
 import { sysUser } from "@/db/schema/system/user";
 import type { UserRecord } from "@/modules/user/types";
 import type { UserRoleItem } from "./types";
@@ -95,4 +96,26 @@ export const findUserPerms = async (
 		.filter((p): p is string => p !== null && p !== "");
 
 	return Array.from(new Set(perms));
+};
+
+/**
+ * 查询目标租户是否存在且状态正常（status=1）
+ * 供 switch-tenant 路由和 Step 5 tenant 模块复用
+ */
+export const findActiveTenantById = async (
+	id: number,
+	db: DB,
+): Promise<boolean> => {
+	const rows = await db
+		.select()
+		.from(sysTenant)
+		.where(
+			and(
+				eq(sysTenant.id, id),
+				eq(sysTenant.status, 1),
+			),
+		)
+		.limit(1);
+
+	return rows.length > 0;
 };
