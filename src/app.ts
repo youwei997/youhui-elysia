@@ -13,6 +13,7 @@ import { operLogRoutes } from "@/modules/oper-log/routes";
 import { roleRoutes } from "@/modules/role/routes";
 import { sseRoutes } from "@/modules/sse/routes";
 import { storageRoutes } from "@/modules/storage/routes";
+import { tenantRoutes } from "@/modules/tenant/routes";
 import { userRoutes } from "@/modules/user/routes";
 import { auditLogPlugin } from "@/plugins/audit-log";
 import { authPlugin } from "@/plugins/auth";
@@ -80,6 +81,7 @@ export const app = new Elysia()
 	.use(authRoutes)
 	.use(userRoutes)
 	.use(roleRoutes)
+	.use(tenantRoutes)
 	.use(menuRoutes)
 	.use(deptRoutes)
 	.use(operLogRoutes)

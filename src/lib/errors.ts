@@ -68,6 +68,15 @@ export const ERR_CODE = {
 	NOTICE_NOT_FOUND: "A0490", // 通知公告不存在
 	NOTICE_ALREADY_PUBLISHED: "A0491", // 通知公告已发布
 	NOTICE_NOT_PUBLISHED: "A0492", // 通知公告未发布或已撤回
+	/** A046x Tenant 模块业务错误 */
+	TENANT_NOT_FOUND: "A0460", // 租户不存在
+	TENANT_CODE_DUPLICATE: "A0461", // 租户编码已存在
+	TENANT_HAS_USERS: "A0462", // 租户下存在用户，无法删除
+	TENANT_PROTECTED: "A0463", // 平台租户受保护，禁止删除/禁用
+	TENANT_PLAN_NOT_FOUND: "A0464", // 套餐不存在
+	TENANT_PLAN_CODE_DUPLICATE: "A0465", // 套餐编码已存在
+	TENANT_MENU_NOT_IN_PLAN: "A0466", // 租户菜单只能从套餐菜单中选择
+	TENANT_PLAN_MENU_NOT_BUSINESS: "A0467", // 套餐菜单只能选择业务菜单（scope=2）
 	/** A0506 重复提交 */
 	DUPLICATE_SUBMISSION: "A0506", // 请勿重复提交
 	/** A047x File 模块业务错误 */
@@ -128,6 +137,14 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.NOTICE_NOT_FOUND]: "通知公告不存在",
 	[ERR_CODE.NOTICE_ALREADY_PUBLISHED]: "通知公告已发布",
 	[ERR_CODE.NOTICE_NOT_PUBLISHED]: "通知公告未发布或已撤回",
+	[ERR_CODE.TENANT_NOT_FOUND]: "租户不存在",
+	[ERR_CODE.TENANT_CODE_DUPLICATE]: "租户编码已存在",
+	[ERR_CODE.TENANT_HAS_USERS]: "租户下存在用户，无法删除",
+	[ERR_CODE.TENANT_PROTECTED]: "平台租户受保护，禁止删除/禁用",
+	[ERR_CODE.TENANT_PLAN_NOT_FOUND]: "套餐不存在",
+	[ERR_CODE.TENANT_PLAN_CODE_DUPLICATE]: "套餐编码已存在",
+	[ERR_CODE.TENANT_MENU_NOT_IN_PLAN]: "租户菜单只能从套餐菜单中选择",
+	[ERR_CODE.TENANT_PLAN_MENU_NOT_BUSINESS]: "套餐菜单只能选择业务菜单（scope=2）",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.FILE_NOT_FOUND]: "文件不存在",
 	[ERR_CODE.FILE_UPLOAD_FAILED]: "文件上传失败",
