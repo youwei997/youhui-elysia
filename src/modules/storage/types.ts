@@ -11,4 +11,5 @@ export type FileCreateData = {
 	mimeType: string | null;
 	url: string;
 	uploaderId: number | undefined;
+	tenantId: number;
 };

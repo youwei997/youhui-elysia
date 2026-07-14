@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "@/db/client";
-import { BizError, ERR_CODE } from "@/lib/errors";
+import { BizError, ERR_CODE, unauthorized } from "@/lib/errors";
 import { storage } from "@/lib/storage";
 import { authPlugin } from "@/plugins/auth";
 import { createFile, findFileByUrl, softDeleteFile } from "./queries";
@@ -19,6 +19,7 @@ export const storageRoutes = new Elysia({ prefix: "/api/v1/files" })
 	.post(
 		"/",
 		async ({ body, user }) => {
+			if (!user) throw unauthorized();
 			const file = body.file;
 			if (file.size === 0) {
 				throw new BizError(ERR_CODE.USER_REQUEST_PARAMETER_ERROR, "文件为空");
@@ -45,8 +46,10 @@ export const storageRoutes = new Elysia({ prefix: "/api/v1/files" })
 					size: file.size,
 					mimeType: file.type,
 					url,
-					uploaderId: user?.sub ? Number(user.sub) : undefined,
+					uploaderId: user.sub ? Number(user.sub) : undefined,
+					tenantId: user.tenantId,
 				},
+				user.tenantId,
 				db,
 			);
 			return parseFileInfo({ name: file.name, url });
@@ -61,14 +64,15 @@ export const storageRoutes = new Elysia({ prefix: "/api/v1/files" })
 	)
 	.delete(
 		"/",
-		async ({ query }) => {
+		async ({ query, user }) => {
+			if (!user) throw unauthorized();
 			const filePath = query.filePath;
-			const file = await findFileByUrl(filePath, db);
+			const file = await findFileByUrl(filePath, user.tenantId, db);
 			if (!file) {
 				throw new BizError(ERR_CODE.FILE_NOT_FOUND, "文件不存在", 404);
 			}
 			await storage.delete(file.key);
-			await softDeleteFile(file.id, db);
+			await softDeleteFile(file.id, user.tenantId, db);
 			return true;
 		},
 		{
