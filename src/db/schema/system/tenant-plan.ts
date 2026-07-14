@@ -25,12 +25,12 @@ export const sysTenantPlan = pgTable("sys_tenant_plan", {
 	sort: smallint("sort").default(0),
 	/** 备注 */
 	remark: varchar("remark", { length: 255 }),
-	/** 创建时间（对齐 Java 原版 create_time） */
-	createTime: timestamp("create_time", { withTimezone: true, mode: "string" })
+	/** 创建时间 */
+	createTime: timestamp("created_at", { withTimezone: true, mode: "string" })
 		.defaultNow()
 		.notNull(),
-	/** 更新时间（对齐 Java 原版 update_time） */
-	updateTime: timestamp("update_time", { withTimezone: true, mode: "string" })
+	/** 更新时间 */
+	updateTime: timestamp("updated_at", { withTimezone: true, mode: "string" })
 		.defaultNow()
 		.notNull(),
 });

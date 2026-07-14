@@ -40,11 +40,11 @@ export const sysRole = pgTable(
 	},
 	(table) => ({
 		/** 租户内角色名称唯一（软删行不计入） */
-		idxRoleTenantName: uniqueIndex("idx_role_tenant_name")
+		idxRoleTenantName: uniqueIndex("uniq_role_tenant_name")
 			.on(table.tenantId, table.name)
 			.where(sql`${table.deleteTime} IS NULL`),
 		/** 租户内角色编码唯一（软删行不计入） */
-		idxRoleTenantCode: uniqueIndex("idx_role_tenant_code")
+		idxRoleTenantCode: uniqueIndex("uniq_role_tenant_code")
 			.on(table.tenantId, table.code)
 			.where(sql`${table.deleteTime} IS NULL`),
 	}),

@@ -151,21 +151,21 @@ describe("多租户 schema 运行时验证", () => {
 			expect(singleNameUnique.length).toBe(0);
 		});
 
-		it("sys_role 有 idx_role_tenant_name 部分唯一索引（含 deleted_at IS NULL）", async () => {
+		it("sys_role 有 uniq_role_tenant_name 部分唯一索引（含 deleted_at IS NULL）", async () => {
 			const rows = await db.execute<{ indexname: string; indexdef: string }>(`
 				SELECT indexname, indexdef FROM pg_indexes
 				WHERE tablename = 'sys_role'
-				  AND indexname = 'idx_role_tenant_name'
+				  AND indexname = 'uniq_role_tenant_name'
 			`);
 			expect(rows.length).toBe(1);
 			expect(rows[0]?.indexdef).toContain("(deleted_at IS NULL)");
 		});
 
-		it("sys_role 有 idx_role_tenant_code 部分唯一索引（含 deleted_at IS NULL）", async () => {
+		it("sys_role 有 uniq_role_tenant_code 部分唯一索引（含 deleted_at IS NULL）", async () => {
 			const rows = await db.execute<{ indexname: string; indexdef: string }>(`
 				SELECT indexname, indexdef FROM pg_indexes
 				WHERE tablename = 'sys_role'
-				  AND indexname = 'idx_role_tenant_code'
+				  AND indexname = 'uniq_role_tenant_code'
 			`);
 			expect(rows.length).toBe(1);
 			expect(rows[0]?.indexdef).toContain("(deleted_at IS NULL)");
@@ -185,11 +185,11 @@ describe("多租户 schema 运行时验证", () => {
 			expect(singleCodeUnique.length).toBe(0);
 		});
 
-		it("sys_dept 有 idx_dept_tenant_code 部分唯一索引（含 deleted_at IS NULL）", async () => {
+		it("sys_dept 有 uniq_dept_tenant_code 部分唯一索引（含 deleted_at IS NULL）", async () => {
 			const rows = await db.execute<{ indexname: string; indexdef: string }>(`
 				SELECT indexname, indexdef FROM pg_indexes
 				WHERE tablename = 'sys_dept'
-				  AND indexname = 'idx_dept_tenant_code'
+				  AND indexname = 'uniq_dept_tenant_code'
 			`);
 			expect(rows.length).toBe(1);
 			expect(rows[0]?.indexdef).toContain("(deleted_at IS NULL)");

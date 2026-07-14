@@ -40,7 +40,7 @@ export const sysDept = pgTable(
 	},
 	(table) => ({
 		/** 租户内部门编号唯一（软删行不计入） */
-		idxDeptTenantCode: uniqueIndex("idx_dept_tenant_code")
+		idxDeptTenantCode: uniqueIndex("uniq_dept_tenant_code")
 			.on(table.tenantId, table.code)
 			.where(sql`${table.deleteTime} IS NULL`),
 	}),
