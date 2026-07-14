@@ -35,6 +35,7 @@ describe("cron jobs", () => {
 				url: "/test",
 				status: 1,
 				createTime: ago31d,
+				tenantId: 0,
 			},
 			{
 				module: TEST_MODULE,
@@ -43,10 +44,11 @@ describe("cron jobs", () => {
 				url: "/test",
 				status: 1,
 				createTime: ago29d,
+				tenantId: 0,
 			},
 		]);
 
-		const deleted = await cleanExpiredOperLogs(30, db);
+		const deleted = await cleanExpiredOperLogs(0, 30, db);
 
 		// 返回值：只删了 1 条
 		expect(deleted).toBe(1);

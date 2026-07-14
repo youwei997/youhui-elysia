@@ -11,6 +11,7 @@ import {
 	or,
 } from "drizzle-orm";
 import type { DB } from "@/db/client";
+import { tenantEq } from "@/db/helpers/tenant";
 import { escapeLike } from "@/db/helpers/like";
 import { sysOperLog } from "@/db/schema/system/oper-log";
 import type { OperLogRecord } from "./types";
@@ -27,9 +28,10 @@ export const findOperLogs = async (
 		status?: number;
 		createTime?: [string, string];
 	},
+	tenantId: number,
 	db: DB,
 ): Promise<{ list: OperLogRecord[]; total: number }> => {
-	const where = [];
+	const where = [tenantEq(sysOperLog.tenantId, tenantId)];
 
 	if (query.keywords) {
 		// 关键字模糊匹配操作人 OR IP，escapeLike 防 LIKE 通配符注入
@@ -82,6 +84,7 @@ export const findOperLogs = async (
  * 与 getVisitTrend 的 UTC 日期分组保持一致。
  */
 export const getVisitOverview = async (
+	tenantId: number,
 	db: DB,
 ): Promise<{
 	todayUvCount: number;
@@ -109,6 +112,7 @@ export const getVisitOverview = async (
 		.from(sysOperLog)
 		.where(
 			and(
+				tenantEq(sysOperLog.tenantId, tenantId),
 				gte(sysOperLog.createTime, todayStart.toISOString()),
 				lt(sysOperLog.createTime, todayEnd.toISOString()),
 			),
@@ -120,7 +124,8 @@ export const getVisitOverview = async (
 			pv: count(),
 			uv: countDistinct(sysOperLog.username),
 		})
-		.from(sysOperLog);
+		.from(sysOperLog)
+		.where(tenantEq(sysOperLog.tenantId, tenantId));
 
 	// 昨日 PV/UV（用于计算增长率）
 	const yesterdayStats = await db
@@ -131,6 +136,7 @@ export const getVisitOverview = async (
 		.from(sysOperLog)
 		.where(
 			and(
+				tenantEq(sysOperLog.tenantId, tenantId),
 				gte(sysOperLog.createTime, yesterdayStart.toISOString()),
 				lt(sysOperLog.createTime, yesterdayEnd.toISOString()),
 			),
@@ -167,6 +173,7 @@ export const getVisitOverview = async (
  * 与日期循环的 key（toISOString().slice(0,10)）均为 UTC 字符串，确保 key 对齐。
  */
 export const getVisitTrend = async (
+	tenantId: number,
 	db: DB,
 	startDate: string,
 	endDate: string,
@@ -183,6 +190,7 @@ export const getVisitTrend = async (
 		.from(sysOperLog)
 		.where(
 			and(
+				tenantEq(sysOperLog.tenantId, tenantId),
 				gte(sysOperLog.createTime, start.toISOString()),
 				lte(sysOperLog.createTime, end.toISOString()),
 			),
@@ -229,6 +237,7 @@ export const getVisitTrend = async (
  * 仅在 cron 任务中调用，不暴露为 REST 接口。
  */
 export const cleanExpiredOperLogs = async (
+	tenantId: number,
 	retentionDays: number,
 	db: DB,
 ): Promise<number> => {
@@ -237,7 +246,12 @@ export const cleanExpiredOperLogs = async (
 	).toISOString();
 	const result = await db
 		.delete(sysOperLog)
-		.where(lt(sysOperLog.createTime, cutoff))
+		.where(
+			and(
+				tenantEq(sysOperLog.tenantId, tenantId),
+				lt(sysOperLog.createTime, cutoff),
+			),
+		)
 		.returning({ id: sysOperLog.id });
 	return result.length;
 };

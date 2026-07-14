@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
+import { unauthorized } from "@/lib/errors";
 import { authPlugin } from "@/plugins/auth";
 import { findOperLogs, getVisitOverview, getVisitTrend } from "./queries";
 import {
@@ -16,8 +17,9 @@ export const operLogRoutes = new Elysia({ prefix: "/api/v1/logs" })
 	.use(authPlugin)
 	.get(
 		"/",
-		async ({ query }) => {
-			const result = await findOperLogs(query, db);
+		async ({ query, user }) => {
+			if (!user) throw unauthorized();
+			const result = await findOperLogs(query, user.tenantId, db);
 			return {
 				...result,
 				list: result.list.map((log) => parseLog(log)),
@@ -37,12 +39,13 @@ export const operLogRoutes = new Elysia({ prefix: "/api/v1/logs" })
 	)
 	.get(
 		"/analytics/trend",
-		async ({ query }) => {
+		async ({ query, user }) => {
+			if (!user) throw unauthorized();
 			const { startDate, endDate } = query;
 			if (!startDate || !endDate) {
 				return { dates: [], pvList: [], uvList: [] };
 			}
-			return getVisitTrend(db, startDate, endDate);
+			return getVisitTrend(user.tenantId, db, startDate, endDate);
 		},
 		{
 			auth: true,
@@ -57,8 +60,9 @@ export const operLogRoutes = new Elysia({ prefix: "/api/v1/logs" })
 	)
 	.get(
 		"/analytics/overview",
-		async () => {
-			return getVisitOverview(db);
+		async ({ user }) => {
+			if (!user) throw unauthorized();
+			return getVisitOverview(user.tenantId, db);
 		},
 		{
 			auth: true,

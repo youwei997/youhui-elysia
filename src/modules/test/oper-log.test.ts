@@ -43,6 +43,7 @@ const seedData: (typeof sysOperLog.$inferInsert)[] = [
 		status: 1,
 		costMs: 100,
 		createTime: "2026-07-05T10:00:00.000Z",
+		tenantId: 0,
 	},
 	{
 		userId: 2,
@@ -56,6 +57,7 @@ const seedData: (typeof sysOperLog.$inferInsert)[] = [
 		status: 1,
 		costMs: 200,
 		createTime: "2026-07-05T11:00:00.000Z",
+		tenantId: 0,
 	},
 	{
 		userId: 1,
@@ -69,6 +71,7 @@ const seedData: (typeof sysOperLog.$inferInsert)[] = [
 		errorMsg: "菜单有关联子项",
 		costMs: 50,
 		createTime: "2026-07-06T08:00:00.000Z",
+		tenantId: 0,
 	},
 ];
 
@@ -191,7 +194,7 @@ describe("oper-log 模块", () => {
 	test("6. 访问趋势 - getVisitTrend（仅测试数据）", async () => {
 		// 趋势接口不支持 module 筛选，所以改为直接调用 getVisitTrend 查询
 		const { getVisitTrend } = await import("@/modules/oper-log/queries");
-		const result = await getVisitTrend(db, "2026-07-05", "2026-07-06");
+		const result = await getVisitTrend(0, db, "2026-07-05", "2026-07-06");
 
 		expect(result.dates).toEqual(["2026-07-05", "2026-07-06"]);
 		// 7月5日有 2 条（admin + testuser），7月6日有 1 条（admin）
