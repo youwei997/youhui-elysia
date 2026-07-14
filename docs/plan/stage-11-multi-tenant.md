@@ -126,7 +126,7 @@
     - `role.ts`：`uniqueIndex("uniq_role_tenant_name").on(tenantId, name)` + `uniqueIndex("uniq_role_tenant_code").on(tenantId, code)`
     - `dept.ts`：`uniqueIndex("uniq_dept_tenant_code").on(tenantId, code)`
     - **范式**：用 `uniqueIndex(...).on(...)`（对齐本项目现有复合唯一先例 `dict-item.ts:43/48`），不用单列 `.unique()`。
-  - **软删交互（决策）**：原版复合含 `is_deleted`（允许软删后同码重建）；本项目软删用 `deleteTime`（可空 timestamp），且**现有单租户基线本就是 plain `.unique()`（软删行仍占编码、不可同码重建）**。为行为一致 + 不主动优化（AGENTS §3），本次仍用 **plain 复合 `(tenant_id, code)`**，**不**加 `WHERE delete_time IS NULL` 偏索引；「软删后同码重建被占用」是与当前单租户一致的**已知限制**，非多租户引入的回归，未来要放开再评估偏索引。
+  - **软删交互（决策）**：原版复合含 `is_deleted`（允许软删后同码重建）；本项目软删用 `deleteTime`（可空 timestamp）。为允许软删后同码重建，改用 **部分唯一索引 `WHERE deleted_at IS NULL`**（`uniqueIndex(...).where(sql`${t.deleteTime} IS NULL`)`，Drizzle beta.22 支持）；软删行不计入唯一约束，可重建同名/同码。
   - **连带影响（核实实际代码，修正 reviewer 表述）**：本项目 `saveRole`/`saveDept` **无** app 层「编码已存在」count 查重（唯一性纯靠 DB 约束兜底：role/dept queries 里 `已存在` 零命中、role 仅分页 `count()`、dept 仅一处 `insert`）。故 reviewer 提的「查重 count 须加 tenantEq」在本项目**不适用**——改约束即足够，无需动 queries。（区别于 Java 有 app 层 `count`；未来若补友好冲突提示，记得 beta.22 的 PG 错误码走 `err.cause?.code`。）
   - **与 username 的区别（勿混）**：username 保持全局唯一是**有意偏离**原版（原版 `sys_user` 亦 `uk_username_tenant`，`:559`），因前端登录不采集 tenantId、需全局消歧（§4 line 153-155）；role/dept 的 code/name 无登录场景、原版明确租户内唯一，两者不可类比。
 
@@ -136,12 +136,12 @@
 
 ### 3.2 新增表
 
-> **审计列策略（须定案，勿留到写代码）**：管理表用**完整 `auditColumns`（含 `deleteTime` 软删）**，对齐本项目管理表范式（`role/dept/config/dict` 均如此），**不**跟 Java 原版硬删。理由：① `architecture.md §4.12` 要求业务表带 `auditColumns`；② 项目内"局部复用 `auditColumns.createTime`（物理删除）"的先例**仅限事件表**（`oper_log/login_log`，见 `docs/notes/2026-06-29-auditColumns-局部复用案例.md`），tenant/tenant-plan 是管理表不属此类。桥表（`*_menu`）同 `relation.ts` **不带**审计列。
-> **DELETE 语义**：`DELETE /tenants/{ids}` = **软删**（置 `deleteTime`），仅标记租户行本身，**不级联**软删该租户的 user/role/dept（避免 reviewer 担心的大范围级联）；租户停用后登录侧按 status/存在性拦截。
+> **审计列策略（须定案）**：`sys_tenant` / `sys_tenant_plan` 为平台级配置表，对齐 Java 原版（无软删），**只保留 `create_time` / `update_time`**，不带 `auditColumns`。桥表（`*_menu`）同 `relation.ts` **不带**审计列。
+> **DELETE 语义**：`DELETE /tenants/{ids}` = **物理硬删**（`removeById`），仅标记租户行本身，**不级联**软删该租户的 user/role/dept（避免 reviewer 担心的大范围级联）；删前须校验该租户下无用户（`userCount=0`），否则 400「租户下存在用户，无法删除」。租户停用后登录侧按 status/存在性拦截。
 
-- `sys_tenant`（id, name, code unique, contactName, contactPhone, contactEmail, domain unique, logo, planId, status, remark, expireTime, **+ `auditColumns`**）
-- `sys_tenant_plan`（id, name, code unique, status, sort, remark, **+ `auditColumns`**）
-- `sys_tenant_plan_menu`（tenantPlanId, menuId，PK 复合，**无审计列**，同桥表 `relation.ts`）
+- `sys_tenant`（id, name, code unique, contactName, contactPhone, contactEmail, domain unique, logo, planId, status, remark, expireTime, create_time, update_time，**无 auditColumns**）
+- `sys_tenant_plan`（id, name, code unique, status, sort, remark, create_time, update_time，**无 auditColumns**）
+- `sys_tenant_plan_menu`（planId, menuId，PK 复合，**无审计列**，同桥表 `relation.ts`）
 - `sys_tenant_menu`（tenantId, menuId，PK 复合，**无审计列**）
 
 ### 3.3 种子数据
@@ -221,7 +221,7 @@
   - 注：`JwtPayload` 类型需加 `tenantId: number` + `canSwitchTenant: boolean` 字段（§4），但「写入值从哪来」由上述三处调用分别决定，不能一处写死。
 - [ ] 新增 `auth/switch-tenant` 路由（校验 + 重新签发）；返回 token 中 `canSwitchTenant` 保持原值（不随 tenantId 改变）
 - [ ] `GET /api/v1/users/me` 响应加 `canSwitchTenant: boolean`（来源：`isSuperUser()` 判定，前端据此渲染切换器）
-- [ ] **目标租户状态校验（第四轮 review D）**：`auth/switch-tenant` 与 `tenants/{id}/switch` 均须先查目标租户**存在且 `status=1` 且 `deleteTime IS NULL`**，否则 400/404。防平台超管切到已软删/停用租户——`§3.2` 软删不级联、租户行仍可被查到，若不加校验 token 会携带无效 tenantId、后续业务查询全空却不报错。**本函数在 Step 2 即前置创建**（放 `lib/tenant.ts` 或 tenant queries 雏形，勿等 Step 5 整模块），两路由统一调用。
+- [ ] **目标租户状态校验（第四轮 review D）**：`auth/switch-tenant` 与 `tenants/{id}/switch` 均须先查目标租户**存在且 `status=1`**，否则 400/404。防平台超管切到已停用/不存在租户——`§3.2` 租户硬删不级联、但停用租户仍可被查到，若不加校验 token 会携带无效 tenantId、后续业务查询全空却不报错。**本函数在 Step 2 即前置创建**（放 `lib/tenant.ts` 或 tenant queries 雏形，勿等 Step 5 整模块），两路由统一调用。
 - [ ] 单测：登录带/不带 tenantId；切换后 token 含新 tenantId；越权切换被拒
 
 ### Step 3 · tenant 隔离 plugin + helper（0.5d）
@@ -277,7 +277,7 @@
   - `GET /tenants/{id}/menuIds`：返回 `tenantMenuIds ∩ planMenuIds`（`resolveTenantPlanMenuIds` 取套餐菜单；套餐未配置则兜底全部业务菜单）；
   - `PUT /tenants/{id}/menus`：校验提交的 `menuIds ⊆ 套餐菜单集合`，否则 400「租户菜单只能从套餐菜单中选择」。
 - [ ] **平台租户菜单守卫扩展（🟡#4）**：`GET /tenants/{id}/menuIds` 与 `PUT /tenants/{id}/menus` 当 `id=0` 时 → 400「平台租户不支持配置菜单」（Java `:357/:400` `!PLATFORM_TENANT_ID` 断言；平台租户菜单由 `sys_tenant_menu(0)` 全量固定，不接受配置）。
-- [ ] **删前用户校验（🟡#5）**：`DELETE /tenants/{ids}` 软删前，若任一目标非平台租户下仍 `userCount>0`，→ 400「租户下存在用户，无法删除」（Java `:589-593`；即便软删，留用户指向已软删租户会使其数据全空，故拦截）。
+- [ ] **删前用户校验（🟡#5）**：`DELETE /tenants/{ids}` **硬删前**，若任一目标非平台租户下仍 `userCount>0`，→ 400「租户下存在用户，无法删除」（Java `:589-593`；硬删后留用户指向已不存在的租户会使其数据全空，故拦截）。
 - [ ] 单测覆盖
 
 ### Step 6 · tenant-plan 模块 CRUD（0.5d）

@@ -1,10 +1,15 @@
-import { auditColumns } from "@db/schema/_shared";
-import { bigint, pgTable, smallint, varchar } from "drizzle-orm/pg-core";
+import {
+	bigint,
+	pgTable,
+	smallint,
+	timestamp,
+	varchar,
+} from "drizzle-orm/pg-core";
 
 /**
  * 系统租户套餐表
  *
- * 管理表，完整 auditColumns（含软删）。
+ * 对齐 Java 原版 sys_tenant_plan：不含软删，只保留 create_time/update_time。
  * 套餐定义一组可授权给租户的业务菜单范围。
  */
 export const sysTenantPlan = pgTable("sys_tenant_plan", {
@@ -20,6 +25,12 @@ export const sysTenantPlan = pgTable("sys_tenant_plan", {
 	sort: smallint("sort").default(0),
 	/** 备注 */
 	remark: varchar("remark", { length: 255 }),
-
-	...auditColumns,
+	/** 创建时间（对齐 Java 原版 create_time） */
+	createTime: timestamp("create_time", { withTimezone: true, mode: "string" })
+		.defaultNow()
+		.notNull(),
+	/** 更新时间（对齐 Java 原版 update_time） */
+	updateTime: timestamp("update_time", { withTimezone: true, mode: "string" })
+		.defaultNow()
+		.notNull(),
 });

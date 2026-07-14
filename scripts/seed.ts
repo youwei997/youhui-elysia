@@ -96,9 +96,7 @@ const main = async () => {
 			status: 1,
 			sort: 1,
 			remark: "包含全部业务菜单",
-			createdBy: 1,
 			createTime: NOW,
-			updatedBy: 1,
 			updateTime: NOW,
 		},
 	]);
@@ -201,7 +199,7 @@ const main = async () => {
 	// 4. 菜单表（sys_menu）—— 含租户管理/套餐管理 + scope 分类
 	// ==========================================
 	// scope: 1=平台管理类（仅平台租户可见） 2=业务类（所有租户可见，受套餐限制）
-	await db.insert(sysMenu).values([
+	const menuData = [
 		// ── 顶级目录 ──
 		// 平台管理（平台级目录，scope=1）
 		{
@@ -1170,7 +1168,8 @@ const main = async () => {
 			updatedBy: 1,
 			updateTime: NOW,
 		},
-	]);
+	];
+	await db.insert(sysMenu).values(menuData);
 	console.log("  ✅ 菜单表：55 条（含平台管理 + 租户管理/套餐管理 + scope 赋值）");
 
 	// ==========================================
@@ -1631,16 +1630,9 @@ const main = async () => {
 	);
 
 	// 演示租户(1)：仅业务菜单（scope=2），不含平台管理类
-	const businessMenuIds = [
-		1, 10, 101, 102, 103, 104, 105, 106, 107,
-		20, 201, 202, 203, 204, 205,
-		40, 401, 402, 403, 404,
-		50, 51,
-		250, 2501, 2502, 2503, 2504,
-		251, 2511, 2512, 2513, 2514,
-		260, 2601, 2602, 2603, 2604,
-		270, 2701, 2702, 2703, 2704, 2705, 2706,
-	];
+	const businessMenuIds = menuData
+		.filter((m) => m.scope === 2)
+		.map((m) => m.id);
 	await db.insert(sysTenantMenu).values(
 		businessMenuIds.map((menuId) => ({
 			tenantId: DEMO_TENANT_ID,
