@@ -192,7 +192,7 @@ describe("menu treePath 级联查询", () => {
 
 	test("softDeleteMenu 级联软删子树", async () => {
 		// 软删根菜单
-		await softDeleteMenu(TEST_MENU_ROOT, db);
+		await softDeleteMenu(TEST_MENU_ROOT, 0, db);
 
 		const deletedRoot = await findMenuById(TEST_MENU_ROOT, db);
 		expect(deletedRoot?.deleteTime).not.toBeNull();

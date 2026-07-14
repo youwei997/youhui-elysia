@@ -123,7 +123,7 @@ const buildUserMenuTree = async (
 	const isRoot = user.roles.includes("ROOT");
 	const menus = isRoot
 		? await findAllMenus(db)
-		: await findMenusByRoleCodes(user.roles, db);
+		: await findMenusByRoleCodes(user.roles, user.tenantId, db);
 
 	const tree = buildTree(menus);
 
@@ -350,14 +350,17 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			},
 		},
 	)
-	.delete(
-		"/:id",
-		async ({ params }) => {
-			const existing = await findMenuById(params.id, db);
-			if (!existing) {
-				throw notFound(ERR_CODE.MENU_NOT_FOUND);
-			}
-			const deleted = await softDeleteMenu(params.id, db);
+		.delete(
+			"/:id",
+			async ({ user, params }) => {
+				if (!user) {
+					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+				}
+				const existing = await findMenuById(params.id, db);
+				if (!existing) {
+					throw notFound(ERR_CODE.MENU_NOT_FOUND);
+				}
+				const deleted = await softDeleteMenu(params.id, user.tenantId, db);
 			return deleted.map((m) => parseMenu(m));
 		},
 		{

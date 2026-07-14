@@ -85,9 +85,9 @@ describe("menu + role 3表 JOIN 查询", () => {
 			},
 		]);
 		await db.insert(sysRoleMenu).values([
-			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_1 },
-			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_2 },
-			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_3 },
+			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_1, tenantId: 0 },
+			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_2, tenantId: 0 },
+			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_3, tenantId: 0 },
 		]);
 	});
 
@@ -96,7 +96,7 @@ describe("menu + role 3表 JOIN 查询", () => {
 	});
 
 	test("findMenusByRoleCodes 3表 JOIN 返回角色可访问菜单", async () => {
-		const menus = await findMenusByRoleCodes(["MENU_TEST_ROLE"], db);
+		const menus = await findMenusByRoleCodes(["MENU_TEST_ROLE"], 0, db);
 		// findMenusByRoleCodes 默认排除按钮（type='B'），所以只返回目录
 		expect(menus.length).toBeGreaterThanOrEqual(1);
 
@@ -113,7 +113,7 @@ describe("menu + role 3表 JOIN 查询", () => {
 	});
 
 	test("findMenusByRoleCodes 不存在的角色码返回空", async () => {
-		const menus = await findMenusByRoleCodes(["NOT_EXIST_ROLE"], db);
+		const menus = await findMenusByRoleCodes(["NOT_EXIST_ROLE"], 0, db);
 		expect(menus.length).toBe(0);
 	});
 
@@ -124,7 +124,7 @@ describe("menu + role 3表 JOIN 查询", () => {
 			.set({ deleteTime: new Date().toISOString() })
 			.where(eq(sysRole.id, TEST_ROLE_ID));
 
-		const menus = await findMenusByRoleCodes(["MENU_TEST_ROLE"], db);
+		const menus = await findMenusByRoleCodes(["MENU_TEST_ROLE"], 0, db);
 		expect(menus.length).toBe(0);
 
 		await db

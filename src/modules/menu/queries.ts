@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, like, ne, or, sql } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
+import { tenantEq } from "@/db/helpers/tenant";
 import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
@@ -39,15 +40,20 @@ export const findAllMenus = async (db: DB): Promise<MenuRoute[]> => {
 };
 
 /**
- * 根据角色编码列表获取菜单（非 ROOT 角色）
+ * 根据角色编码列表获取菜单（非 ROOT 角色；加 tenantEq）
  *
  * 链路：sys_role → sys_role_menu → sys_menu
- * 过滤：角色软删/禁用 + 菜单软删 + 排除按钮
+ * 过滤：角色软删/禁用 + 菜单软删 + 排除按钮 + 租户隔离
  * 去重：角色间可能绑同一菜单，DB 层用 DISTINCT 去重
  * 排序：按菜单 sort 升序
+ *
+ * @param roleCodes 角色编码列表
+ * @param tenantId 租户 ID（用于 sys_role_menu 租户隔离）
+ * @param db Drizzle 实例
  */
 export const findMenusByRoleCodes = async (
 	roleCodes: string[],
+	tenantId: number,
 	db: DB,
 ): Promise<MenuRoute[]> => {
 	if (roleCodes.length === 0) {
@@ -79,6 +85,7 @@ export const findMenusByRoleCodes = async (
 		.where(
 			and(
 				inArray(sysRole.code, roleCodes),
+				tenantEq(sysRoleMenu.tenantId, tenantId),
 				isNull(sysRole.deleteTime),
 				eq(sysRole.status, 1),
 				isNull(sysMenu.deleteTime),
@@ -255,7 +262,7 @@ export const updateMenu = async (
 };
 
 /**
- * 软删除菜单（级联删除所有子孙）
+ * 软删除菜单（级联删除所有子孙；加 tenantEq）
  *
  * 使用 treePath 正则匹配一次性删除自身 + 整棵子树：
  *   tree_path ~ '(^|,)ID(,|$)' 匹配路径中含有该 ID 的节点（身为祖先或自身）
@@ -263,6 +270,7 @@ export const updateMenu = async (
  */
 export const softDeleteMenu = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<MenuRecord[]> => {
 	const pattern = `(^|,)${id}(,|$)`;
@@ -281,7 +289,12 @@ export const softDeleteMenu = async (
 		if (idsToDelete.length > 0) {
 			await tx
 				.delete(sysRoleMenu)
-				.where(inArray(sysRoleMenu.menuId, idsToDelete));
+				.where(
+					and(
+						inArray(sysRoleMenu.menuId, idsToDelete),
+						tenantEq(sysRoleMenu.tenantId, tenantId),
+					),
+				);
 		}
 		// 软删：自身 + 所有子孙
 		const menus = await tx
