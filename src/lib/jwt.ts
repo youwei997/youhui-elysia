@@ -36,6 +36,8 @@ export type JwtPayload = {
 	exp?: number;
 	/** 当前数据视图租户 ID（login=home tenant, switch-tenant=target, refresh=透传旧值） */
 	tenantId: number;
+	/** 用户所属租户 ID（登录时写入，始终不变；refresh/switch-tenant 透传；查询角色/权限时用此值） */
+	homeTenantId: number;
 	/** 是否可切换租户（仅平台超管为 true） */
 	canSwitchTenant: boolean;
 };

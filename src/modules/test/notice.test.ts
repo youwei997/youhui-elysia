@@ -286,12 +286,12 @@ describe("notice 模块查询", () => {
 		await cleanUp();
 	});
 
-test("findNotices 分页 + title 模糊 + publisherName join", async () => {
-	const result = await findNotices(
-		{ pageNum: 1, pageSize: 50, title: "测试通知" },
-		0,
-		db,
-	);
+	test("findNotices 分页 + title 模糊 + publisherName join", async () => {
+		const result = await findNotices(
+			{ pageNum: 1, pageSize: 50, title: "测试通知" },
+			0,
+			db,
+		);
 		expect(result.total).toBeGreaterThanOrEqual(5);
 
 		const draft = result.list.find((n) => n.id === LIST_DRAFT_ID);
@@ -301,12 +301,12 @@ test("findNotices 分页 + title 模糊 + publisherName join", async () => {
 		expect(published?.publisherName).toBe(publisherName);
 	});
 
-test("findNotices 按 publishStatus 过滤", async () => {
-	const result = await findNotices(
-		{ pageNum: 1, pageSize: 50, title: "测试通知", publishStatus: 0 },
-		0,
-		db,
-	);
+	test("findNotices 按 publishStatus 过滤", async () => {
+		const result = await findNotices(
+			{ pageNum: 1, pageSize: 50, title: "测试通知", publishStatus: 0 },
+			0,
+			db,
+		);
 		const ids = result.list.map((n) => n.id);
 		expect(ids).toContain(LIST_DRAFT_ID);
 		expect(ids).not.toContain(LIST_PUBLISHED_ID);
@@ -422,7 +422,12 @@ test("findNotices 按 publishStatus 过滤", async () => {
 	});
 
 	test("publishNotice targetType=2（指定）仅物化给 targetUserIds", async () => {
-		const updated = await publishNotice(PUBLISH_TARGETED_ID, publisherId, 0, db);
+		const updated = await publishNotice(
+			PUBLISH_TARGETED_ID,
+			publisherId,
+			0,
+			db,
+		);
 		expect(updated?.publishStatus).toBe(1);
 
 		const materialized = await db

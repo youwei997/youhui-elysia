@@ -6,6 +6,7 @@ import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
 import { sysTenantMenu } from "@/db/schema/system/tenant-menu";
+import { resolvePlanMenuIds } from "@/modules/tenant/queries";
 import type { MenuCreateBody, MenuUpdateBody } from "./schema";
 import type { MenuRecord, MenuRoute } from "./types";
 
@@ -107,7 +108,22 @@ export const findMenusByRoleCodes = async (
 			),
 		)
 		.orderBy(asc(sysMenu.sort));
-	return rows as MenuRoute[];
+
+	let menus = rows as MenuRoute[];
+
+	// 非平台租户：套餐级二次过滤（role_menu ∩ tenant_menu 后再 intersect plan_menu）
+	if (tenantId !== 0) {
+		const planMenuIds = await resolvePlanMenuIds(tenantId, db);
+		if (planMenuIds.length > 0) {
+			const planMenuSet = new Set(planMenuIds);
+			menus = menus.filter((m) => planMenuSet.has(m.id));
+		} else {
+			// 套餐无菜单配置且无兜底 → 空列表
+			menus = [];
+		}
+	}
+
+	return menus;
 };
 
 /**

@@ -1,9 +1,9 @@
 import { and, count, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { DB } from "@/db/client";
-import { BizError, ERR_CODE } from "@/lib/errors";
+import { sysMenu } from "@/db/schema/system/menu";
 import { sysTenantPlan } from "@/db/schema/system/tenant-plan";
 import { sysTenantPlanMenu } from "@/db/schema/system/tenant-plan-menu";
-import { sysMenu } from "@/db/schema/system/menu";
+import { BizError, ERR_CODE } from "@/lib/errors";
 import type { TenantPlanRecord } from "./types";
 
 /**
@@ -65,9 +65,15 @@ export const findTenantPlanById = async (
 /**
  * 套餐选项列表
  */
-export const findTenantPlanOptions = async (db: DB): Promise<{ id: number; name: string; code: string }[]> => {
+export const findTenantPlanOptions = async (
+	db: DB,
+): Promise<{ id: number; name: string; code: string }[]> => {
 	return db
-		.select({ id: sysTenantPlan.id, name: sysTenantPlan.name, code: sysTenantPlan.code })
+		.select({
+			id: sysTenantPlan.id,
+			name: sysTenantPlan.name,
+			code: sysTenantPlan.code,
+		})
 		.from(sysTenantPlan)
 		.where(eq(sysTenantPlan.status, 1))
 		.orderBy(sql`${sysTenantPlan.sort} ASC, ${sysTenantPlan.id} ASC`);
@@ -129,9 +135,14 @@ export const updateTenantPlan = async (
 /**
  * 硬删套餐
  */
-export const deleteTenantPlans = async (ids: number[], db: DB): Promise<number> => {
+export const deleteTenantPlans = async (
+	ids: number[],
+	db: DB,
+): Promise<number> => {
 	return await db.transaction(async (tx) => {
-		await tx.delete(sysTenantPlanMenu).where(inArray(sysTenantPlanMenu.planId, ids));
+		await tx
+			.delete(sysTenantPlanMenu)
+			.where(inArray(sysTenantPlanMenu.planId, ids));
 		const result = await tx
 			.delete(sysTenantPlan)
 			.where(inArray(sysTenantPlan.id, ids))
@@ -168,7 +179,13 @@ export const updateTenantPlanMenus = async (
 	const allowedRows = await db
 		.select({ id: sysMenu.id })
 		.from(sysMenu)
-		.where(and(eq(sysMenu.scope, 2), inArray(sysMenu.id, menuIds), isNull(sysMenu.deleteTime)));
+		.where(
+			and(
+				eq(sysMenu.scope, 2),
+				inArray(sysMenu.id, menuIds),
+				isNull(sysMenu.deleteTime),
+			),
+		);
 	const allowedSet = new Set(allowedRows.map((r) => r.id));
 
 	for (const menuId of menuIds) {
@@ -179,7 +196,9 @@ export const updateTenantPlanMenus = async (
 
 	// 2. 替换套餐菜单
 	await db.transaction(async (tx) => {
-		await tx.delete(sysTenantPlanMenu).where(eq(sysTenantPlanMenu.planId, planId));
+		await tx
+			.delete(sysTenantPlanMenu)
+			.where(eq(sysTenantPlanMenu.planId, planId));
 		if (menuIds.length > 0) {
 			await tx.insert(sysTenantPlanMenu).values(
 				menuIds.map((menuId) => ({

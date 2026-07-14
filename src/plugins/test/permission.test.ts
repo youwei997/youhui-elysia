@@ -35,6 +35,7 @@ const makePayload = (over: Partial<JwtPayload> = {}): JwtPayload => ({
 	tokenVersion: 0,
 	jti: "test-jti-perm-1",
 	tenantId: 0,
+	homeTenantId: 0,
 	canSwitchTenant: false,
 	...over,
 });

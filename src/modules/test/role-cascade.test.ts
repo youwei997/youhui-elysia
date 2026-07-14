@@ -223,7 +223,7 @@ describe("role 与 dept/menu 事务级联", () => {
 					eq(sysUserRole.roleId, TEST_ROLE_ID),
 				),
 			);
-			const unassigned = await isRoleAssignedToUsers(TEST_ROLE_ID, 0, db);
+		const unassigned = await isRoleAssignedToUsers(TEST_ROLE_ID, 0, db);
 		expect(unassigned).toBe(false);
 	});
 

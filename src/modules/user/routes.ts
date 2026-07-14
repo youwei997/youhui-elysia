@@ -60,9 +60,10 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			if (!userInfo) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
+			// 角色/权限始终从 homeTenantId 查询，不受当前数据视图租户影响
 			const [roles, perms] = await Promise.all([
-				findUserRoles(userId, user.tenantId, db),
-				findUserPerms(userId, user.tenantId, db),
+				findUserRoles(userId, user.homeTenantId, db),
+				findUserPerms(userId, user.homeTenantId, db),
 			]);
 			return {
 				userId: String(userInfo.id),

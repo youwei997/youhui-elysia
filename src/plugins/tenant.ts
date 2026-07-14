@@ -18,6 +18,8 @@ import type { AuthContext } from "@/plugins/auth";
 export type TenantContext = AuthContext & {
 	/** 当前数据视图租户 ID（login=home tenant, switch-tenant=target, refresh=透传旧值） */
 	tenantId: number;
+	/** 用户所属租户 ID（登录时写入，始终不变） */
+	homeTenantId: number;
 	/** 是否平台租户（tenantId === 0），平台超管可跨租户查数据 */
 	isPlatform: boolean;
 };
@@ -30,13 +32,15 @@ export const tenantPlugin = new Elysia({ name: "tenant" }).derive(
 		const { user } = ctx as unknown as AuthContext;
 
 		if (!user) {
-			return { user: null, tenantId: 0, isPlatform: false };
+			return { user: null, tenantId: 0, homeTenantId: 0, isPlatform: false };
 		}
 
 		const tenantId = user.tenantId;
+		const homeTenantId = user.homeTenantId;
 		return {
 			user,
 			tenantId,
+			homeTenantId,
 			isPlatform: tenantId === 0,
 		};
 	},

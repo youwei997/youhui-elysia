@@ -15,6 +15,7 @@ const makeAdminPayload = (): JwtPayload => ({
 	tokenVersion: 0,
 	jti: "test-integration-jti-oper-log",
 	tenantId: 0,
+	homeTenantId: 0,
 	canSwitchTenant: true,
 });
 

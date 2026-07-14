@@ -2,7 +2,7 @@ import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { buildTree, type TreeNode } from "@/db/helpers/tree";
 import { BizError, ERR_CODE, notFound, unauthorized } from "@/lib/errors";
-import { authPlugin, type AuthContext } from "@/plugins/auth";
+import { type AuthContext, authPlugin } from "@/plugins/auth";
 import {
 	createMenu,
 	findAllMenus,
@@ -351,17 +351,17 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 			},
 		},
 	)
-		.delete(
-			"/:id",
-			async ({ user, params }) => {
-				if (!user) {
-					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
-				}
-				const existing = await findMenuById(params.id, db);
-				if (!existing) {
-					throw notFound(ERR_CODE.MENU_NOT_FOUND);
-				}
-				const deleted = await softDeleteMenu(params.id, user.tenantId, db);
+	.delete(
+		"/:id",
+		async ({ user, params }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const existing = await findMenuById(params.id, db);
+			if (!existing) {
+				throw notFound(ERR_CODE.MENU_NOT_FOUND);
+			}
+			const deleted = await softDeleteMenu(params.id, user.tenantId, db);
 			return deleted.map((m) => parseMenu(m));
 		},
 		{

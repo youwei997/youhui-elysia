@@ -9,8 +9,8 @@ import {
 	like,
 } from "drizzle-orm";
 import type { DB } from "@/db/client";
-import { tenantEq } from "@/db/helpers/tenant";
 import { escapeLike } from "@/db/helpers/like";
+import { tenantEq } from "@/db/helpers/tenant";
 import { sysNotice, sysUserNotice } from "@/db/schema/system/notice";
 import { sysUser } from "@/db/schema/system/user";
 import type { PageResult } from "@/lib/pagination";
@@ -109,7 +109,11 @@ export const createNotice = async (
 	const { targetUserIds, ...rest } = data;
 	const [notice] = await db
 		.insert(sysNotice)
-		.values({ ...rest, tenantId, targetUserIds: (targetUserIds ?? []).join(",") })
+		.values({
+			...rest,
+			tenantId,
+			targetUserIds: (targetUserIds ?? []).join(","),
+		})
 		.returning();
 	return notice as NoticeRecord;
 };

@@ -113,13 +113,16 @@ export const tenantPlanRoutes = new Elysia({ prefix: "/api/v1/tenant-plans" })
 		"/",
 		async ({ body, user }) => {
 			if (!user) throw unauthorized();
-			const plan = await createTenantPlan(body as {
-				name: string;
-				code: string;
-				status: number;
-				sort: number | null;
-				remark?: string | null;
-			}, db);
+			const plan = await createTenantPlan(
+				body as {
+					name: string;
+					code: string;
+					status: number;
+					sort: number | null;
+					remark?: string | null;
+				},
+				db,
+			);
 			return parseTenantPlan(plan);
 		},
 		{

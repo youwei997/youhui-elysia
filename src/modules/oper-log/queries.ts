@@ -11,8 +11,8 @@ import {
 	or,
 } from "drizzle-orm";
 import type { DB } from "@/db/client";
-import { tenantEq } from "@/db/helpers/tenant";
 import { escapeLike } from "@/db/helpers/like";
+import { tenantEq } from "@/db/helpers/tenant";
 import { sysOperLog } from "@/db/schema/system/oper-log";
 import type { OperLogRecord } from "./types";
 

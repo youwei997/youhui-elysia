@@ -1,15 +1,19 @@
 import { and, count, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { DB } from "@/db/client";
-import { hashPassword } from "@/lib/password";
-import { BizError, ERR_CODE } from "@/lib/errors";
+import { sysDept } from "@/db/schema/system/dept";
+import { sysMenu } from "@/db/schema/system/menu";
+import {
+	sysRoleDept,
+	sysRoleMenu,
+	sysUserRole,
+} from "@/db/schema/system/relation";
+import { sysRole } from "@/db/schema/system/role";
 import { sysTenant } from "@/db/schema/system/tenant";
 import { sysTenantMenu } from "@/db/schema/system/tenant-menu";
 import { sysTenantPlanMenu } from "@/db/schema/system/tenant-plan-menu";
-import { sysDept } from "@/db/schema/system/dept";
-import { sysMenu } from "@/db/schema/system/menu";
-import { sysRole } from "@/db/schema/system/role";
 import { sysUser } from "@/db/schema/system/user";
-import { sysRoleDept, sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
+import { BizError, ERR_CODE } from "@/lib/errors";
+import { hashPassword } from "@/lib/password";
 import type { TenantCreateResult, TenantRecord } from "./types";
 
 /** 平台租户 ID */
@@ -59,7 +63,10 @@ export const findTenants = async (
 /**
  * 按 ID 查租户
  */
-export const findTenantById = async (id: number, db: DB): Promise<TenantRecord | undefined> => {
+export const findTenantById = async (
+	id: number,
+	db: DB,
+): Promise<TenantRecord | undefined> => {
 	const [tenant] = await db
 		.select()
 		.from(sysTenant)
@@ -84,9 +91,34 @@ export const findActiveTenantById = async (
 };
 
 /**
+ * 判断用户是否有权限访问目标租户
+ *
+ * 无切换权限：仅允许访问当前所属租户
+ * 有切换权限（平台超管）：允许访问任意启用租户
+ */
+export const canAccessTenant = async (
+	currentTenantId: number,
+	targetTenantId: number,
+	canSwitchTenant: boolean,
+	db: DB,
+): Promise<boolean> => {
+	// 无切换权限：仅允许访问当前租户
+	if (!canSwitchTenant) {
+		return currentTenantId === targetTenantId;
+	}
+
+	// 有切换权限：允许访问任意启用租户
+	const tenant = await findActiveTenantById(targetTenantId, db);
+	return tenant !== undefined;
+};
+
+/**
  * 租户选项列表（用于切换下拉），平台租户返回全量
  */
-export const findTenantOptions = async (tenantId: number, db: DB): Promise<{ id: number; name: string; code: string }[]> => {
+export const findTenantOptions = async (
+	tenantId: number,
+	db: DB,
+): Promise<{ id: number; name: string; code: string }[]> => {
 	if (tenantId === PLATFORM_TENANT_ID) {
 		return db
 			.select({ id: sysTenant.id, name: sysTenant.name, code: sysTenant.code })
@@ -137,19 +169,22 @@ export const createTenant = async (
 		}
 
 		// 2. 创建租户
-		const tenantRows = await tx.insert(sysTenant).values({
-			name: data.name,
-			code: data.code,
-			contactName: data.contactName ?? null,
-			contactPhone: data.contactPhone ?? null,
-			contactEmail: data.contactEmail ?? null,
-			domain: data.domain ?? null,
-			logo: data.logo ?? null,
-			planId: data.planId ?? null,
-			remark: data.remark ?? null,
-			expireTime: data.expireTime ?? null,
-			status: 1,
-		}).returning();
+		const tenantRows = await tx
+			.insert(sysTenant)
+			.values({
+				name: data.name,
+				code: data.code,
+				contactName: data.contactName ?? null,
+				contactPhone: data.contactPhone ?? null,
+				contactEmail: data.contactEmail ?? null,
+				domain: data.domain ?? null,
+				logo: data.logo ?? null,
+				planId: data.planId ?? null,
+				remark: data.remark ?? null,
+				expireTime: data.expireTime ?? null,
+				status: 1,
+			})
+			.returning();
 		if (tenantRows.length === 0) {
 			throw new BizError(ERR_CODE.SYSTEM_ERROR, "创建租户失败");
 		}
@@ -180,17 +215,20 @@ export const createTenant = async (
 		}
 
 		// 4. 创建根部门
-		const deptRows = await tx.insert(sysDept).values({
-			tenantId: tenant.id,
-			name: `${data.name} 管理部门`,
-			code: `${data.code}_DEPT`,
-			parentId: 0,
-			treePath: "0,",
-			sort: 0,
-			status: 1,
-			createTime: now,
-			updateTime: now,
-		}).returning();
+		const deptRows = await tx
+			.insert(sysDept)
+			.values({
+				tenantId: tenant.id,
+				name: `${data.name} 管理部门`,
+				code: `${data.code}_DEPT`,
+				parentId: 0,
+				treePath: "0,",
+				sort: 0,
+				status: 1,
+				createTime: now,
+				updateTime: now,
+			})
+			.returning();
 		if (deptRows.length === 0) {
 			throw new BizError(ERR_CODE.SYSTEM_ERROR, "创建租户根部门失败");
 		}
@@ -198,17 +236,20 @@ export const createTenant = async (
 
 		// 5. 创建管理员用户
 		const hashedPassword = await hashPassword(adminPassword);
-		const userRows = await tx.insert(sysUser).values({
-			tenantId: tenant.id,
-			username: adminUsername,
-			password: hashedPassword,
-			nickname: "租户管理员",
-			gender: 1,
-			deptId: dept.id,
-			status: 1,
-			createTime: now,
-			updateTime: now,
-		}).returning();
+		const userRows = await tx
+			.insert(sysUser)
+			.values({
+				tenantId: tenant.id,
+				username: adminUsername,
+				password: hashedPassword,
+				nickname: "租户管理员",
+				gender: 1,
+				deptId: dept.id,
+				status: 1,
+				createTime: now,
+				updateTime: now,
+			})
+			.returning();
 		if (userRows.length === 0) {
 			throw new BizError(ERR_CODE.SYSTEM_ERROR, "创建租户管理员失败");
 		}
@@ -216,16 +257,19 @@ export const createTenant = async (
 
 		// 6. 创建管理员角色
 		const adminRoleCode = `TENANT_ADMIN_${data.code}`;
-		const roleRows = await tx.insert(sysRole).values({
-			tenantId: tenant.id,
-			name: `${data.name} 管理员`,
-			code: adminRoleCode,
-			sort: 1,
-			status: 1,
-			dataScope: 4,
-			createTime: now,
-			updateTime: now,
-		}).returning();
+		const roleRows = await tx
+			.insert(sysRole)
+			.values({
+				tenantId: tenant.id,
+				name: `${data.name} 管理员`,
+				code: adminRoleCode,
+				sort: 1,
+				status: 1,
+				dataScope: 4,
+				createTime: now,
+				updateTime: now,
+			})
+			.returning();
 		if (roleRows.length === 0) {
 			throw new BizError(ERR_CODE.SYSTEM_ERROR, "创建租户管理员角色失败");
 		}
@@ -356,7 +400,10 @@ export const updateTenantStatus = async (
 /**
  * 获取租户已授权菜单 ID 列表
  */
-export const findTenantMenuIds = async (tenantId: number, db: DB): Promise<number[]> => {
+export const findTenantMenuIds = async (
+	tenantId: number,
+	db: DB,
+): Promise<number[]> => {
 	if (tenantId === PLATFORM_TENANT_ID) {
 		throw new BizError(ERR_CODE.TENANT_PROTECTED);
 	}
@@ -406,9 +453,12 @@ export const updateTenantMenus = async (
 };
 
 /**
- * 解析租户当前套餐菜单 ID 列表（供 updateTenantMenus 校验用）
+ * 解析租户当前套餐菜单 ID 列表（供 updateTenantMenus 校验和菜单查询用）
  */
-const resolvePlanMenuIds = async (tenantId: number, db: DB): Promise<number[]> => {
+export const resolvePlanMenuIds = async (
+	tenantId: number,
+	db: DB,
+): Promise<number[]> => {
 	const [tenant] = await db
 		.select({ planId: sysTenant.planId })
 		.from(sysTenant)
@@ -432,7 +482,9 @@ const resolvePlanMenuIds = async (tenantId: number, db: DB): Promise<number[]> =
 /**
  * 兜底：全部业务菜单（scope=2）
  */
-const resolveDefaultBusinessMenuIds = async (db: DB): Promise<number[]> => {
+export const resolveDefaultBusinessMenuIds = async (
+	db: DB,
+): Promise<number[]> => {
 	const rows = await db
 		.select({ id: sysMenu.id })
 		.from(sysMenu)

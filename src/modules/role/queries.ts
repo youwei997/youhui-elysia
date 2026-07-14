@@ -1,8 +1,8 @@
 import { and, count, eq, inArray, isNull, like } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
-import { tenantEq } from "@/db/helpers/tenant";
 import { escapeLike } from "@/db/helpers/like";
+import { tenantEq } from "@/db/helpers/tenant";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysMenu } from "@/db/schema/system/menu";
 import {
@@ -33,7 +33,10 @@ export const findRoles = async (
 	tenantId: number,
 	db: DB,
 ): Promise<PageResult<RoleRecord>> => {
-	const where = [isNull(sysRole.deleteTime), tenantEq(sysRole.tenantId, tenantId)];
+	const where = [
+		isNull(sysRole.deleteTime),
+		tenantEq(sysRole.tenantId, tenantId),
+	];
 	if (query.keywords) {
 		where.push(like(sysRole.name, `%${escapeLike(query.keywords)}%`));
 	}
@@ -94,15 +97,13 @@ export const createRole = async (
 		}
 
 		if (roleData.dataScope === 5 && deptIds && deptIds.length > 0) {
-			await tx
-				.insert(sysRoleDept)
-				.values(
-					deptIds.map((deptId) => ({
-						roleId: role.id,
-						deptId,
-						tenantId,
-					})),
-				);
+			await tx.insert(sysRoleDept).values(
+				deptIds.map((deptId) => ({
+					roleId: role.id,
+					deptId,
+					tenantId,
+				})),
+			);
 		}
 
 		return role;
@@ -141,22 +142,30 @@ export const updateRole = async (
 		if (effectiveDataScope === 5) {
 			await tx
 				.delete(sysRoleDept)
-				.where(and(eq(sysRoleDept.roleId, id), tenantEq(sysRoleDept.tenantId, tenantId)));
+				.where(
+					and(
+						eq(sysRoleDept.roleId, id),
+						tenantEq(sysRoleDept.tenantId, tenantId),
+					),
+				);
 			if (deptIds && deptIds.length > 0) {
-				await tx
-					.insert(sysRoleDept)
-					.values(
-						deptIds.map((deptId) => ({
-							roleId: id,
-							deptId,
-							tenantId,
-						})),
-					);
+				await tx.insert(sysRoleDept).values(
+					deptIds.map((deptId) => ({
+						roleId: id,
+						deptId,
+						tenantId,
+					})),
+				);
 			}
 		} else {
 			await tx
 				.delete(sysRoleDept)
-				.where(and(eq(sysRoleDept.roleId, id), tenantEq(sysRoleDept.tenantId, tenantId)));
+				.where(
+					and(
+						eq(sysRoleDept.roleId, id),
+						tenantEq(sysRoleDept.tenantId, tenantId),
+					),
+				);
 		}
 
 		return role;
@@ -176,19 +185,32 @@ export const softDeleteRole = async (
 	return await db.transaction(async (tx) => {
 		await tx
 			.delete(sysUserRole)
-			.where(and(eq(sysUserRole.roleId, id), tenantEq(sysUserRole.tenantId, tenantId)));
+			.where(
+				and(
+					eq(sysUserRole.roleId, id),
+					tenantEq(sysUserRole.tenantId, tenantId),
+				),
+			);
 		await tx
 			.delete(sysRoleMenu)
-			.where(and(eq(sysRoleMenu.roleId, id), tenantEq(sysRoleMenu.tenantId, tenantId)));
+			.where(
+				and(
+					eq(sysRoleMenu.roleId, id),
+					tenantEq(sysRoleMenu.tenantId, tenantId),
+				),
+			);
 		await tx
 			.delete(sysRoleDept)
-			.where(and(eq(sysRoleDept.roleId, id), tenantEq(sysRoleDept.tenantId, tenantId)));
+			.where(
+				and(
+					eq(sysRoleDept.roleId, id),
+					tenantEq(sysRoleDept.tenantId, tenantId),
+				),
+			);
 		const [role] = await tx
 			.update(sysRole)
 			.set({ deleteTime: new Date().toISOString() })
-			.where(
-				and(eq(sysRole.id, id), tenantEq(sysRole.tenantId, tenantId)),
-			)
+			.where(and(eq(sysRole.id, id), tenantEq(sysRole.tenantId, tenantId)))
 			.returning();
 		return role;
 	});
@@ -285,13 +307,16 @@ export const replaceRoleMenus = async (
 	return await db.transaction(async (tx) => {
 		await tx
 			.delete(sysRoleMenu)
-			.where(and(eq(sysRoleMenu.roleId, roleId), tenantEq(sysRoleMenu.tenantId, tenantId)));
+			.where(
+				and(
+					eq(sysRoleMenu.roleId, roleId),
+					tenantEq(sysRoleMenu.tenantId, tenantId),
+				),
+			);
 		if (menuIds.length > 0) {
 			await tx
 				.insert(sysRoleMenu)
-				.values(
-					menuIds.map((menuId) => ({ roleId, menuId, tenantId })),
-				);
+				.values(menuIds.map((menuId) => ({ roleId, menuId, tenantId })));
 		}
 	});
 };
@@ -308,13 +333,16 @@ export const replaceRoleDepts = async (
 	return await db.transaction(async (tx) => {
 		await tx
 			.delete(sysRoleDept)
-			.where(and(eq(sysRoleDept.roleId, roleId), tenantEq(sysRoleDept.tenantId, tenantId)));
+			.where(
+				and(
+					eq(sysRoleDept.roleId, roleId),
+					tenantEq(sysRoleDept.tenantId, tenantId),
+				),
+			);
 		if (body.deptIds.length > 0) {
 			await tx
 				.insert(sysRoleDept)
-				.values(
-					body.deptIds.map((deptId) => ({ roleId, deptId, tenantId })),
-				);
+				.values(body.deptIds.map((deptId) => ({ roleId, deptId, tenantId })));
 		}
 	});
 };
@@ -328,10 +356,7 @@ export const findRoleOptions = async (
 		.select({ id: sysRole.id, name: sysRole.name })
 		.from(sysRole)
 		.where(
-			and(
-				tenantEq(sysRole.tenantId, tenantId),
-				isNull(sysRole.deleteTime),
-			),
+			and(tenantEq(sysRole.tenantId, tenantId), isNull(sysRole.deleteTime)),
 		)
 		.orderBy(sysRole.sort);
 	return rows.map((r) => ({ value: String(r.id), label: r.name }));
@@ -402,13 +427,28 @@ export const batchSoftDeleteRoles = async (
 	return await db.transaction(async (tx) => {
 		await tx
 			.delete(sysUserRole)
-			.where(and(inArray(sysUserRole.roleId, ids), tenantEq(sysUserRole.tenantId, tenantId)));
+			.where(
+				and(
+					inArray(sysUserRole.roleId, ids),
+					tenantEq(sysUserRole.tenantId, tenantId),
+				),
+			);
 		await tx
 			.delete(sysRoleMenu)
-			.where(and(inArray(sysRoleMenu.roleId, ids), tenantEq(sysRoleMenu.tenantId, tenantId)));
+			.where(
+				and(
+					inArray(sysRoleMenu.roleId, ids),
+					tenantEq(sysRoleMenu.tenantId, tenantId),
+				),
+			);
 		await tx
 			.delete(sysRoleDept)
-			.where(and(inArray(sysRoleDept.roleId, ids), tenantEq(sysRoleDept.tenantId, tenantId)));
+			.where(
+				and(
+					inArray(sysRoleDept.roleId, ids),
+					tenantEq(sysRoleDept.tenantId, tenantId),
+				),
+			);
 		const roles = await tx
 			.update(sysRole)
 			.set({ deleteTime: new Date().toISOString() })

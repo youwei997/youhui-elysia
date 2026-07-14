@@ -144,7 +144,8 @@ const ERR_MSG: Record<ErrCode, string> = {
 	[ERR_CODE.TENANT_PLAN_NOT_FOUND]: "套餐不存在",
 	[ERR_CODE.TENANT_PLAN_CODE_DUPLICATE]: "套餐编码已存在",
 	[ERR_CODE.TENANT_MENU_NOT_IN_PLAN]: "租户菜单只能从套餐菜单中选择",
-	[ERR_CODE.TENANT_PLAN_MENU_NOT_BUSINESS]: "套餐菜单只能选择业务菜单（scope=2）",
+	[ERR_CODE.TENANT_PLAN_MENU_NOT_BUSINESS]:
+		"套餐菜单只能选择业务菜单（scope=2）",
 	[ERR_CODE.DUPLICATE_SUBMISSION]: "请勿重复提交",
 	[ERR_CODE.FILE_NOT_FOUND]: "文件不存在",
 	[ERR_CODE.FILE_UPLOAD_FAILED]: "文件上传失败",

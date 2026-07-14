@@ -21,10 +21,10 @@ import { verifyPassword } from "@/lib/password";
 import { redis } from "@/lib/redis";
 import { redisKeys } from "@/lib/redis-keys";
 import { addIpToBlacklist } from "@/modules/ip-blacklist/queries";
+import { canAccessTenant } from "@/modules/tenant/queries";
 import { authPlugin } from "@/plugins/auth";
 import { rateLimitPlugin } from "@/plugins/rate-limit";
 import {
-	findActiveTenantById,
 	findActiveUserByUsername,
 	findUserPerms,
 	findUserRoles,
@@ -49,6 +49,7 @@ const buildJwtPayload = (
 	roles: UserRoleItem[],
 	perms: string[],
 	tenantId: number,
+	homeTenantId: number,
 	canSwitchTenant: boolean,
 ): JwtPayload => {
 	return {
@@ -62,6 +63,7 @@ const buildJwtPayload = (
 		tokenVersion,
 		jti: generateJti(),
 		tenantId,
+		homeTenantId,
 		canSwitchTenant,
 	};
 };
@@ -233,8 +235,9 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 					(await redis.get(redisKeys.userTokenVersion(user.id))) ?? "0",
 				);
 
-				// login: tenantId = home tenant, canSwitchTenant = 是否平台超管
+				// login: tenantId = home tenant, homeTenantId = home tenant, canSwitchTenant = 是否平台超管
 				const tenantId = user.tenantId;
+				const homeTenantId = user.tenantId;
 				const canSwitchTenant = userRoles.some((r) => r.code === ROLE_ROOT);
 
 				const payload = buildJwtPayload(
@@ -243,6 +246,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 					userRoles,
 					userPerms,
 					tenantId,
+					homeTenantId,
 					canSwitchTenant,
 				);
 
@@ -311,19 +315,20 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			// 2. 旧 refresh token 的 jti 加入黑名单（一次性使用）
 			await revokeJti(oldPayload.jti, oldPayload.exp);
 
-			// 3. 从 JWT sub（userId）重新查角色/权限，确保刷新后权限是最新的
+			// 3. 从 JWT sub（userId）重新查角色/权限，使用 homeTenantId 确保切换租户后仍查到原始角色
 			const userId = Number(oldPayload.sub);
 			const [userRoles, userPerms] = await Promise.all([
-				findUserRoles(userId, oldPayload.tenantId, db),
-				findUserPerms(userId, oldPayload.tenantId, db),
+				findUserRoles(userId, oldPayload.homeTenantId, db),
+				findUserPerms(userId, oldPayload.homeTenantId, db),
 			]);
 
 			const tokenVersion = Number(
 				(await redis.get(redisKeys.userTokenVersion(userId))) ?? "0",
 			);
 
-			// refresh: 保留数据视图 tenantId + canSwitchTenant，不重算
+			// refresh: 保留数据视图 tenantId + homeTenantId + canSwitchTenant，不重算
 			const tenantId = oldPayload.tenantId;
+			const homeTenantId = oldPayload.homeTenantId;
 			const canSwitchTenant = oldPayload.canSwitchTenant;
 
 			// 4. 签发新的双 token，携带最新权限
@@ -333,6 +338,7 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				userRoles,
 				userPerms,
 				tenantId,
+				homeTenantId,
 				canSwitchTenant,
 			);
 			const [accessToken, newRefreshToken] = await Promise.all([
@@ -391,9 +397,14 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				);
 			}
 
-			// 平台超管可切换到任何租户；普通用户只能切到自身所属租户
-			const isRoot = user.roles.includes(ROLE_ROOT);
-			if (!isRoot && user.tenantId !== tenantId) {
+			// 校验是否有权限切换到目标租户
+			const canAccess = await canAccessTenant(
+				user.tenantId,
+				tenantId,
+				user.canSwitchTenant,
+				db,
+			);
+			if (!canAccess) {
 				throw new BizError(
 					ERR_CODE.ACCESS_TOKEN_INVALID,
 					"无权限切换到该租户",
@@ -401,27 +412,19 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 				);
 			}
 
-			// 校验目标租户存在且状态正常
-			const tenantActive = await findActiveTenantById(tenantId, db);
-			if (!tenantActive) {
-				throw new BizError(
-					ERR_CODE.ACCESS_TOKEN_INVALID,
-					"目标租户不存在或已停用",
-					404,
-				);
-			}
-
-			// 重签 token（新 tenantId，canSwitchTenant 保持不变）
+			// 重签 token（新 tenantId，homeTenantId / canSwitchTenant / roles / perms 保持不变）
 			const [accessToken, refreshToken] = await Promise.all([
 				signAccessToken({
 					...user,
 					tenantId,
+					homeTenantId: user.homeTenantId,
 					canSwitchTenant: user.canSwitchTenant,
 					jti: generateJti(),
 				}),
 				signRefreshToken({
 					...user,
 					tenantId,
+					homeTenantId: user.homeTenantId,
 					canSwitchTenant: user.canSwitchTenant,
 					jti: generateJti(),
 				}),

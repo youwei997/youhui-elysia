@@ -51,13 +51,13 @@ const stringifyTreeIds = <T extends { id: number; parentId: number }>(
 
 export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 	.use(authPlugin)
-		.get(
-			"/",
-			async ({ user, query }) => {
-				if (!user) {
-					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
-				}
-				const list = await findAllDepts(query, user.tenantId, db);
+	.get(
+		"/",
+		async ({ user, query }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const list = await findAllDepts(query, user.tenantId, db);
 			const items = list
 				.map((d) => DeptResponse.parse(d))
 				.filter((d) => d.parentId !== null)
@@ -76,13 +76,13 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			},
 		},
 	)
-		.get(
-			"/options",
-			async ({ user }) => {
-				if (!user) {
-					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
-				}
-				const list = await findAllDepts({}, user.tenantId, db);
+	.get(
+		"/options",
+		async ({ user }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const list = await findAllDepts({}, user.tenantId, db);
 			const items = list
 				.map((d) => DeptResponse.parse(d))
 				.filter((d) => d.parentId !== null)
@@ -118,13 +118,13 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			},
 		},
 	)
-		.get(
-			"/:id",
-			async ({ user, params }) => {
-				if (!user) {
-					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
-				}
-				const dept = await findDeptById(params.id, user.tenantId, db);
+	.get(
+		"/:id",
+		async ({ user, params }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const dept = await findDeptById(params.id, user.tenantId, db);
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
@@ -140,13 +140,13 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			},
 		},
 	)
-		.get(
-			"/:id/form",
-			async ({ user, params }) => {
-				if (!user) {
-					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
-				}
-				const dept = await findDeptById(params.id, user.tenantId, db);
+	.get(
+		"/:id/form",
+		async ({ user, params }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const dept = await findDeptById(params.id, user.tenantId, db);
 			if (!dept) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
@@ -163,19 +163,19 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			},
 		},
 	)
-		.post(
-			"/",
-			async ({ user, body }) => {
-				if (!user) {
-					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+	.post(
+		"/",
+		async ({ user, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			if (body.parentId && body.parentId !== 0) {
+				const parent = await findDeptById(body.parentId, user.tenantId, db);
+				if (!parent) {
+					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 				}
-				if (body.parentId && body.parentId !== 0) {
-					const parent = await findDeptById(body.parentId, user.tenantId, db);
-					if (!parent) {
-						throw notFound(ERR_CODE.DEPT_NOT_FOUND);
-					}
-				}
-				const dept = await createDept(body, user.tenantId, db);
+			}
+			const dept = await createDept(body, user.tenantId, db);
 			return parseDept(dept);
 		},
 		{
@@ -190,36 +190,41 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			},
 		},
 	)
-		.put(
-			"/:id",
-			async ({ user, params, body }) => {
-				if (!user) {
-					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
-				}
-				const existing = await findDeptById(params.id, user.tenantId, db);
-				if (!existing) {
+	.put(
+		"/:id",
+		async ({ user, params, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const existing = await findDeptById(params.id, user.tenantId, db);
+			if (!existing) {
+				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
+			}
+			if (
+				body.parentId !== undefined &&
+				body.parentId !== null &&
+				body.parentId !== 0
+			) {
+				const parent = await findDeptById(body.parentId, user.tenantId, db);
+				if (!parent) {
 					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 				}
-				if (
-					body.parentId !== undefined &&
-					body.parentId !== null &&
-					body.parentId !== 0
-				) {
-					const parent = await findDeptById(body.parentId, user.tenantId, db);
-					if (!parent) {
-						throw notFound(ERR_CODE.DEPT_NOT_FOUND);
-					}
+			}
+			if (body.parentId !== undefined && body.parentId !== null) {
+				const cyclic = await isParentIdCyclic(
+					params.id,
+					body.parentId,
+					user.tenantId,
+					db,
+				);
+				if (cyclic) {
+					throw new BizError(
+						ERR_CODE.DEPT_PARENT_CYCLE,
+						"不能将部门移动到自己的子部门下",
+					);
 				}
-				if (body.parentId !== undefined && body.parentId !== null) {
-					const cyclic = await isParentIdCyclic(params.id, body.parentId, user.tenantId, db);
-					if (cyclic) {
-						throw new BizError(
-							ERR_CODE.DEPT_PARENT_CYCLE,
-							"不能将部门移动到自己的子部门下",
-						);
-					}
-				}
-				const updated = await updateDept(params.id, body, user.tenantId, db);
+			}
+			const updated = await updateDept(params.id, body, user.tenantId, db);
 			if (!updated) {
 				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 			}
@@ -239,50 +244,50 @@ export const deptRoutes = new Elysia({ prefix: "/api/v1/depts" })
 			},
 		},
 	)
-		.delete(
-			"/:id",
-			async ({ user, params }) => {
-				if (!user) {
-					throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+	.delete(
+		"/:id",
+		async ({ user, params }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const idStr = params.id;
+			if (idStr.includes(",")) {
+				const ids = idStr
+					.split(",")
+					.map((s) => Number(s.trim()))
+					.filter((n) => !Number.isNaN(n));
+				if (ids.length === 0) {
+					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 				}
-				const idStr = params.id;
-				if (idStr.includes(",")) {
-					const ids = idStr
-						.split(",")
-						.map((s) => Number(s.trim()))
-						.filter((n) => !Number.isNaN(n));
-					if (ids.length === 0) {
+				for (const id of ids) {
+					const existing = await findDeptById(id, user.tenantId, db);
+					if (!existing) {
 						throw notFound(ERR_CODE.DEPT_NOT_FOUND);
 					}
-					for (const id of ids) {
-						const existing = await findDeptById(id, user.tenantId, db);
-						if (!existing) {
-							throw notFound(ERR_CODE.DEPT_NOT_FOUND);
-						}
-						const inUse = await isDeptUsedByUsers(id, user.tenantId, db);
-						if (inUse) {
-							throw new BizError(
-								ERR_CODE.DEPT_HAS_USERS,
-								"部门下存在用户，无法删除",
-							);
-						}
+					const inUse = await isDeptUsedByUsers(id, user.tenantId, db);
+					if (inUse) {
+						throw new BizError(
+							ERR_CODE.DEPT_HAS_USERS,
+							"部门下存在用户，无法删除",
+						);
 					}
-					const deleted = await batchSoftDeleteDepts(ids, user.tenantId, db);
-					return deleted.map((d) => parseDept(d));
 				}
-				const id = Number(idStr);
-				if (Number.isNaN(id)) {
-					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
-				}
-				const existing = await findDeptById(id, user.tenantId, db);
-				if (!existing) {
-					throw notFound(ERR_CODE.DEPT_NOT_FOUND);
-				}
-				const inUse = await isDeptUsedByUsers(id, user.tenantId, db);
-				if (inUse) {
-					throw new BizError(ERR_CODE.DEPT_HAS_USERS, "部门下存在用户，无法删除");
-				}
-				const count = await softDeleteDept(id, user.tenantId, db);
+				const deleted = await batchSoftDeleteDepts(ids, user.tenantId, db);
+				return deleted.map((d) => parseDept(d));
+			}
+			const id = Number(idStr);
+			if (Number.isNaN(id)) {
+				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
+			}
+			const existing = await findDeptById(id, user.tenantId, db);
+			if (!existing) {
+				throw notFound(ERR_CODE.DEPT_NOT_FOUND);
+			}
+			const inUse = await isDeptUsedByUsers(id, user.tenantId, db);
+			if (inUse) {
+				throw new BizError(ERR_CODE.DEPT_HAS_USERS, "部门下存在用户，无法删除");
+			}
+			const count = await softDeleteDept(id, user.tenantId, db);
 			return { deletedCount: count };
 		},
 		{

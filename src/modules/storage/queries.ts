@@ -5,8 +5,15 @@ import { sysFile } from "@/db/schema/system/file";
 import type { FileCreateData } from "./types";
 
 /** 新建文件元数据 */
-export const createFile = async (data: FileCreateData, tenantId: number, db: DB) => {
-	const [row] = await db.insert(sysFile).values({ ...data, tenantId }).returning();
+export const createFile = async (
+	data: FileCreateData,
+	tenantId: number,
+	db: DB,
+) => {
+	const [row] = await db
+		.insert(sysFile)
+		.values({ ...data, tenantId })
+		.returning();
 	return row;
 };
 
@@ -31,12 +38,7 @@ export const softDeleteFile = async (id: number, tenantId: number, db: DB) => {
 	const [row] = await db
 		.update(sysFile)
 		.set({ deleteTime: new Date().toISOString() })
-		.where(
-			and(
-				eq(sysFile.id, id),
-				tenantEq(sysFile.tenantId, tenantId),
-			),
-		)
+		.where(and(eq(sysFile.id, id), tenantEq(sysFile.tenantId, tenantId)))
 		.returning();
 	return row ?? null;
 };

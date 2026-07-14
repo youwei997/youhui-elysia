@@ -49,6 +49,7 @@ const basePayload = (): JwtPayload => ({
 	tokenVersion: 0,
 	jti: "test-jti-abc123",
 	tenantId: 0,
+	homeTenantId: 0,
 	canSwitchTenant: false,
 });
 

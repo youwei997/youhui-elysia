@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { BizError, ERR_CODE, unauthorized } from "@/lib/errors";
+import type { JwtPayload } from "@/lib/jwt";
 import { signAccessToken, signRefreshToken } from "@/lib/jwt";
 import { authPlugin } from "@/plugins/auth";
 import {
@@ -15,7 +16,6 @@ import {
 	updateTenantMenus,
 	updateTenantStatus,
 } from "./queries";
-import type { JwtPayload } from "@/lib/jwt";
 import {
 	TenantCreateBody,
 	TenantListQuery,
@@ -132,7 +132,7 @@ export const tenantRoutes = new Elysia({ prefix: "/api/v1/tenants" })
 		},
 	)
 	.post(
-			"/",
+		"/",
 		async ({ body, user }) => {
 			if (!user) throw unauthorized();
 			const { adminUsername, adminPassword, ...rest } = body;

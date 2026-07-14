@@ -35,11 +35,11 @@ export const findActiveUserByUsername = async (
 
 /**
  * 查询用户关联的有效角色列表
- * 过滤：角色软删 + 角色状态正常 + 租户隔离（用 home tenant，非 token 当前 tenantId）
+ * 过滤：角色软删 + 角色状态正常 + 租户隔离（用 homeTenantId，非 token 当前 tenantId）
  * 返回 { code, dataScope }，供 JWT payload 注入 roles / dataScopes 字段
  *
  * @param userId 用户 ID
- * @param homeTenantId 用户所属租户 ID（来自 sys_user.tenant_id，即 home tenant）
+ * @param homeTenantId 用户所属租户 ID（来自 JWT homeTenantId，始终不变）
  * @param db Drizzle 实例
  */
 export const findUserRoles = async (
@@ -77,7 +77,7 @@ export const findUserRoles = async (
  * 因此 ROOT 用户此函数可能返回 []，业务层不应依赖 perms 推断 ROOT 身份。
  *
  * @param userId 用户 ID
- * @param homeTenantId 用户所属租户 ID（来自 sys_user.tenant_id，即 home tenant）
+ * @param homeTenantId 用户所属租户 ID（来自 JWT homeTenantId，始终不变）
  * @param db Drizzle 实例
  */
 export const findUserPerms = async (

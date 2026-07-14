@@ -1,8 +1,8 @@
 import { and, asc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import type z from "zod";
 import type { DB } from "@/db/client";
-import { tenantEq } from "@/db/helpers/tenant";
 import { escapeLike } from "@/db/helpers/like";
+import { tenantEq } from "@/db/helpers/tenant";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysRoleDept } from "@/db/schema/system/relation";
 import { sysUser } from "@/db/schema/system/user";
@@ -17,7 +17,10 @@ export const findAllDepts = async (
 	tenantId: number,
 	db: DB,
 ) => {
-	const where = [isNull(sysDept.deleteTime), tenantEq(sysDept.tenantId, tenantId)];
+	const where = [
+		isNull(sysDept.deleteTime),
+		tenantEq(sysDept.tenantId, tenantId),
+	];
 	if (query.keywords) {
 		where.push(like(sysDept.name, `%${escapeLike(query.keywords)}%`));
 	}
@@ -300,10 +303,7 @@ export const batchSoftDeleteDepts = async (
 			.update(sysDept)
 			.set({ deleteTime: new Date().toISOString() })
 			.where(
-				and(
-					inArray(sysDept.id, ids),
-					tenantEq(sysDept.tenantId, tenantId),
-				),
+				and(inArray(sysDept.id, ids), tenantEq(sysDept.tenantId, tenantId)),
 			)
 			.returning();
 		return depts;
