@@ -28,7 +28,9 @@ describe("importUsers 逐行导入", () => {
 	beforeAll(async () => {
 		await cleanUp();
 		// 预置一个已存在用户，模拟 DB 级别的用户名冲突（23505）
-		await db.insert(sysUser).values({ username: PRE, password: "x" });
+		await db
+			.insert(sysUser)
+			.values({ username: PRE, password: "x", tenantId: 0 });
 	});
 
 	afterAll(async () => {
@@ -43,6 +45,7 @@ describe("importUsers 逐行导入", () => {
 				row(A, 4), // 文件内与第 2 行同名，冲突
 				row(PRE, 5), // 与预置用户同名，冲突
 			],
+			0,
 			db,
 		);
 

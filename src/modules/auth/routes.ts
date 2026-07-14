@@ -225,8 +225,8 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 
 				// 并发查角色 + 权限（互不依赖，一起跑更快）
 				const [userRoles, userPerms] = await Promise.all([
-					findUserRoles(user.id, db),
-					findUserPerms(user.id, db),
+					findUserRoles(user.id, user.tenantId, db),
+					findUserPerms(user.id, user.tenantId, db),
 				]);
 
 				const tokenVersion = Number(
@@ -314,8 +314,8 @@ export const authRoutes = new Elysia({ prefix: "/api/v1/auth" })
 			// 3. 从 JWT sub（userId）重新查角色/权限，确保刷新后权限是最新的
 			const userId = Number(oldPayload.sub);
 			const [userRoles, userPerms] = await Promise.all([
-				findUserRoles(userId, db),
-				findUserPerms(userId, db),
+				findUserRoles(userId, oldPayload.tenantId, db),
+				findUserPerms(userId, oldPayload.tenantId, db),
 			]);
 
 			const tokenVersion = Number(

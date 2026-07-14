@@ -15,6 +15,7 @@ import {
 	dataScopeFilter,
 } from "@/db/helpers/data-scope";
 import { escapeLike } from "@/db/helpers/like";
+import { tenantEq } from "@/db/helpers/tenant";
 import { sysDept } from "@/db/schema/system/dept";
 import { sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
@@ -41,6 +42,7 @@ import type {
  */
 const batchFindUserRoleNames = async (
 	userIds: number[],
+	tenantId: number,
 	db: DB,
 ): Promise<Map<number, string>> => {
 	if (userIds.length === 0) {
@@ -54,7 +56,12 @@ const batchFindUserRoleNames = async (
 		})
 		.from(sysUserRole)
 		.innerJoin(sysRole, eq(sysUserRole.roleId, sysRole.id))
-		.where(inArray(sysUserRole.userId, userIds));
+		.where(
+			and(
+				inArray(sysUserRole.userId, userIds),
+				tenantEq(sysUserRole.tenantId, tenantId),
+			),
+		);
 
 	const grouped = new Map<number, string[]>();
 	for (const row of rows) {
@@ -91,10 +98,14 @@ export const findUsers = async (
 		deptId?: number;
 	},
 	ctx: DataScopeContext,
+	tenantId: number,
 	db: DB,
 ): Promise<PageResult<UserListRecord>> => {
-	// 组装查询条件：软删过滤（必加）+ 关键字模糊匹配 + 状态精确匹配 + 部门筛选 + 数据权限
-	const where = [isNull(sysUser.deleteTime)];
+	// 组装查询条件：软删过滤（必加）+ 租户隔离 + 关键字模糊匹配 + 状态精确匹配 + 部门筛选 + 数据权限
+	const where = [
+		isNull(sysUser.deleteTime),
+		tenantEq(sysUser.tenantId, tenantId),
+	];
 	if (query.keywords) {
 		const keywordCondition = or(
 			like(sysUser.username, `%${escapeLike(query.keywords)}%`),
@@ -132,6 +143,7 @@ export const findUsers = async (
 	// 角色名通过单独批量查询聚合：避免在 select 里写原生 SQL，同时保持分页后只查当前页用户角色。
 	const roleNameMap = await batchFindUserRoleNames(
 		list.map((u) => u.id),
+		tenantId,
 		db,
 	);
 
@@ -151,63 +163,88 @@ export const findUsers = async (
 	return { list: listWithRoles, total };
 };
 
-/** 根据 ID 查询用户（默认过滤已软删记录） */
+/** 根据 ID 查询用户（默认过滤已软删记录 + 租户隔离） */
 export const findUserById = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
 	const rows = await db
 		.select()
 		.from(sysUser)
-		.where(and(eq(sysUser.id, id), isNull(sysUser.deleteTime)));
+		.where(
+			and(
+				eq(sysUser.id, id),
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+			),
+		);
 	return rows[0]; // 可能为 undefined，由 routes 层判断
 };
 
-/** 创建用户 */
+/** 创建用户（注入 tenantId） */
 export const createUser = async (
 	data: z.infer<typeof UserCreateBody>,
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
-	const [user] = await db.insert(sysUser).values(data).returning();
+	const [user] = await db
+		.insert(sysUser)
+		.values({ ...data, tenantId })
+		.returning();
 	return user;
 };
 
-/** 更新用户（默认过滤已软删记录，禁止改活已删数据） */
+/** 更新用户（默认过滤已软删记录，禁止改活已删数据；加 tenantEq 防跨租户篡改） */
 export const updateUser = async (
 	id: number,
 	data: z.infer<typeof UserUpdateBody>,
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set(data)
-		.where(and(eq(sysUser.id, id), isNull(sysUser.deleteTime)))
+		.where(
+			and(
+				eq(sysUser.id, id),
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+			),
+		)
 		.returning();
 	return user;
 };
 
-/** 软删除用户（自身就是设 deleteTime，按软删规则不需要加 deleteTime 过滤） */
+/** 软删除用户（加 tenantEq 防跨租户误删） */
 export const softDeleteUser = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ deleteTime: new Date().toISOString() })
-		.where(eq(sysUser.id, id))
+		.where(and(eq(sysUser.id, id), tenantEq(sysUser.tenantId, tenantId)))
 		.returning();
 	return user;
 };
 
-/** 查某用户已绑定的角色 ID 列表（前端"用户编辑"页回显用） */
+/** 查某用户已绑定的角色 ID 列表（前端"用户编辑"页回显用；加 tenantEq） */
 export const findUserRoleIds = async (
 	userId: number,
+	tenantId: number,
 	db: DB,
 ): Promise<number[]> => {
 	const rows = await db
 		.select({ roleId: sysUserRole.roleId })
 		.from(sysUserRole)
-		.where(eq(sysUserRole.userId, userId));
+		.where(
+			and(
+				eq(sysUserRole.userId, userId),
+				tenantEq(sysUserRole.tenantId, tenantId),
+			),
+		);
 	return rows.map((r) => r.roleId);
 };
 
@@ -217,18 +254,20 @@ export const findUserRoleIds = async (
  */
 export const findUserFormData = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<UserFormData | undefined> => {
-	const user = await findUserById(id, db);
+	const user = await findUserById(id, tenantId, db);
 	if (!user) {
 		return undefined;
 	}
-	const roleIds = await findUserRoleIds(id, db);
+	const roleIds = await findUserRoleIds(id, tenantId, db);
 	return { ...user, roleIds };
 };
 
-/** 用户下拉选项（供前端下拉选择器使用），仅返回启用且未删除的用户 */
+/** 用户下拉选项（供前端下拉选择器使用），仅返回启用且未删除的同租户用户 */
 export const findUserOptions = async (
+	tenantId: number,
 	db: DB,
 ): Promise<Array<{ value: string; label: string }>> => {
 	const rows = await db
@@ -238,16 +277,23 @@ export const findUserOptions = async (
 			nickname: sysUser.nickname,
 		})
 		.from(sysUser)
-		.where(and(isNull(sysUser.deleteTime), eq(sysUser.status, 1)));
+		.where(
+			and(
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+				eq(sysUser.status, 1),
+			),
+		);
 	return rows.map((r) => ({
 		value: String(r.id),
 		label: r.nickname || r.username,
 	}));
 };
 
-/** 批量软删除用户 */
+/** 批量软删除用户（加 tenantEq 防跨租户误删） */
 export const batchSoftDeleteUsers = async (
 	ids: number[],
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord[]> => {
 	if (ids.length === 0) {
@@ -256,21 +302,28 @@ export const batchSoftDeleteUsers = async (
 	const users = await db
 		.update(sysUser)
 		.set({ deleteTime: new Date().toISOString() })
-		.where(inArray(sysUser.id, ids))
+		.where(and(inArray(sysUser.id, ids), tenantEq(sysUser.tenantId, tenantId)))
 		.returning();
 	return users;
 };
 
-/** 重置用户密码（软删过滤，禁止重置已删用户的密码） */
+/** 重置用户密码（软删过滤，禁止重置已删用户的密码；加 tenantEq） */
 export const resetUserPassword = async (
 	id: number,
 	password: string,
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ password })
-		.where(and(eq(sysUser.id, id), isNull(sysUser.deleteTime)))
+		.where(
+			and(
+				eq(sysUser.id, id),
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+			),
+		)
 		.returning();
 	return user;
 };
@@ -278,13 +331,14 @@ export const resetUserPassword = async (
 /* ── 个人中心 ── */
 
 /**
- * 获取个人中心详情（含部门名称和角色名称）
+ * 获取个人中心详情（含部门名称和角色名称；加 tenantEq）
  */
 export const findUserProfileDetail = async (
 	userId: number,
+	tenantId: number,
 	db: DB,
 ): Promise<UserProfileDetail | undefined> => {
-	const user = await findUserById(userId, db);
+	const user = await findUserById(userId, tenantId, db);
 	if (!user) return undefined;
 
 	const [dept, roleNamesRow] = await Promise.all([
@@ -292,7 +346,13 @@ export const findUserProfileDetail = async (
 			? db
 					.select({ deptName: sysDept.name })
 					.from(sysDept)
-					.where(and(eq(sysDept.id, user.deptId), isNull(sysDept.deleteTime)))
+					.where(
+						and(
+							eq(sysDept.id, user.deptId),
+							tenantEq(sysDept.tenantId, tenantId),
+							isNull(sysDept.deleteTime),
+						),
+					)
 					.limit(1)
 					.then((rows) => rows[0]?.deptName ?? null)
 			: Promise.resolve(null),
@@ -301,7 +361,12 @@ export const findUserProfileDetail = async (
 			.select({ roleName: sysRole.name })
 			.from(sysUserRole)
 			.innerJoin(sysRole, eq(sysUserRole.roleId, sysRole.id))
-			.where(eq(sysUserRole.userId, userId))
+			.where(
+				and(
+					eq(sysUserRole.userId, userId),
+					tenantEq(sysUserRole.tenantId, tenantId),
+				),
+			)
 			.then((rows) =>
 				rows.length > 0 ? rows.map((r) => r.roleName).join(",") : null,
 			),
@@ -322,7 +387,7 @@ export const findUserProfileDetail = async (
 };
 
 /**
- * 更新个人中心信息（仅允许修改 nickname / avatar / gender）
+ * 更新个人中心信息（仅允许修改 nickname / avatar / gender；加 tenantEq）
  */
 export const updateUserProfile = async (
 	userId: number,
@@ -331,26 +396,34 @@ export const updateUserProfile = async (
 		avatar?: string | null | undefined;
 		gender?: number | null | undefined;
 	},
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set(data)
-		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+		.where(
+			and(
+				eq(sysUser.id, userId),
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+			),
+		)
 		.returning();
 	return user;
 };
 
 /**
- * 修改密码（需校验旧密码，新密码哈希后入库，同时递增 tokenVersion 使旧 token 失效）
+ * 修改密码（需校验旧密码，新密码哈希后入库，同时递增 tokenVersion 使旧 token 失效；加 tenantEq）
  */
 export const updateUserPassword = async (
 	userId: number,
 	oldPassword: string,
 	newPassword: string,
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
-	const user = await findUserById(userId, db);
+	const user = await findUserById(userId, tenantId, db);
 	if (!user) return undefined;
 
 	const ok = await verifyPassword(oldPassword, user.password);
@@ -362,7 +435,13 @@ export const updateUserPassword = async (
 	const [updated] = await db
 		.update(sysUser)
 		.set({ password: hashed })
-		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+		.where(
+			and(
+				eq(sysUser.id, userId),
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+			),
+		)
 		.returning();
 
 	if (!updated) return undefined;
@@ -373,13 +452,17 @@ export const updateUserPassword = async (
 	return updated;
 };
 
-/** 导出用户列表（按查询参数，返回所有匹配用户） */
+/** 导出用户列表（按查询参数，返回所有匹配用户；加 tenantEq） */
 export const exportUsers = async (
 	query: UserListFilter,
 	ctx: DataScopeContext,
+	tenantId: number,
 	db: DB,
 ): Promise<UserListRecord[]> => {
-	const where = [isNull(sysUser.deleteTime)];
+	const where = [
+		isNull(sysUser.deleteTime),
+		tenantEq(sysUser.tenantId, tenantId),
+	];
 	if (query.keywords) {
 		const kw = or(
 			like(sysUser.username, `%${escapeLike(query.keywords)}%`),
@@ -404,6 +487,7 @@ export const exportUsers = async (
 
 	const roleNameMap = await batchFindUserRoleNames(
 		list.map((u) => u.id),
+		tenantId,
 		db,
 	);
 	return list.map((u) => ({
@@ -412,10 +496,10 @@ export const exportUsers = async (
 	}));
 };
 
-/** 逐行创建用户（导入用，密码已由调用方哈希）。逐行 insert 而非批量，
- * 使得 within-file 同名用户不会导致整批回滚，非法行写入 messageList。 */
+/** 逐行创建用户（导入用，密码已由调用方哈希；注入 tenantId） */
 export const importUsers = async (
 	users: UserImportRow[],
+	tenantId: number,
 	db: DB,
 ): Promise<{ created: number; messages: string[] }> => {
 	let created = 0;
@@ -423,7 +507,7 @@ export const importUsers = async (
 	for (const u of users) {
 		const { rowNum, ...dbValues } = u;
 		try {
-			await db.insert(sysUser).values(dbValues);
+			await db.insert(sysUser).values({ ...dbValues, tenantId });
 			created++;
 		} catch {
 			// 预校验已保证必填/长度；唯一约束仅 username，故逐行失败即用户名冲突
@@ -433,30 +517,44 @@ export const importUsers = async (
 	return { created, messages };
 };
 
-/** 更新手机号 */
+/** 更新手机号（加 tenantEq） */
 export const updateUserMobile = async (
 	userId: number,
 	mobile: string | null,
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ mobile })
-		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+		.where(
+			and(
+				eq(sysUser.id, userId),
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+			),
+		)
 		.returning();
 	return user;
 };
 
-/** 更新邮箱 */
+/** 更新邮箱（加 tenantEq） */
 export const updateUserEmail = async (
 	userId: number,
 	email: string | null,
+	tenantId: number,
 	db: DB,
 ): Promise<UserRecord | undefined> => {
 	const [user] = await db
 		.update(sysUser)
 		.set({ email })
-		.where(and(eq(sysUser.id, userId), isNull(sysUser.deleteTime)))
+		.where(
+			and(
+				eq(sysUser.id, userId),
+				tenantEq(sysUser.tenantId, tenantId),
+				isNull(sysUser.deleteTime),
+			),
+		)
 		.returning();
 	return user;
 };

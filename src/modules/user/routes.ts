@@ -56,13 +56,13 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			const userInfo = await findUserById(userId, db);
+			const userInfo = await findUserById(userId, user.tenantId, db);
 			if (!userInfo) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
 			const [roles, perms] = await Promise.all([
-				findUserRoles(userId, db),
-				findUserPerms(userId, db),
+				findUserRoles(userId, user.tenantId, db),
+				findUserPerms(userId, user.tenantId, db),
 			]);
 			return {
 				userId: String(userInfo.id),
@@ -92,7 +92,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			const detail = await findUserProfileDetail(userId, db);
+			const detail = await findUserProfileDetail(userId, user.tenantId, db);
 			if (!detail) throw notFound(ERR_CODE.USER_NOT_FOUND);
 			// 对齐 §4.11：id 统一转 string，与其它经 parseUser 的接口契约一致
 			return { ...detail, id: String(detail.id) };
@@ -113,7 +113,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			const updated = await updateUserProfile(userId, body, db);
+			const updated = await updateUserProfile(userId, body, user.tenantId, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
 			return parseUser(updated);
 		},
@@ -134,7 +134,13 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			await updateUserPassword(userId, body.oldPassword, body.newPassword, db);
+			await updateUserPassword(
+				userId,
+				body.oldPassword,
+				body.newPassword,
+				user.tenantId,
+				db,
+			);
 			return true;
 		},
 		{
@@ -169,7 +175,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			const userRecord = await findUserById(userId, db);
+			const userRecord = await findUserById(userId, user.tenantId, db);
 			if (!userRecord) throw notFound(ERR_CODE.USER_NOT_FOUND);
 
 			const ok = await verifyPassword(body.password, userRecord.password);
@@ -177,7 +183,12 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 			}
 
-			const updated = await updateUserMobile(userId, body.mobile, db);
+			const updated = await updateUserMobile(
+				userId,
+				body.mobile,
+				user.tenantId,
+				db,
+			);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
 			return parseUser(updated);
 		},
@@ -198,7 +209,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			const userRecord = await findUserById(userId, db);
+			const userRecord = await findUserById(userId, user.tenantId, db);
 			if (!userRecord) throw notFound(ERR_CODE.USER_NOT_FOUND);
 
 			const ok = await verifyPassword(body.password, userRecord.password);
@@ -206,7 +217,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 			}
 
-			const updated = await updateUserMobile(userId, null, db);
+			const updated = await updateUserMobile(userId, null, user.tenantId, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
 			return parseUser(updated);
 		},
@@ -242,7 +253,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			const userRecord = await findUserById(userId, db);
+			const userRecord = await findUserById(userId, user.tenantId, db);
 			if (!userRecord) throw notFound(ERR_CODE.USER_NOT_FOUND);
 
 			const ok = await verifyPassword(body.password, userRecord.password);
@@ -250,7 +261,12 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 			}
 
-			const updated = await updateUserEmail(userId, body.email, db);
+			const updated = await updateUserEmail(
+				userId,
+				body.email,
+				user.tenantId,
+				db,
+			);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
 			return parseUser(updated);
 		},
@@ -271,7 +287,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
 			}
 			const userId = Number(user.sub);
-			const userRecord = await findUserById(userId, db);
+			const userRecord = await findUserById(userId, user.tenantId, db);
 			if (!userRecord) throw notFound(ERR_CODE.USER_NOT_FOUND);
 
 			const ok = await verifyPassword(body.password, userRecord.password);
@@ -279,7 +295,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				throw new BizError(ERR_CODE.USER_PASSWORD_ERROR, undefined, 401);
 			}
 
-			const updated = await updateUserEmail(userId, null, db);
+			const updated = await updateUserEmail(userId, null, user.tenantId, db);
 			if (!updated) throw notFound(ERR_CODE.USER_NOT_FOUND);
 			return parseUser(updated);
 		},
@@ -306,7 +322,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 				user.dataScopes,
 				db,
 			);
-			const result = await findUsers(query, dataScopeCtx, db);
+			const result = await findUsers(query, dataScopeCtx, user.tenantId, db);
 			return {
 				...result,
 				list: result.list.map((u) => parseUser(u)),
@@ -326,8 +342,11 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.get(
 		"/options",
-		async () => {
-			return findUserOptions(db);
+		async ({ user }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			return findUserOptions(user.tenantId, db);
 		},
 		{
 			auth: true,
@@ -341,8 +360,11 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.get(
 		"/:id/form",
-		async ({ params }) => {
-			const data = await findUserFormData(params.id, db);
+		async ({ user, params }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const data = await findUserFormData(params.id, user.tenantId, db);
 			if (!data) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
@@ -363,8 +385,11 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.get(
 		"/:id",
-		async ({ params }) => {
-			const user = await findUserById(params.id, db);
+		async ({ user: ctxUser, params }) => {
+			if (!ctxUser) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const user = await findUserById(params.id, ctxUser.tenantId, db);
 			if (!user) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
@@ -383,12 +408,15 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.post(
 		"/",
-		async ({ body }) => {
-			const user = await createUser(body, db);
+		async ({ user, body }) => {
 			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const record = await createUser(body, user.tenantId, db);
+			if (!record) {
 				throw new BizError(ERR_CODE.SYSTEM_ERROR, undefined, 500);
 			}
-			return parseUser(user);
+			return parseUser(record);
 		},
 		{
 			auth: true,
@@ -404,13 +432,21 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.put(
 		"/:id/password/reset",
-		async ({ params, query }) => {
-			const { password } = query;
-			const user = await resetUserPassword(params.id, password, db);
+		async ({ user, params, query }) => {
 			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const { password } = query;
+			const record = await resetUserPassword(
+				params.id,
+				password,
+				user.tenantId,
+				db,
+			);
+			if (!record) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
-			return parseUser(user);
+			return parseUser(record);
 		},
 		{
 			auth: true,
@@ -427,12 +463,15 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.put(
 		"/:id",
-		async ({ params, body }) => {
-			const user = await updateUser(params.id, body, db);
+		async ({ user, params, body }) => {
 			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
+			const record = await updateUser(params.id, body, user.tenantId, db);
+			if (!record) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
-			return parseUser(user);
+			return parseUser(record);
 		},
 		{
 			auth: true,
@@ -449,7 +488,10 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.delete(
 		"/:id",
-		async ({ params }) => {
+		async ({ user: ctxUser, params }) => {
+			if (!ctxUser) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
 			// 前端批量删除发送 "1,2,3" 格式，单条删除发送 "1"
 			const idStr = params.id;
 			if (idStr.includes(",")) {
@@ -457,18 +499,18 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 					.split(",")
 					.map((s) => Number(s.trim()))
 					.filter((n) => !Number.isNaN(n));
-				const deleted = await batchSoftDeleteUsers(ids, db);
+				const deleted = await batchSoftDeleteUsers(ids, ctxUser.tenantId, db);
 				return deleted.map((u) => parseUser(u));
 			}
 			const id = Number(idStr);
 			if (Number.isNaN(id)) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
-			const user = await softDeleteUser(id, db);
-			if (!user) {
+			const record = await softDeleteUser(id, ctxUser.tenantId, db);
+			if (!record) {
 				throw notFound(ERR_CODE.USER_NOT_FOUND);
 			}
-			return parseUser(user);
+			return parseUser(record);
 		},
 		{
 			auth: true,
@@ -538,6 +580,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 			const users = await exportUsers(
 				{ keywords, status, deptId },
 				dataScopeCtx,
+				user.tenantId,
 				db,
 			);
 			const ws = XLSX.utils.json_to_sheet(
@@ -576,7 +619,10 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 	)
 	.post(
 		"/import",
-		async ({ body }) => {
+		async ({ user, body }) => {
+			if (!user) {
+				throw new BizError(ERR_CODE.ACCESS_TOKEN_INVALID, undefined, 401);
+			}
 			const file = body.file;
 			// ponytail: expect Buffer from multipart, 50MB ceiling from storage matches
 			const buf = Buffer.from(await file.arrayBuffer());
@@ -635,6 +681,7 @@ export const userRoutes = new Elysia({ prefix: "/api/v1/users" })
 
 			const { created, messages: importMessages } = await importUsers(
 				valid,
+				user.tenantId,
 				db,
 			);
 			return {

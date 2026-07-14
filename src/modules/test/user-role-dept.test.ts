@@ -60,6 +60,7 @@ describe("user + role + dept 联合查询", () => {
 			password: "test",
 			deptId: TEST_DEPT_ID,
 			status: 1,
+			tenantId: 0,
 			createdBy: 1,
 			createTime: now,
 			updatedBy: 1,
@@ -68,6 +69,7 @@ describe("user + role + dept 联合查询", () => {
 		await db.insert(sysUserRole).values({
 			userId: TEST_USER_ID,
 			roleId: TEST_ROLE_ID,
+			tenantId: 0,
 		});
 	});
 
@@ -86,6 +88,7 @@ describe("user + role + dept 联合查询", () => {
 		const result = await findUsers(
 			{ pageNum: 1, pageSize: 10, keywords: "jointest" },
 			ctx,
+			0,
 			db,
 		);
 
@@ -106,6 +109,7 @@ describe("user + role + dept 联合查询", () => {
 		const result = await findUsers(
 			{ pageNum: 1, pageSize: 10, deptId: TEST_DEPT_ID },
 			ctx,
+			0,
 			db,
 		);
 		expect(result.total).toBeGreaterThanOrEqual(1);
@@ -119,7 +123,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.SELF }],
 		};
 
-		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, 0, db);
 		expect(result.list.every((u) => u.id === TEST_USER_ID)).toBe(true);
 	});
 
@@ -131,11 +135,15 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.DEPT }],
 		};
 
-		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, 0, db);
 		expect(result.list.every((u) => u.deptId === TEST_DEPT_ID)).toBe(true);
 	});
 
 	test("findUsers dataScope=DEPT_AND_SUB 返回部门及子部门", async () => {
+		// 清理可能残留的测试数据（上一次失败未清理）
+		await db.delete(sysUser).where(eq(sysUser.id, 101));
+		await db.delete(sysDept).where(eq(sysDept.id, 101));
+
 		// 插入一个子部门
 		const childDeptId = 101;
 		const childUserId = 101;
@@ -161,6 +169,7 @@ describe("user + role + dept 联合查询", () => {
 			password: "test",
 			deptId: childDeptId,
 			status: 1,
+			tenantId: 0,
 			createdBy: 1,
 			createTime: now,
 			updatedBy: 1,
@@ -174,7 +183,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.DEPT_AND_SUB }],
 		};
 
-		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, 0, db);
 		const ids = result.list.map((u) => u.id);
 		expect(ids).toContain(TEST_USER_ID);
 		expect(ids).toContain(childUserId);
@@ -196,7 +205,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.CUSTOM, customDeptIds: [TEST_DEPT_ID] }],
 		};
 
-		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, 0, db);
 		expect(result.list.every((u) => u.deptId === TEST_DEPT_ID)).toBe(true);
 	});
 
@@ -211,6 +220,7 @@ describe("user + role + dept 联合查询", () => {
 		const result = await findUsers(
 			{ pageNum: 1, pageSize: 10, keywords: "联合" },
 			ctx,
+			0,
 			db,
 		);
 		expect(result.list.some((u) => u.id === TEST_USER_ID)).toBe(true);
@@ -229,7 +239,7 @@ describe("user + role + dept 联合查询", () => {
 			scopes: [{ scope: DATA_SCOPE.ALL }],
 		};
 
-		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, db);
+		const result = await findUsers({ pageNum: 1, pageSize: 10 }, ctx, 0, db);
 		expect(result.list.some((u) => u.id === TEST_USER_ID)).toBe(false);
 
 		await db

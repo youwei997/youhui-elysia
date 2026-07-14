@@ -38,6 +38,7 @@ describe("auth 权限链联合查询", () => {
 			password: "test",
 			deptId: 1,
 			status: 1,
+			tenantId: 0,
 			createdBy: 1,
 			createTime: now,
 			updatedBy: 1,
@@ -102,13 +103,14 @@ describe("auth 权限链联合查询", () => {
 			},
 		]);
 		await db.insert(sysRoleMenu).values([
-			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_1 },
-			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_2 },
-			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_3 },
+			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_1, tenantId: 0 },
+			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_2, tenantId: 0 },
+			{ roleId: TEST_ROLE_ID, menuId: TEST_MENU_ID_3, tenantId: 0 },
 		]);
 		await db.insert(sysUserRole).values({
 			userId: TEST_USER_ID,
 			roleId: TEST_ROLE_ID,
+			tenantId: 0,
 		});
 	});
 
@@ -117,13 +119,13 @@ describe("auth 权限链联合查询", () => {
 	});
 
 	test("findUserRoles 查用户角色（2表 JOIN）", async () => {
-		const roles = await findUserRoles(TEST_USER_ID, db);
+		const roles = await findUserRoles(TEST_USER_ID, 0, db);
 		expect(roles.length).toBeGreaterThanOrEqual(1);
 		expect(roles.some((r) => r.code === "AUTH_TEST_ROLE")).toBe(true);
 	});
 
 	test("findUserPerms 查用户权限点（4表 JOIN）", async () => {
-		const perms = await findUserPerms(TEST_USER_ID, db);
+		const perms = await findUserPerms(TEST_USER_ID, 0, db);
 		expect(perms).toContain("test:btn:add");
 		expect(perms).toContain("test:btn:edit");
 	});
@@ -152,7 +154,7 @@ describe("auth 权限链联合查询", () => {
 			{ roleId: role2Id, menuId: TEST_MENU_ID_3 },
 		]);
 
-		const perms = await findUserPerms(TEST_USER_ID, db);
+		const perms = await findUserPerms(TEST_USER_ID, 0, db);
 		const addCount = perms.filter((p) => p === "test:btn:add").length;
 		const editCount = perms.filter((p) => p === "test:btn:edit").length;
 		expect(addCount).toBe(1);
@@ -177,7 +179,7 @@ describe("auth 权限链联合查询", () => {
 			.set({ deleteTime: new Date().toISOString() })
 			.where(eq(sysRole.id, TEST_ROLE_ID));
 
-		const perms = await findUserPerms(TEST_USER_ID, db);
+		const perms = await findUserPerms(TEST_USER_ID, 0, db);
 		expect(perms).not.toContain("test:btn:add");
 		expect(perms).not.toContain("test:btn:edit");
 
@@ -188,7 +190,7 @@ describe("auth 权限链联合查询", () => {
 	});
 
 	test("findUserPerms 过滤无 perm 的菜单（type=M 目录）", async () => {
-		const perms = await findUserPerms(TEST_USER_ID, db);
+		const perms = await findUserPerms(TEST_USER_ID, 0, db);
 		const hasNullPerm = perms.some((p) => p === null || p === "");
 		expect(hasNullPerm).toBe(false);
 	});

@@ -104,7 +104,7 @@ describe("user profile 个人中心", () => {
 	});
 
 	test("findUserProfileDetail 返回含 deptName 和 roleNames 的详情", async () => {
-		const detail = await findUserProfileDetail(TEST_USER_ID, db);
+		const detail = await findUserProfileDetail(TEST_USER_ID, 0, db);
 		expect(detail).toBeDefined();
 		expect(defined(detail).username).toBeDefined();
 		expect(defined(detail).deptName).toBe("个人中心测试部门");
@@ -121,6 +121,7 @@ describe("user profile 个人中心", () => {
 				avatar: "https://example.com/avatar.png",
 				gender: 2,
 			},
+			0,
 			db,
 		);
 		expect(updated).toBeDefined();
@@ -132,6 +133,7 @@ describe("user profile 个人中心", () => {
 		await updateUserProfile(
 			TEST_USER_ID,
 			{ nickname: "测试用户", gender: 1 },
+			0,
 			db,
 		);
 	});
@@ -149,6 +151,7 @@ describe("user profile 个人中心", () => {
 			TEST_USER_ID,
 			"test123456",
 			"newpass123",
+			0,
 			db,
 		);
 		expect(updated).toBeDefined();
@@ -173,27 +176,32 @@ describe("user profile 个人中心", () => {
 
 	test("updateUserPassword 旧密码错误抛出异常", async () => {
 		await expect(
-			updateUserPassword(TEST_USER_ID, "wrongpass", "newpass123", db),
+			updateUserPassword(TEST_USER_ID, "wrongpass", "newpass123", 0, db),
 		).rejects.toThrow("PASSWORD_INCORRECT");
 	});
 
 	test("updateUserMobile 绑定手机号", async () => {
-		const updated = await updateUserMobile(TEST_USER_ID, "13900139000", db);
+		const updated = await updateUserMobile(TEST_USER_ID, "13900139000", 0, db);
 		expect(defined(updated).mobile).toBe("13900139000");
 
 		// 解绑
-		await updateUserMobile(TEST_USER_ID, null, db);
-		const user = await findUserById(TEST_USER_ID, db);
+		await updateUserMobile(TEST_USER_ID, null, 0, db);
+		const user = await findUserById(TEST_USER_ID, 0, db);
 		expect(defined(user).mobile).toBeNull();
 	});
 
 	test("updateUserEmail 绑定邮箱", async () => {
-		const updated = await updateUserEmail(TEST_USER_ID, "new@example.com", db);
+		const updated = await updateUserEmail(
+			TEST_USER_ID,
+			"new@example.com",
+			0,
+			db,
+		);
 		expect(defined(updated).email).toBe("new@example.com");
 
 		// 解绑
-		await updateUserEmail(TEST_USER_ID, null, db);
-		const user = await findUserById(TEST_USER_ID, db);
+		await updateUserEmail(TEST_USER_ID, null, 0, db);
+		const user = await findUserById(TEST_USER_ID, 0, db);
 		expect(defined(user).email).toBeNull();
 	});
 });

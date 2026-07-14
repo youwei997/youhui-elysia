@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import type { DB } from "@/db/client";
+import { tenantEq } from "@/db/helpers/tenant";
 import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu, sysUserRole } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
@@ -34,11 +35,16 @@ export const findActiveUserByUsername = async (
 
 /**
  * 查询用户关联的有效角色列表
- * 过滤：角色软删 + 角色状态正常
+ * 过滤：角色软删 + 角色状态正常 + 租户隔离（用 home tenant，非 token 当前 tenantId）
  * 返回 { code, dataScope }，供 JWT payload 注入 roles / dataScopes 字段
+ *
+ * @param userId 用户 ID
+ * @param homeTenantId 用户所属租户 ID（来自 sys_user.tenant_id，即 home tenant）
+ * @param db Drizzle 实例
  */
 export const findUserRoles = async (
 	userId: number,
+	homeTenantId: number,
 	db: DB,
 ): Promise<UserRoleItem[]> => {
 	const rows = await db
@@ -51,6 +57,7 @@ export const findUserRoles = async (
 		.where(
 			and(
 				eq(sysUserRole.userId, userId),
+				tenantEq(sysUserRole.tenantId, homeTenantId),
 				isNull(sysRole.deleteTime),
 				eq(sysRole.status, 1),
 			),
@@ -64,12 +71,18 @@ export const findUserRoles = async (
  * 链路：sys_user_role → sys_role → sys_role_menu → sys_menu
  * 过滤：角色软删/禁用 + 菜单软删 + 仅取有 perm 的菜单（B 按钮或带 perm 的菜单）
  * 去重：用 Set 内存去重（多角色绑同一菜单的情况）
+ * 租户隔离：sys_user_role 和 sys_role_menu 均按 homeTenantId 过滤
  *
  * 注意：ROOT 角色按约定不绑定菜单（短路通过靠 roles.includes('ROOT') 判断），
  * 因此 ROOT 用户此函数可能返回 []，业务层不应依赖 perms 推断 ROOT 身份。
+ *
+ * @param userId 用户 ID
+ * @param homeTenantId 用户所属租户 ID（来自 sys_user.tenant_id，即 home tenant）
+ * @param db Drizzle 实例
  */
 export const findUserPerms = async (
 	userId: number,
+	homeTenantId: number,
 	db: DB,
 ): Promise<string[]> => {
 	const rows = await db
@@ -81,6 +94,8 @@ export const findUserPerms = async (
 		.where(
 			and(
 				eq(sysUserRole.userId, userId),
+				tenantEq(sysUserRole.tenantId, homeTenantId),
+				tenantEq(sysRoleMenu.tenantId, homeTenantId),
 				isNull(sysRole.deleteTime),
 				eq(sysRole.status, 1),
 				isNull(sysMenu.deleteTime),
