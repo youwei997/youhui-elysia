@@ -9,7 +9,7 @@ import {
 /**
  * 系统租户套餐表
  *
- * 对齐 Java 原版 sys_tenant_plan：不含软删，只保留 create_time/update_time。
+ * 对齐 Java 原版 sys_tenant_plan：不含软删，只保留 created_at/updated_at。
  * 套餐定义一组可授权给租户的业务菜单范围。
  */
 export const sysTenantPlan = pgTable("sys_tenant_plan", {

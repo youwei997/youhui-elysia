@@ -10,7 +10,7 @@ import {
 /**
  * 系统租户表（平台级配置表）
  *
- * 与 Java 原版对齐：不含软删和创建人/更新人追踪，只保留 create_time/update_time。
+ * 与 Java 原版对齐：不含软删和创建人/更新人追踪，只保留 created_at/updated_at。
  * tenantId=0 为平台租户（系统运行基础），不可删除/禁用。
  */
 export const sysTenant = pgTable(
