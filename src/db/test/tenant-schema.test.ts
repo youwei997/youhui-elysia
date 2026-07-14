@@ -10,6 +10,10 @@ import { db } from "./client";
 /**
  * Step 1 多租户 schema 运行时验证
  *
+ * ponytail: 本文件使用 db.execute() 查询 information_schema/pg_indexes 验证 schema。
+ * 原因：Drizzle ORM 无类型安全的元数据查询 API，information_schema 查询无法用 Drizzle
+ * 类型安全 API 替代。此为测试环境验证手段，不影响业务运行时代码。
+ *
  * 通过查询 information_schema 验证：
  * 1. 新增 4 张租户表存在且结构正确
  * 2. 现有业务表含 tenant_id 列

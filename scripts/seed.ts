@@ -12,8 +12,16 @@ import { sysTenantPlanMenu } from "@/db/schema/system/tenant-plan-menu";
 import { sysTenantMenu } from "@/db/schema/system/tenant-menu";
 
 /**
+ * 种子数据初始化脚本
+ *
  * bcrypt 哈希密码（明文：123456）
  * 后续阶段 3 接入 auth 模块后，可通过登录接口验证
+ *
+ * ponytail: 本文件使用 db.execute() 原生 SQL 完成两类操作：
+ * 1. 部分唯一索引（partial unique index）：Drizzle schema 不支持 WHERE ... IS NULL 语法，
+ *    故 CREATE UNIQUE INDEX 用原生 SQL 创建。升级路径：Drizzle 支持后迁移到 schema 声明。
+ * 2. 序列重置（setval）：Drizzle insert 不提供序列管理 API，用原生 SQL 保持自增 ID 连续。
+ * 以上均为 seed 脚本特有，不影响业务运行时代码。
  */
 const DEFAULT_PASSWORD =
 	"$2a$10$xVWsNOhHrCxh5UbpCE7/HuJ.PAOKcYAqRxD2CO2nVnJS.IAXkr5aq";

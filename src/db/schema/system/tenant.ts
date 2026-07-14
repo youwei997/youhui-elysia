@@ -37,12 +37,12 @@ export const sysTenant = pgTable("sys_tenant", {
 	remark: varchar("remark", { length: 255 }),
 	/** 过期时间 */
 	expireTime: timestamp("expire_time", { withTimezone: true, mode: "string" }),
-	/** 创建时间 */
-	createTime: timestamp("created_at", { withTimezone: true, mode: "string" })
+	/** 创建时间（对齐 Java 原版 create_time） */
+	createTime: timestamp("create_time", { withTimezone: true, mode: "string" })
 		.defaultNow()
 		.notNull(),
-	/** 更新时间 */
-	updateTime: timestamp("updated_at", { withTimezone: true, mode: "string" })
+	/** 更新时间（对齐 Java 原版 update_time） */
+	updateTime: timestamp("update_time", { withTimezone: true, mode: "string" })
 		.defaultNow()
 		.notNull(),
 });
