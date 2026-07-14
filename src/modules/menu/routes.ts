@@ -1,9 +1,8 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { buildTree, type TreeNode } from "@/db/helpers/tree";
-import { BizError, ERR_CODE, notFound } from "@/lib/errors";
-import type { AuthContext } from "@/plugins/auth";
-import { authPlugin } from "@/plugins/auth";
+import { BizError, ERR_CODE, notFound, unauthorized } from "@/lib/errors";
+import { authPlugin, type AuthContext } from "@/plugins/auth";
 import {
 	createMenu,
 	findAllMenus,
@@ -208,10 +207,12 @@ export const menuRoutes = new Elysia({ prefix: "/api/v1/menus" })
 	)
 	.get(
 		"/options",
-		async ({ query }) => {
+		async ({ query, user }) => {
+			if (!user) throw unauthorized();
 			const items = await findMenuOptions(
 				query.onlyParent === "true" || query.onlyParent === "1",
 				query.scope,
+				user.tenantId,
 				db,
 			);
 			// findMenuOptions 返回平面列表，需要组装成树

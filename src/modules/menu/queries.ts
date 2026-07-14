@@ -5,6 +5,7 @@ import { tenantEq } from "@/db/helpers/tenant";
 import { sysMenu } from "@/db/schema/system/menu";
 import { sysRoleMenu } from "@/db/schema/system/relation";
 import { sysRole } from "@/db/schema/system/role";
+import { sysTenantMenu } from "@/db/schema/system/tenant-menu";
 import type { MenuCreateBody, MenuUpdateBody } from "./schema";
 import type { MenuRecord, MenuRoute } from "./types";
 
@@ -60,7 +61,7 @@ export const findMenusByRoleCodes = async (
 		return [];
 	}
 
-	const rows = await db
+	const query = db
 		.selectDistinct({
 			id: sysMenu.id,
 			parentId: sysMenu.parentId,
@@ -81,7 +82,20 @@ export const findMenusByRoleCodes = async (
 		})
 		.from(sysMenu)
 		.innerJoin(sysRoleMenu, eq(sysRoleMenu.menuId, sysMenu.id))
-		.innerJoin(sysRole, eq(sysRole.id, sysRoleMenu.roleId))
+		.innerJoin(sysRole, eq(sysRole.id, sysRoleMenu.roleId));
+
+	// 非平台租户：与 sys_tenant_menu 求交集（套餐菜单限制）
+	if (tenantId !== 0) {
+		query.innerJoin(
+			sysTenantMenu,
+			and(
+				eq(sysTenantMenu.menuId, sysMenu.id),
+				eq(sysTenantMenu.tenantId, tenantId),
+			),
+		);
+	}
+
+	const rows = await query
 		.where(
 			and(
 				inArray(sysRole.code, roleCodes),
@@ -93,7 +107,6 @@ export const findMenusByRoleCodes = async (
 			),
 		)
 		.orderBy(asc(sysMenu.sort));
-	// Drizzle 用 .select({ ... }) 投影字段后返回类型与 MenuRoute 不完全匹配，需显式断言
 	return rows as MenuRoute[];
 };
 
@@ -140,6 +153,7 @@ export const findAllMenusWithButtons = async (
 export const findMenuOptions = async (
 	onlyParent: boolean | undefined,
 	scope: number | undefined,
+	tenantId: number,
 	db: DB,
 ): Promise<Array<{ value: string; label: string; parentId: number }>> => {
 	const where = [isNull(sysMenu.deleteTime)];
@@ -149,15 +163,28 @@ export const findMenuOptions = async (
 	if (scope !== undefined) {
 		where.push(eq(sysMenu.scope, scope));
 	}
-	const rows = await db
+
+	const query = db
 		.select({
 			id: sysMenu.id,
 			name: sysMenu.name,
 			parentId: sysMenu.parentId,
 		})
 		.from(sysMenu)
-		.where(and(...where))
-		.orderBy(asc(sysMenu.sort));
+		.where(and(...where));
+
+	// 非平台租户：限定在本租户 sys_tenant_menu 授权的菜单内
+	if (tenantId !== 0) {
+		query.innerJoin(
+			sysTenantMenu,
+			and(
+				eq(sysTenantMenu.menuId, sysMenu.id),
+				eq(sysTenantMenu.tenantId, tenantId),
+			),
+		);
+	}
+
+	const rows = await query.orderBy(asc(sysMenu.sort));
 	return rows.map((r) => ({
 		value: String(r.id),
 		label: r.name,
