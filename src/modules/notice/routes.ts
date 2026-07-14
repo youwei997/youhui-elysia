@@ -52,7 +52,7 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 		"/my",
 		async ({ query, user }) => {
 			if (!user) throw unauthorized();
-			const result = await findMyNotices(query, Number(user.sub), db);
+			const result = await findMyNotices(query, Number(user.sub), user.tenantId, db);
 			return {
 				...result,
 				list: result.list.map((n) => parseMyNotice(n)),
@@ -69,10 +69,11 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
-	.get(
-		"/",
-		async ({ query }) => {
-			const result = await findNotices(query, db);
+			.get(
+				"/",
+				async ({ query, user }) => {
+					if (!user) throw unauthorized();
+					const result = await findNotices(query, user.tenantId, db);
 			return {
 				...result,
 				list: result.list.map((n) => parseNotice(n)),
@@ -89,10 +90,11 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
-	.get(
-		"/:id/form",
-		async ({ params }) => {
-			const row = await findNoticeById(params.id, db);
+			.get(
+				"/:id/form",
+				async ({ params, user }) => {
+					if (!user) throw unauthorized();
+					const row = await findNoticeById(params.id, user.tenantId, db);
 			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
 			return parseNotice(row);
 		},
@@ -111,9 +113,9 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 		"/:id/detail",
 		async ({ params, user }) => {
 			if (!user) throw unauthorized();
-			const row = await findNoticeDetailById(params.id, db);
+			const row = await findNoticeDetailById(params.id, user.tenantId, db);
 			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
-			await markNoticeAsRead(params.id, Number(user.sub), db);
+			await markNoticeAsRead(params.id, Number(user.sub), user.tenantId, db);
 			return parseNotice(row);
 		},
 		{
@@ -127,10 +129,11 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
-	.post(
-		"/",
-		async ({ body }) => {
-			const row = await createNotice(body, db);
+			.post(
+				"/",
+				async ({ body, user }) => {
+					if (!user) throw unauthorized();
+					const row = await createNotice(body, user.tenantId, db);
 			return parseNotice(row);
 		},
 		{
@@ -146,11 +149,11 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
-	.put(
-		"/read-all",
-		async ({ user }) => {
-			if (!user) throw unauthorized();
-			await markAllNoticesAsRead(Number(user.sub), db);
+		.put(
+			"/read-all",
+			async ({ user }) => {
+				if (!user) throw unauthorized();
+				await markAllNoticesAsRead(Number(user.sub), user.tenantId, db);
 			return true;
 		},
 		{
@@ -163,12 +166,13 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
-	.put(
-		"/:id",
-		async ({ params, body }) => {
-			const existing = await findNoticeById(params.id, db);
-			if (!existing) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
-			const row = await updateNotice(params.id, body, db);
+		.put(
+			"/:id",
+			async ({ params, body, user }) => {
+				if (!user) throw unauthorized();
+				const existing = await findNoticeById(params.id, user.tenantId, db);
+				if (!existing) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+				const row = await updateNotice(params.id, body, user.tenantId, db);
 			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
 			return parseNotice(row);
 		},
@@ -185,16 +189,16 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
-	.put(
-		"/:id/publish",
-		async ({ params, user }) => {
-			if (!user) throw unauthorized();
-			const existing = await findNoticeById(params.id, db);
-			if (!existing) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
-			if (existing.publishStatus === 1) {
-				throw new BizError(ERR_CODE.NOTICE_ALREADY_PUBLISHED);
-			}
-			const row = await publishNotice(params.id, Number(user.sub), db);
+		.put(
+			"/:id/publish",
+			async ({ params, user }) => {
+				if (!user) throw unauthorized();
+				const existing = await findNoticeById(params.id, user.tenantId, db);
+				if (!existing) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+				if (existing.publishStatus === 1) {
+					throw new BizError(ERR_CODE.NOTICE_ALREADY_PUBLISHED);
+				}
+				const row = await publishNotice(params.id, Number(user.sub), user.tenantId, db);
 			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
 			// 广播实时通知（broadcast 内部按连接 try/catch 隔离，不会抛错阻断发布结果）
 			// id 统一 String（对齐 notice 前端 id 约定，避免 bigint 精度丢失）；
@@ -222,15 +226,16 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
-	.put(
-		"/:id/revoke",
-		async ({ params }) => {
-			const existing = await findNoticeById(params.id, db);
-			if (!existing) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
-			if (existing.publishStatus !== 1) {
-				throw new BizError(ERR_CODE.NOTICE_NOT_PUBLISHED);
-			}
-			const row = await revokeNotice(params.id, db);
+		.put(
+			"/:id/revoke",
+			async ({ params, user }) => {
+				if (!user) throw unauthorized();
+				const existing = await findNoticeById(params.id, user.tenantId, db);
+				if (!existing) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
+				if (existing.publishStatus !== 1) {
+					throw new BizError(ERR_CODE.NOTICE_NOT_PUBLISHED);
+				}
+				const row = await revokeNotice(params.id, user.tenantId, db);
 			if (!row) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
 			// 广播撤回，前端按 id 从列表移除 + 未读 -1（撤回只关心 id）
 			broadcast("notice-revoke", { id: String(row.id) });
@@ -248,12 +253,13 @@ export const noticeRoutes = new Elysia({ prefix: "/api/v1/notices" })
 			},
 		},
 	)
-	.delete(
-		"/:ids",
-		async ({ params }) => {
-			// 前端批量删传 "1,2,3"，单条传 "1"；schema 已保证纯数字，直接 split
-			const ids = params.ids.split(",").map(Number);
-			const deleted = await batchSoftDeleteNotices(ids, db);
+		.delete(
+			"/:ids",
+			async ({ params, user }) => {
+				if (!user) throw unauthorized();
+				// 前端批量删传 "1,2,3"，单条传 "1"；schema 已保证纯数字，直接 split
+				const ids = params.ids.split(",").map(Number);
+				const deleted = await batchSoftDeleteNotices(ids, user.tenantId, db);
 			// 0 条命中说明目标全部不存在或已软删，视为无效删除，避免前端误判成功
 			if (deleted === 0) throw notFound(ERR_CODE.NOTICE_NOT_FOUND);
 			return true;

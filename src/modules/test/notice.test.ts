@@ -78,6 +78,7 @@ describe("notice 模块查询", () => {
 			createTime: now,
 			updatedBy: 1,
 			updateTime: now,
+			tenantId: 0,
 		};
 		await db.insert(sysNotice).values([
 			{
@@ -285,11 +286,12 @@ describe("notice 模块查询", () => {
 		await cleanUp();
 	});
 
-	test("findNotices 分页 + title 模糊 + publisherName join", async () => {
-		const result = await findNotices(
-			{ pageNum: 1, pageSize: 50, title: "测试通知" },
-			db,
-		);
+test("findNotices 分页 + title 模糊 + publisherName join", async () => {
+	const result = await findNotices(
+		{ pageNum: 1, pageSize: 50, title: "测试通知" },
+		0,
+		db,
+	);
 		expect(result.total).toBeGreaterThanOrEqual(5);
 
 		const draft = result.list.find((n) => n.id === LIST_DRAFT_ID);
@@ -299,11 +301,12 @@ describe("notice 模块查询", () => {
 		expect(published?.publisherName).toBe(publisherName);
 	});
 
-	test("findNotices 按 publishStatus 过滤", async () => {
-		const result = await findNotices(
-			{ pageNum: 1, pageSize: 50, title: "测试通知", publishStatus: 0 },
-			db,
-		);
+test("findNotices 按 publishStatus 过滤", async () => {
+	const result = await findNotices(
+		{ pageNum: 1, pageSize: 50, title: "测试通知", publishStatus: 0 },
+		0,
+		db,
+	);
 		const ids = result.list.map((n) => n.id);
 		expect(ids).toContain(LIST_DRAFT_ID);
 		expect(ids).not.toContain(LIST_PUBLISHED_ID);
@@ -319,6 +322,7 @@ describe("notice 模块查询", () => {
 				targetType: 2,
 				targetUserIds: [11, 22, 33],
 			},
+			0,
 			db,
 		);
 		expect(created.publishStatus).toBe(0);
@@ -330,10 +334,10 @@ describe("notice 模块查询", () => {
 	});
 
 	test("findNoticeById 命中与不存在", async () => {
-		const hit = await findNoticeById(UPDATE_ID, db);
+		const hit = await findNoticeById(UPDATE_ID, 0, db);
 		expect(hit?.title).toBe("测试通知待编辑");
 
-		const miss = await findNoticeById(999999, db);
+		const miss = await findNoticeById(999999, 0, db);
 		expect(miss).toBeUndefined();
 	});
 
@@ -341,6 +345,7 @@ describe("notice 模块查询", () => {
 		const updated = await updateNotice(
 			UPDATE_ID,
 			{ title: "测试通知编辑后", targetUserIds: [7, 8] },
+			0,
 			db,
 		);
 		expect(updated?.title).toBe("测试通知编辑后");
@@ -350,13 +355,14 @@ describe("notice 模块查询", () => {
 	test("batchSoftDeleteNotices 批量软删 + 级联软删 user_notice + 返回条数", async () => {
 		const deleted = await batchSoftDeleteNotices(
 			[DELETE_ID_A, DELETE_ID_B],
+			0,
 			db,
 		);
 		expect(deleted).toBe(2);
 
 		// 软删后主表查不到
-		expect(await findNoticeById(DELETE_ID_A, db)).toBeUndefined();
-		expect(await findNoticeById(DELETE_ID_B, db)).toBeUndefined();
+		expect(await findNoticeById(DELETE_ID_A, 0, db)).toBeUndefined();
+		expect(await findNoticeById(DELETE_ID_B, 0, db)).toBeUndefined();
 
 		// 关联 user_notice 一并被软删（deleteTime 非空 → 未删的条数为 0）
 		const alive = await db
@@ -372,7 +378,7 @@ describe("notice 模块查询", () => {
 	});
 
 	test("batchSoftDeleteNotices 目标全不存在时返回 0（route 据此报 NOTICE_NOT_FOUND）", async () => {
-		const deleted = await batchSoftDeleteNotices([888888, 999999], db);
+		const deleted = await batchSoftDeleteNotices([888888, 999999], 0, db);
 		expect(deleted).toBe(0);
 	});
 
@@ -397,7 +403,7 @@ describe("notice 模块查询", () => {
 			.from(sysUser)
 			.where(isNull(sysUser.deleteTime));
 
-		const updated = await publishNotice(PUBLISH_ALL_ID, publisherId, db);
+		const updated = await publishNotice(PUBLISH_ALL_ID, publisherId, 0, db);
 		expect(updated?.publishStatus).toBe(1);
 		expect(updated?.publisherId).toBe(publisherId);
 		expect(updated?.publishTime).not.toBeNull();
@@ -416,7 +422,7 @@ describe("notice 模块查询", () => {
 	});
 
 	test("publishNotice targetType=2（指定）仅物化给 targetUserIds", async () => {
-		const updated = await publishNotice(PUBLISH_TARGETED_ID, publisherId, db);
+		const updated = await publishNotice(PUBLISH_TARGETED_ID, publisherId, 0, db);
 		expect(updated?.publishStatus).toBe(1);
 
 		const materialized = await db
@@ -438,7 +444,7 @@ describe("notice 模块查询", () => {
 			.from(sysUser)
 			.where(isNull(sysUser.deleteTime));
 
-		const updated = await publishNotice(REPUBLISH_ID, publisherId, db);
+		const updated = await publishNotice(REPUBLISH_ID, publisherId, 0, db);
 		expect(updated?.publishStatus).toBe(1);
 		expect(updated?.revokeTime).toBeNull();
 
@@ -456,7 +462,7 @@ describe("notice 模块查询", () => {
 	});
 
 	test("revokeNotice 已发布→已撤回 + 清空对应 user_notice", async () => {
-		const updated = await revokeNotice(REVOKE_ID, db);
+		const updated = await revokeNotice(REVOKE_ID, 0, db);
 		expect(updated?.publishStatus).toBe(-1);
 		expect(updated?.revokeTime).not.toBeNull();
 
@@ -475,17 +481,17 @@ describe("notice 模块查询", () => {
 	// ── T9 已读 / 我的通知 ──────────────────────────────────────────────
 
 	test("findNoticeDetailById 返回含 publisherName 的通知详情", async () => {
-		const row = await findNoticeDetailById(LIST_PUBLISHED_ID, db);
+		const row = await findNoticeDetailById(LIST_PUBLISHED_ID, 0, db);
 		expect(row?.title).toBe("测试通知已发布");
 		expect(row?.publisherName).toBe(publisherName);
 
 		// 不存在 / 软删后查不到
-		const miss = await findNoticeDetailById(999999, db);
+		const miss = await findNoticeDetailById(999999, 0, db);
 		expect(miss).toBeUndefined();
 	});
 
 	test("markNoticeAsRead 将 user_notice 置为已读（isRead=1 + readTime 非空）", async () => {
-		await markNoticeAsRead(MARK_READ_ID, publisherId, db);
+		await markNoticeAsRead(MARK_READ_ID, publisherId, 0, db);
 
 		const [row] = await db
 			.select({
@@ -506,7 +512,7 @@ describe("notice 模块查询", () => {
 
 	test("markNoticeAsRead 对无 user_notice 记录的用户为空操作（不报错）", async () => {
 		await expect(
-			markNoticeAsRead(MARK_READ_ID, 999999, db),
+			markNoticeAsRead(MARK_READ_ID, 999999, 0, db),
 		).resolves.toBeUndefined();
 	});
 
@@ -514,6 +520,7 @@ describe("notice 模块查询", () => {
 		const result = await findMyNotices(
 			{ pageNum: 1, pageSize: 50 },
 			publisherId,
+			0,
 			db,
 		);
 		const noticeA = result.list.find((n) => n.id === MY_NOTICE_ID_A);
@@ -530,6 +537,7 @@ describe("notice 模块查询", () => {
 		const result = await findMyNotices(
 			{ pageNum: 1, pageSize: 50, isRead: 0 },
 			publisherId,
+			0,
 			db,
 		);
 		const ids = result.list.map((n) => n.id);
@@ -539,7 +547,7 @@ describe("notice 模块查询", () => {
 
 	// markAllNoticesAsRead 放最后，它会把所有未读改为已读，影响后续断言
 	test("markAllNoticesAsRead 将当前用户全部未读 user_notice 置为已读", async () => {
-		await markAllNoticesAsRead(publisherId, db);
+		await markAllNoticesAsRead(publisherId, 0, db);
 
 		const unread = await db
 			.select({ id: sysUserNotice.id })

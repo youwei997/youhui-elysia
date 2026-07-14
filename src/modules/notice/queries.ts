@@ -9,6 +9,7 @@ import {
 	like,
 } from "drizzle-orm";
 import type { DB } from "@/db/client";
+import { tenantEq } from "@/db/helpers/tenant";
 import { escapeLike } from "@/db/helpers/like";
 import { sysNotice, sysUserNotice } from "@/db/schema/system/notice";
 import { sysUser } from "@/db/schema/system/user";
@@ -30,9 +31,13 @@ export const findNotices = async (
 		publishStatus?: number | undefined;
 		type?: number | undefined;
 	},
+	tenantId: number,
 	db: DB,
 ): Promise<PageResult<NoticeListRecord>> => {
-	const where = [isNull(sysNotice.deleteTime)];
+	const where = [
+		isNull(sysNotice.deleteTime),
+		tenantEq(sysNotice.tenantId, tenantId),
+	];
 
 	if (query.title) {
 		where.push(like(sysNotice.title, `%${escapeLike(query.title)}%`));
@@ -68,12 +73,19 @@ export const findNotices = async (
  */
 export const findNoticeById = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<NoticeRecord | undefined> => {
 	const [notice] = await db
 		.select()
 		.from(sysNotice)
-		.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)));
+		.where(
+			and(
+				eq(sysNotice.id, id),
+				tenantEq(sysNotice.tenantId, tenantId),
+				isNull(sysNotice.deleteTime),
+			),
+		);
 	return notice;
 };
 
@@ -91,12 +103,13 @@ export const createNotice = async (
 		targetType: number;
 		targetUserIds?: number[] | undefined;
 	},
+	tenantId: number,
 	db: DB,
 ): Promise<NoticeRecord> => {
 	const { targetUserIds, ...rest } = data;
 	const [notice] = await db
 		.insert(sysNotice)
-		.values({ ...rest, targetUserIds: (targetUserIds ?? []).join(",") })
+		.values({ ...rest, tenantId, targetUserIds: (targetUserIds ?? []).join(",") })
 		.returning();
 	return notice as NoticeRecord;
 };
@@ -114,6 +127,7 @@ export const updateNotice = async (
 		targetType?: number | undefined;
 		targetUserIds?: number[] | undefined;
 	},
+	tenantId: number,
 	db: DB,
 ): Promise<NoticeRecord | undefined> => {
 	const { targetUserIds, ...rest } = data;
@@ -125,7 +139,13 @@ export const updateNotice = async (
 				? { targetUserIds: targetUserIds.join(",") }
 				: {}),
 		})
-		.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)))
+		.where(
+			and(
+				eq(sysNotice.id, id),
+				tenantEq(sysNotice.tenantId, tenantId),
+				isNull(sysNotice.deleteTime),
+			),
+		)
 		.returning();
 	return notice as NoticeRecord | undefined;
 };
@@ -141,6 +161,7 @@ export const updateNotice = async (
 export const publishNotice = async (
 	id: number,
 	publisherId: number,
+	tenantId: number,
 	db: DB,
 ): Promise<NoticeRecord | undefined> => {
 	return await db.transaction(async (tx) => {
@@ -150,13 +171,23 @@ export const publishNotice = async (
 			.update(sysUserNotice)
 			.set({ deleteTime: now })
 			.where(
-				and(eq(sysUserNotice.noticeId, id), isNull(sysUserNotice.deleteTime)),
+				and(
+					eq(sysUserNotice.noticeId, id),
+					tenantEq(sysUserNotice.tenantId, tenantId),
+					isNull(sysUserNotice.deleteTime),
+				),
 			);
 
 		const [notice] = await tx
 			.select()
 			.from(sysNotice)
-			.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)));
+			.where(
+				and(
+					eq(sysNotice.id, id),
+					tenantEq(sysNotice.tenantId, tenantId),
+					isNull(sysNotice.deleteTime),
+				),
+			);
 		if (!notice) return undefined;
 
 		const targetUserIds =
@@ -170,6 +201,7 @@ export const publishNotice = async (
 			.where(
 				and(
 					isNull(sysUser.deleteTime),
+					tenantEq(sysUser.tenantId, tenantId),
 					...(targetUserIds ? [inArray(sysUser.id, targetUserIds)] : []),
 				),
 			);
@@ -179,6 +211,7 @@ export const publishNotice = async (
 				targetUsers.map((u) => ({
 					noticeId: id,
 					userId: u.id,
+					tenantId,
 					isRead: 0,
 				})),
 			);
@@ -192,7 +225,13 @@ export const publishNotice = async (
 				publishTime: now,
 				revokeTime: null,
 			})
-			.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)))
+			.where(
+				and(
+					eq(sysNotice.id, id),
+					tenantEq(sysNotice.tenantId, tenantId),
+					isNull(sysNotice.deleteTime),
+				),
+			)
 			.returning();
 		return updated as NoticeRecord;
 	});
@@ -205,6 +244,7 @@ export const publishNotice = async (
  */
 export const revokeNotice = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<NoticeRecord | undefined> => {
 	return await db.transaction(async (tx) => {
@@ -214,13 +254,23 @@ export const revokeNotice = async (
 			.update(sysUserNotice)
 			.set({ deleteTime: now })
 			.where(
-				and(eq(sysUserNotice.noticeId, id), isNull(sysUserNotice.deleteTime)),
+				and(
+					eq(sysUserNotice.noticeId, id),
+					tenantEq(sysUserNotice.tenantId, tenantId),
+					isNull(sysUserNotice.deleteTime),
+				),
 			);
 
 		const [updated] = await tx
 			.update(sysNotice)
 			.set({ publishStatus: -1, revokeTime: now })
-			.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)))
+			.where(
+				and(
+					eq(sysNotice.id, id),
+					tenantEq(sysNotice.tenantId, tenantId),
+					isNull(sysNotice.deleteTime),
+				),
+			)
 			.returning();
 		return updated as NoticeRecord | undefined;
 	});
@@ -234,6 +284,7 @@ export const revokeNotice = async (
  */
 export const batchSoftDeleteNotices = async (
 	ids: number[],
+	tenantId: number,
 	db: DB,
 ): Promise<number> => {
 	return await db.transaction(async (tx) => {
@@ -244,13 +295,20 @@ export const batchSoftDeleteNotices = async (
 			.where(
 				and(
 					inArray(sysUserNotice.noticeId, ids),
+					tenantEq(sysUserNotice.tenantId, tenantId),
 					isNull(sysUserNotice.deleteTime),
 				),
 			);
 		const result = await tx
 			.update(sysNotice)
 			.set({ deleteTime: now })
-			.where(and(inArray(sysNotice.id, ids), isNull(sysNotice.deleteTime)))
+			.where(
+				and(
+					inArray(sysNotice.id, ids),
+					tenantEq(sysNotice.tenantId, tenantId),
+					isNull(sysNotice.deleteTime),
+				),
+			)
 			.returning({ id: sysNotice.id });
 		return result.length;
 	});
@@ -263,13 +321,20 @@ export const batchSoftDeleteNotices = async (
  */
 export const findNoticeDetailById = async (
 	id: number,
+	tenantId: number,
 	db: DB,
 ): Promise<NoticeListRecord | undefined> => {
 	const [row] = await db
 		.select({ ...getColumns(sysNotice), publisherName: sysUser.nickname })
 		.from(sysNotice)
 		.leftJoin(sysUser, eq(sysNotice.publisherId, sysUser.id))
-		.where(and(eq(sysNotice.id, id), isNull(sysNotice.deleteTime)));
+		.where(
+			and(
+				eq(sysNotice.id, id),
+				tenantEq(sysNotice.tenantId, tenantId),
+				isNull(sysNotice.deleteTime),
+			),
+		);
 	return row;
 };
 
@@ -281,6 +346,7 @@ export const findNoticeDetailById = async (
 export const markNoticeAsRead = async (
 	noticeId: number,
 	userId: number,
+	tenantId: number,
 	db: DB,
 ): Promise<void> => {
 	const now = new Date().toISOString();
@@ -291,6 +357,7 @@ export const markNoticeAsRead = async (
 			and(
 				eq(sysUserNotice.noticeId, noticeId),
 				eq(sysUserNotice.userId, userId),
+				tenantEq(sysUserNotice.tenantId, tenantId),
 				isNull(sysUserNotice.deleteTime),
 			),
 		);
@@ -303,6 +370,7 @@ export const markNoticeAsRead = async (
  */
 export const markAllNoticesAsRead = async (
 	userId: number,
+	tenantId: number,
 	db: DB,
 ): Promise<void> => {
 	const now = new Date().toISOString();
@@ -312,6 +380,7 @@ export const markAllNoticesAsRead = async (
 		.where(
 			and(
 				eq(sysUserNotice.userId, userId),
+				tenantEq(sysUserNotice.tenantId, tenantId),
 				eq(sysUserNotice.isRead, 0),
 				isNull(sysUserNotice.deleteTime),
 			),
@@ -328,10 +397,12 @@ export const markAllNoticesAsRead = async (
 export const findMyNotices = async (
 	query: { pageNum: number; pageSize: number; title?: string; isRead?: number },
 	userId: number,
+	tenantId: number,
 	db: DB,
 ): Promise<PageResult<MyNoticeRecord>> => {
 	const where = [
 		eq(sysUserNotice.userId, userId),
+		tenantEq(sysUserNotice.tenantId, tenantId),
 		isNull(sysUserNotice.deleteTime),
 		eq(sysNotice.publishStatus, 1),
 		isNull(sysNotice.deleteTime),
