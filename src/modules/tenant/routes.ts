@@ -1,8 +1,6 @@
 import { Elysia } from "elysia";
 import { db } from "@/db/client";
 import { BizError, ERR_CODE, unauthorized } from "@/lib/errors";
-import type { JwtPayload } from "@/lib/jwt";
-import { signAccessToken, signRefreshToken } from "@/lib/jwt";
 import { authPlugin } from "@/plugins/auth";
 import {
 	createTenant,
@@ -238,7 +236,7 @@ export const tenantRoutes = new Elysia({ prefix: "/api/v1/tenants" })
 			},
 		},
 	)
-	.put(
+	.post(
 		"/:id/switch",
 		async ({ params, user }) => {
 			if (!user) throw unauthorized();
@@ -251,24 +249,14 @@ export const tenantRoutes = new Elysia({ prefix: "/api/v1/tenants" })
 			if (!targetTenant) {
 				throw new BizError(ERR_CODE.TENANT_NOT_FOUND);
 			}
-			// 重新签发 token（新 tenantId，其余字段不变）
-			const payload: JwtPayload = {
-				...user,
-				tenantId: targetId,
-			};
-			return {
-				accessToken: signAccessToken(payload),
-				refreshToken: signRefreshToken(payload),
-				tokenType: "Bearer",
-				expiresIn: Number(process.env.ACCESS_TOKEN_EXPIRES_IN) || 3600,
-			};
+			return parseTenant(targetTenant);
 		},
 		{
 			auth: true,
 			detail: {
 				tags: ["Tenant"],
 				summary: "切换租户",
-				description: "平台超管可切换数据视图租户，重新签发 token",
+				description: "平台超管可切换数据视图租户，返回目标租户信息",
 			},
 		},
 	)

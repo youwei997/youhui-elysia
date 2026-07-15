@@ -7,6 +7,10 @@ export const LoginBody = z
 		password: z.string().describe("密码"),
 		captchaId: z.string().optional().describe("验证码缓存 ID"),
 		captchaCode: z.string().optional().describe("验证码"),
+		tenantId: z
+			.number()
+			.optional()
+			.describe("租户 ID（可选，用于指定租户登录）"),
 	})
 	.describe("登录请求参数");
 

@@ -40,7 +40,6 @@ export const TenantListQuery = createListQuery(sysTenant, {
 export const TenantCreateBody = createInsertSchema(sysTenant, {
 	name: (s) => s.describe("租户名称"),
 	code: codeSchema.describe("租户编码（全局唯一）"),
-	status: statusSchema.default(1),
 	contactName: (s) => s.optional().describe("联系人"),
 	contactPhone: (s) => s.optional().describe("联系电话"),
 	contactEmail: (s) => s.optional().describe("联系邮箱"),
@@ -88,13 +87,9 @@ export const TenantMenusBody = z
 	.array(z.coerce.number().int().positive())
 	.describe("菜单 ID 列表");
 
-/** 租户响应：排除过期时间、备注 */
-export const TenantResponse = createSelectSchema(sysTenant)
-	.omit({
-		expireTime: true,
-		remark: true,
-	})
-	.describe("租户信息");
+/** 租户响应：保留全部字段（含过期时间、备注） */
+export const TenantResponse =
+	createSelectSchema(sysTenant).describe("租户信息");
 
 /** TenantResponse.parse 的输入类型 */
 export type TenantResponseInput = z.input<typeof TenantResponse>;
